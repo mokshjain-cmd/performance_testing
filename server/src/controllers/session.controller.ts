@@ -1,195 +1,195 @@
-import { Request, Response, NextFunction } from 'express';
-import { SessionService } from '../services/session.service';
-import path from 'path';
+import { Request, Response } from 'express';
+import Session from '../models/Session';
+import Device from '../models/Devices';
 
-export class SessionController {
-  private sessionService: SessionService;
+/**
+ * Create a new session with device files
+ * Expects multipart/form-data with:
+ * - userId, activityType, startTime, endTime
+ * - benchmarkDeviceType (optional)
+ * - deviceFiles[] - array of raw files (fieldname should be deviceType)
+ */
+export const createSession = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const {
+      userId,
+      activityType,
+      startTime,
+      endTime,
+      benchmarkDeviceType
+    } = req.body;
 
-  constructor() {
-    this.sessionService = new SessionService();
+    if (!userId || !activityType || !startTime || !endTime) {
+      res.status(400).json({
+        success: false,
+        message: "Missing required fields: userId, activityType, startTime, endTime"
+      });
+      return;
+    }
+
+    const files = req.files as Express.Multer.File[];
+
+    if (!files || files.length === 0) {
+      res.status(400).json({
+        success: false,
+        message: "No files uploaded"
+      });
+      return;
+    }
+
+    const start = new Date(startTime);
+    const end = new Date(endTime);
+
+    const durationSec = Math.floor(
+      (end.getTime() - start.getTime()) / 1000
+    );
+
+    // Resolve deviceId from DB for each uploaded file
+    const devices = await Promise.all(
+      files.map(async (file) => {
+        const deviceType = file.fieldname;
+
+        const device = await Device.findOne({ deviceType });
+
+        if (!device) {
+          throw new Error(`Device not registered: ${deviceType}`);
+        }
+
+        return {
+          deviceId: device._id,
+          deviceType: device.deviceType,
+          firmwareVersion: device.firmwareVersion
+        };
+      })
+    );
+
+    // Create session
+    const session = await Session.create({
+      userId,
+      activityType,
+      startTime: start,
+      endTime: end,
+      durationSec,
+      devices,
+      benchmarkDeviceType
+    });
+
+    // Populate device details
+    await session.populate('devices.deviceId');
+
+    res.status(201).json({
+      success: true,
+      data: session
+    });
+
+  } catch (error) {
+    console.error('Error creating session:', error);
+    res.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Unknown error"
+    });
   }
+};
 
-  /**
-   * Create a new session with device files
-   * Expects multipart/form-data with:
-   * - sessionName, activity, startTime, endTime
-   * - deviceTypes[] - array of device types
-   * - deviceFiles[] - array of raw files (matched by index with deviceTypes)
-   */
-  public createSession = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> => {
-    try {
-      const { sessionName, activity, startTime, endTime, deviceTypes } = req.body;
+/**
+ * Get session by ID
+ */
+export const getSession = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { id } = req.params;
 
-      // Validation
-      if (!sessionName || !activity || !startTime || !endTime) {
-        res.status(400).json({
-          success: false,
-          message: 'Missing required fields: sessionName, activity, startTime, endTime'
-        });
-        return;
-      }
+    const session = await Session.findById(id)
+      .populate('userId', 'email name')
+      .populate('devices.deviceId')
+      .exec();
 
-      if (!deviceTypes || (Array.isArray(deviceTypes) ? deviceTypes.length === 0 : !deviceTypes)) {
-        res.status(400).json({
-          success: false,
-          message: 'At least one device type is required'
-        });
-        return;
-      }
-
-      // Get uploaded files
-      const files = req.files as Express.Multer.File[];
-      
-      if (!files || files.length === 0) {
-        res.status(400).json({
-          success: false,
-          message: 'No files uploaded. Please upload device raw files'
-        });
-        return;
-      }
-
-      // Parse deviceTypes (could be string or array)
-      const deviceTypesArray = Array.isArray(deviceTypes) 
-        ? deviceTypes 
-        : [deviceTypes];
-
-      // Validate file count matches device count
-      if (files.length !== deviceTypesArray.length) {
-        res.status(400).json({
-          success: false,
-          message: `Number of files (${files.length}) must match number of devices (${deviceTypesArray.length})`
-        });
-        return;
-      }
-
-      // Map files to devices
-      const devices = files.map((file, index) => ({
-        deviceType: deviceTypesArray[index],
-        filePath: file.path,
-        fileName: file.filename
-      }));
-
-      // Create session
-      const session = await this.sessionService.createSession({
-        sessionName,
-        activity,
-        startTime: new Date(startTime),
-        endTime: new Date(endTime),
-        devices
-      });
-
-      res.status(201).json({
-        success: true,
-        message: 'Session created successfully',
-        data: session
-      });
-    } catch (error) {
-      console.error('Error creating session:', error);
-      res.status(500).json({
+    if (!session) {
+      res.status(404).json({
         success: false,
-        message: 'Failed to create session',
-        error: error instanceof Error ? error.message : 'Unknown error'
+        message: 'Session not found'
       });
+      return;
     }
-  };
 
-  /**
-   * Get session by ID
-   */
-  public getSession = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> => {
-    try {
-      const { id } = req.params;
+    res.status(200).json({
+      success: true,
+      data: session
+    });
+  } catch (error) {
+    console.error('Error fetching session:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch session',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+};
 
-      const session = await this.sessionService.getSessionById(id);
+/**
+ * Get all sessions
+ */
+export const getAllSessions = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const sessions = await Session.find()
+      .populate('userId', 'email name')
+      .populate('devices.deviceId')
+      .sort({ createdAt: -1 })
+      .exec();
 
-      if (!session) {
-        res.status(404).json({
-          success: false,
-          message: 'Session not found'
-        });
-        return;
-      }
+    res.status(200).json({
+      success: true,
+      count: sessions.length,
+      data: sessions
+    });
+  } catch (error) {
+    console.error('Error fetching sessions:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch sessions',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+};
 
-      res.status(200).json({
-        success: true,
-        data: session
-      });
-    } catch (error) {
-      console.error('Error fetching session:', error);
-      res.status(500).json({
+/**
+ * Delete session
+ */
+export const deleteSession = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    const deleted = await Session.findByIdAndDelete(id);
+
+    if (!deleted) {
+      res.status(404).json({
         success: false,
-        message: 'Failed to fetch session',
-        error: error instanceof Error ? error.message : 'Unknown error'
+        message: 'Session not found'
       });
+      return;
     }
-  };
 
-  /**
-   * Get all sessions
-   */
-  public getAllSessions = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> => {
-    try {
-      const sessions = await this.sessionService.getAllSessions();
-
-      res.status(200).json({
-        success: true,
-        count: sessions.length,
-        data: sessions
-      });
-    } catch (error) {
-      console.error('Error fetching sessions:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to fetch sessions',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
-  };
-
-  /**
-   * Delete session
-   */
-  public deleteSession = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> => {
-    try {
-      const { id } = req.params;
-
-      const deleted = await this.sessionService.deleteSession(id);
-
-      if (!deleted) {
-        res.status(404).json({
-          success: false,
-          message: 'Session not found'
-        });
-        return;
-      }
-
-      res.status(200).json({
-        success: true,
-        message: 'Session deleted successfully'
-      });
-    } catch (error) {
-      console.error('Error deleting session:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to delete session',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
-  };
-}
+    res.status(200).json({
+      success: true,
+      message: 'Session deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting session:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete session',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+};

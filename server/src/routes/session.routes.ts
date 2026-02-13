@@ -1,20 +1,19 @@
 import { Router } from 'express';
-import { SessionController } from '../controllers/session.controller';
+import { createSession, getSession, getAllSessions, deleteSession } from '../controllers/session.controller';
 import { uploadDeviceFiles } from '../middleware/upload.middleware';
 
 const router = Router();
-const sessionController = new SessionController();
 
 // Create a new session with device files
-router.post('/create', uploadDeviceFiles, sessionController.createSession);
+router.post('/create', uploadDeviceFiles, createSession);
 
 // Get all sessions
-router.get('/', sessionController.getAllSessions);
+router.get('/', getAllSessions);
 
 // Get session by ID
-router.get('/:id', sessionController.getSession);
+router.get('/:id', getSession);
 
 // Delete session by ID
-router.delete('/:id', sessionController.deleteSession);
+router.delete('/:id', deleteSession);
 
 export default router;

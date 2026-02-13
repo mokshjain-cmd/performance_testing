@@ -1,9 +1,8 @@
-import { Schema, model, Document, Types } from "mongoose";
+import { Schema, model, Document } from "mongoose";
 
 export type DeviceType = "luna" | "polar" | "apple" | "whoop";
 
 export interface IDevice extends Document {
-  userId: Types.ObjectId;
   deviceType: DeviceType;
   hardwareVersion?: string;
   firmwareVersion?: string;
@@ -13,11 +12,11 @@ export interface IDevice extends Document {
 
 const DeviceSchema = new Schema<IDevice>(
   {
-    userId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
     deviceType: {
       type: String,
       enum: ["luna", "polar", "apple", "whoop"],
       required: true,
+      unique: true,
       index: true,
     },
     hardwareVersion: String,

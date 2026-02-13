@@ -14,12 +14,16 @@ const storage = multer.diskStorage({
   destination: (req: Request, file: Express.Multer.File, cb) => {
     cb(null, tempDir);
   },
+
   filename: (req: Request, file: Express.Multer.File, cb) => {
-    // Create unique filename: timestamp-originalname
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const deviceType = file.fieldname; // 🔥 This is key
+
+    const uniqueSuffix =
+      Date.now() + "-" + Math.round(Math.random() * 1e9);
+
     const ext = path.extname(file.originalname);
-    const nameWithoutExt = path.basename(file.originalname, ext);
-    cb(null, `${nameWithoutExt}-${uniqueSuffix}${ext}`);
+
+    cb(null, `${deviceType}-${uniqueSuffix}${ext}`);
   }
 });
 
@@ -44,4 +48,4 @@ export const upload = multer({
 });
 
 // Middleware to handle multiple device files
-export const uploadDeviceFiles = upload.array('deviceFiles', 10); // Max 10 files
+export const uploadDeviceFiles = upload.any(); // Max 10 files
