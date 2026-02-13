@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import Session from '../models/Session';
 import Device from '../models/Devices';
+import { ingestSessionFiles } from '../services/sessionIngestion.service';
 
 /**
  * Create a new session with device files
@@ -9,6 +10,8 @@ import Device from '../models/Devices';
  * - benchmarkDeviceType (optional)
  * - deviceFiles[] - array of raw files (fieldname should be deviceType)
  */
+
+//currently no user check , add later
 export const createSession = async (
   req: Request,
   res: Response
@@ -77,13 +80,21 @@ export const createSession = async (
       benchmarkDeviceType
     });
 
-    // Populate device details
-    await session.populate('devices.deviceId');
+    ingestSessionFiles({
+        sessionId: session._id,
+        userId,
+        startTime: start,
+        endTime: end,
+        files,
+    });
 
+    
     res.status(201).json({
       success: true,
       data: session
     });
+
+
 
   } catch (error) {
     console.error('Error creating session:', error);

@@ -4,12 +4,12 @@ import { createOrUpdateDevice, getDeviceByType, getAllDevices } from '../control
 const router = Router();
 
 // Create or update a device
-router.post('/', createOrUpdateDevice);
-
-// Get all devices
-router.get('/', getAllDevices);
 
 // Get device by type
 router.get('/:deviceType', getDeviceByType);
+// Get all devices
+router.get('/', getAllDevices);
+router.post('/', createOrUpdateDevice);
+
 
 export default router;

@@ -1,11 +1,12 @@
 import { Schema, model, Document, Types } from "mongoose";
 
 export interface INormalizedReading extends Document {
-  userId: Types.ObjectId;
-  sessionId: Types.ObjectId;
-  deviceId: Types.ObjectId;
-  deviceType: string;
-  firmwareVersion?: string;
+  meta: {
+    sessionId: Types.ObjectId;
+    userId: Types.ObjectId;
+    deviceType: string;
+    firmwareVersion?: string;
+  };
   timestamp: Date;
   metrics: {
     heartRate?: number;
@@ -18,30 +19,34 @@ export interface INormalizedReading extends Document {
 
 const NormalizedReadingSchema = new Schema<INormalizedReading>(
   {
-    userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    sessionId: { type: Schema.Types.ObjectId, ref: "Session", required: true, index: true },
-    deviceId: { type: Schema.Types.ObjectId, ref: "Device", required: true },
-    deviceType: { type: String, required: true, index: true },
-    firmwareVersion: String,
-    timestamp: { type: Date, required: true, index: true },
+    meta: {
+      sessionId: { type: Schema.Types.ObjectId, ref: "Session", required: true },
+      userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+      deviceType: { type: String, required: true },
+      firmwareVersion: String,
+    },
+    timestamp: { type: Date, required: true },
     metrics: {
       heartRate: Number,
       spo2: Number,
       stress: Number,
       skinTemp: Number,
     },
-    isValid: { type: Boolean, default: true, index: true },
+    isValid: { type: Boolean, default: true },
   },
   {
     timeseries: {
       timeField: "timestamp",
-      metaField: "sessionId",
+      metaField: "meta",
       granularity: "seconds",
     },
   }
 );
 
-NormalizedReadingSchema.index({ sessionId: 1, deviceType: 1, timestamp: 1 });
+// Optional additional indexes
+NormalizedReadingSchema.index({ "meta.sessionId": 1 });
+NormalizedReadingSchema.index({ "meta.deviceType": 1 });
+NormalizedReadingSchema.index({ "meta.firmwareVersion": 1 });
 
 export default model<INormalizedReading>(
   "NormalizedReading",
