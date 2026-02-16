@@ -12,6 +12,7 @@
     startTime: Date;
     endTime: Date;
     durationSec: number;
+    bandPosition?: string;
     devices: ISessionDeviceSnapshot[];
     benchmarkDeviceType?: string;
     isValid: boolean;
@@ -34,6 +35,7 @@
         },
         ],
         benchmarkDeviceType: String,
+        bandPosition: { type: String, default: "wrist" }, //add a default value here i.e wrist
         isValid: { type: Boolean, default: true, index: true },
     },
     { timestamps: true }

@@ -5,6 +5,8 @@ type NormalizedReadingInput = {
     sessionId: any;
     userId: any;
     deviceType: string;
+    activityType: string;
+    bandPosition?: string;
     firmwareVersion?: string;
   };
   timestamp: Date;
@@ -33,6 +35,8 @@ export async function parsePolarCsv(
   meta: {
     sessionId: any;
     userId: any;
+    activityType: string;
+    bandPosition?: string;
     firmwareVersion?: string;
   },
   startTime: Date,
@@ -100,7 +104,7 @@ export async function parsePolarCsv(
         !isNaN(min) &&
         !isNaN(sec)
       ) {
-        baseDatetime = new Date(yyyy, mm - 1, dd, hh, min, sec);
+        baseDatetime = new Date(yyyy, mm - 1, dd, hh+5, min+30, sec);
       }
     }
   }
@@ -171,6 +175,8 @@ export async function parsePolarCsv(
         sessionId: meta.sessionId,
         userId: meta.userId,
         deviceType: "polar",
+        activityType: meta.activityType,
+        bandPosition: meta.bandPosition,
         firmwareVersion: meta.firmwareVersion,
       },
       timestamp: ts,

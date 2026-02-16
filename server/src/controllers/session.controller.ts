@@ -1,6 +1,8 @@
+
 import { Request, Response } from 'express';
 import Session from '../models/Session';
 import Device from '../models/Devices';
+import mongoose from "mongoose";
 import { ingestSessionFiles } from '../services/sessionIngestion.service';
 
 /**
@@ -10,6 +12,28 @@ import { ingestSessionFiles } from '../services/sessionIngestion.service';
  * - benchmarkDeviceType (optional)
  * - deviceFiles[] - array of raw files (fieldname should be deviceType)
  */
+
+
+function parseISTString(dateStr: string): Date {
+  // Expecting: "2026-02-13T15:20:50"
+  const [datePart, timePart] = dateStr.split("T");
+
+  const [year, month, day] = datePart.split("-").map(Number);
+  const [hour, minute, second] = timePart.split(":").map(Number);
+
+  // Create date as IST but store correct UTC equivalent
+  // IST = UTC + 5:30 → so subtract 5:30 to get UTC
+  return new Date(Date.UTC(
+    year,
+    month - 1,
+    day,
+    hour,
+    minute,
+    second
+  ));
+}
+
+
 
 //currently no user check , add later
 export const createSession = async (
@@ -22,7 +46,8 @@ export const createSession = async (
       activityType,
       startTime,
       endTime,
-      benchmarkDeviceType
+      benchmarkDeviceType,
+      bandPosition
     } = req.body;
 
     if (!userId || !activityType || !startTime || !endTime) {
@@ -43,9 +68,10 @@ export const createSession = async (
       return;
     }
 
-    const start = new Date(startTime);
-    const end = new Date(endTime);
-
+    const start = parseISTString(startTime);
+    const end = parseISTString(endTime);  
+    console.log('Parsed start time (UTC):', start.toISOString());
+    console.log('Parsed end time (UTC):', end.toISOString());
     const durationSec = Math.floor(
       (end.getTime() - start.getTime()) / 1000
     );
@@ -77,12 +103,15 @@ export const createSession = async (
       endTime: end,
       durationSec,
       devices,
-      benchmarkDeviceType
+      benchmarkDeviceType,
+      bandPosition,
     });
 
     ingestSessionFiles({
         sessionId: session._id,
         userId,
+        activityType,
+        bandPosition,
         startTime: start,
         endTime: end,
         files,
@@ -141,7 +170,28 @@ export const getSession = async (
     });
   }
 };
-
+/**
+ * Get all sessions for a user
+ */
+export const getSessionsByUserId = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const { userId } = req.query;
+    if (!userId) {
+      return res.status(400).json({ success: false, message: 'userId required' });
+    }
+    const sessions = await Session.find({ userId })
+      .populate('userId', 'email name')
+      .populate('devices.deviceId')
+      .sort({ createdAt: -1 })
+      .exec();
+    res.status(200).json({ success: true, count: sessions.length, data: sessions });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to fetch sessions', error: error instanceof Error ? error.message : 'Unknown error' });
+  }
+};
 /**
  * Get all sessions
  */
@@ -150,9 +200,19 @@ export const getAllSessions = async (
   res: Response
 ): Promise<void> => {
   try {
-    const sessions = await Session.find()
-      .populate('userId', 'email name')
-      .populate('devices.deviceId')
+    const { userId } = req.params;
+
+    // Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      res.status(400).json({
+        success: false,
+        message: "Invalid userId"
+      });
+      return;
+    }
+
+    const sessions = await Session.find({ userId })
+      .populate("userId", "email name")
       .sort({ createdAt: -1 })
       .exec();
 
@@ -162,11 +222,11 @@ export const getAllSessions = async (
       data: sessions
     });
   } catch (error) {
-    console.error('Error fetching sessions:', error);
+    console.error("Error fetching sessions:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch sessions',
-      error: error instanceof Error ? error.message : 'Unknown error'
+      message: "Failed to fetch sessions",
+      error: error instanceof Error ? error.message : "Unknown error"
     });
   }
 };
@@ -190,7 +250,6 @@ export const deleteSession = async (
       });
       return;
     }
-
     res.status(200).json({
       success: true,
       message: 'Session deleted successfully'
@@ -204,3 +263,6 @@ export const deleteSession = async (
     });
   }
 };
+
+
+

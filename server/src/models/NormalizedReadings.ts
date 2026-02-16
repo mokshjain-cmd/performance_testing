@@ -6,10 +6,12 @@ export interface INormalizedReading extends Document {
     userId: Types.ObjectId;
     deviceType: string;
     firmwareVersion?: string;
+    bandPosition?: string;
+    activityType: string;
   };
   timestamp: Date;
   metrics: {
-    heartRate?: number;
+    heartRate?: number | null;
     spo2?: number;
     stress?: number;
     skinTemp?: number;
@@ -24,10 +26,12 @@ const NormalizedReadingSchema = new Schema<INormalizedReading>(
       userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
       deviceType: { type: String, required: true },
       firmwareVersion: String,
+      bandPosition: String,
+      activityType: { type: String, required: true },
     },
     timestamp: { type: Date, required: true },
     metrics: {
-      heartRate: Number,
+      heartRate: { type: Number, default: null },
       spo2: Number,
       stress: Number,
       skinTemp: Number,
