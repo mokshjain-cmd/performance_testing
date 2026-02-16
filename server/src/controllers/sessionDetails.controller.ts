@@ -20,14 +20,34 @@ export const getSessionFullDetails = async (req: Request, res: Response) => {
     const endTime = session.endTime;
     const deviceTypes = session.devices.map((d: any) => d.deviceType);
     const points: Record<string, any[]> = {};
-    for (const deviceType of deviceTypes) {
-      points[deviceType] = await NormalizedReading.find({
+    const readings = await NormalizedReading.find(
+    {
         'meta.sessionId': id,
-        'meta.deviceType': deviceType,
         timestamp: { $gte: startTime, $lte: endTime },
-      }, { timestamp: 1, 'metrics.heartRate': 1, _id: 0 })
-        .sort({ timestamp: 1 })
-        .lean();
+    },
+    {
+        timestamp: 1,
+        'metrics.heartRate': 1,
+        'meta.deviceType': 1,
+        _id: 0
+    }
+    )
+    .sort({ timestamp: 1 })
+    .lean();
+
+    for (const reading of readings) {
+        const deviceType = reading.meta.deviceType;
+
+        if (!points[deviceType]) {
+            points[deviceType] = [];
+        }
+
+        points[deviceType].push({
+          timestamp: reading.timestamp,
+          metrics: {
+            heartRate: reading.metrics?.heartRate ?? null
+          }
+        });
     }
 
     res.json({

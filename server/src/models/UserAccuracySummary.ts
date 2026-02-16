@@ -25,6 +25,12 @@ export interface IUserAccuracySummary extends Document {
     avgAccuracy: number;
     totalSessions: number;
   }[];
+  bandPositionWiseAccuracy: {
+    bandPosition: string;
+    avgAccuracy: number;
+    totalSessions: number;
+    totalDurationSec: number;
+  }[];
   lastUpdated: Date;
 }
 
@@ -55,6 +61,14 @@ const UserAccuracySummarySchema = new Schema<IUserAccuracySummary>({
       firmwareVersion: String,
       avgAccuracy: Number,
       totalSessions: Number,
+    },
+  ],
+  bandPositionWiseAccuracy: [
+    {
+      bandPosition: String,
+      avgAccuracy: Number,
+      totalSessions: Number,
+      totalDurationSec: Number,
     },
   ],
   lastUpdated: { type: Date, default: Date.now },

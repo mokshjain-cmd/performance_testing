@@ -5,6 +5,7 @@ import NormalizedReading from '../models/NormalizedReadings';
 import { parseLunaCsv } from '../parsers/lunaParser';
 import { parsePolarCsv } from '../parsers/polarParser';
 import { analyzeSession } from './sessionAnalysis.service';
+import { updateUserAccuracySummary } from './userAccuracySummary.service';
 
 export async function ingestSessionFiles({
   sessionId,
@@ -57,6 +58,11 @@ export async function ingestSessionFiles({
       try {
         await analyzeSession(sessionId);
         console.log('Session analysis completed for session:', sessionId);
+        // Update user accuracy summary after analysis
+        if (userId) {
+          await updateUserAccuracySummary(userId);
+          console.log('User accuracy summary updated for user:', userId);
+        }
       } catch (err) {
         console.error('❌ Session analysis failed:', err);
       }
