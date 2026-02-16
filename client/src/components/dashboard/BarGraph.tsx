@@ -10,8 +10,8 @@ interface BarProps {
 }
 
 const BarGraph: React.FC<BarProps> = ({ data, title, color, yLabel }) => (
-  <div style={{ background: '#fff', borderRadius: 8, boxShadow: '0 1px 4px #eee', padding: 16, marginBottom: 24 }}>
-    <h3 style={{ marginBottom: 8 }}>{title}</h3>
+  <div className="bg-white rounded-lg shadow p-4 mb-6">
+    <h3 className="mb-2 font-semibold text-lg">{title}</h3>
     <ResponsiveContainer width="100%" height={260}>
       <BarChart data={data} margin={{ top: 16, right: 24, left: 0, bottom: 16 }}>
         <XAxis dataKey="name" />

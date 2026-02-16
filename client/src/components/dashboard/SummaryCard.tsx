@@ -1,5 +1,4 @@
 import React from 'react';
-
 import type { UserSummary } from '../../types';
 import { splitDateTime } from '../../utils/dateTime';
 
@@ -7,60 +6,83 @@ interface Props {
   userSummary: UserSummary;
 }
 
-const cardStyle: React.CSSProperties = {
-  background: '#f9fafb',
-  borderRadius: 8,
-  padding: 16,
-  boxShadow: '0 1px 4px #eee'
-};
+const CardWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <div className="rounded-3xl border border-white/40 bg-white/70 backdrop-blur-xl shadow-[0_10px_40px_rgba(0,0,0,0.06)] p-8 transition-all duration-300 hover:shadow-[0_12px_50px_rgba(0,0,0,0.08)]">
+    {children}
+  </div>
+);
 
-
-const tableStyle: React.CSSProperties = {
-  width: '100%',
-  borderCollapse: 'collapse',
-  marginTop: 8,
-};
-const thtd: React.CSSProperties = {
-  padding: 8,
-  border: '1px solid #eee',
-  textAlign: 'center',
-};
+const StatCard: React.FC<{
+  label: string;
+  value: string | number | undefined;
+}> = ({ label, value }) => (
+  <div className="rounded-2xl bg-white/80 backdrop-blur-md border border-gray-100 p-5 shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-[2px]">
+    <div className="text-xs uppercase tracking-wide text-gray-500 mb-1">
+      {label}
+    </div>
+    <div className="text-lg font-semibold text-gray-900">
+      {value}
+    </div>
+  </div>
+);
 
 const SummaryCards: React.FC<Props> = ({ userSummary }) => {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      {/* Basic Info */}
-      <div style={cardStyle}>
-        <div style={{ fontSize: 22, fontWeight: 600 }}>{userSummary.userId.name}</div>
-        <div style={{ color: '#666', marginBottom: 8 }}>{userSummary.userId.email}</div>
-        <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
-          <div><strong>Total Sessions:</strong> <span style={{ background: '#e0e7ff', borderRadius: 4, padding: '2px 6px' }}>{userSummary.totalSessions}</span></div>
-          <div>
-            <strong>Last Updated:</strong> 
-            <span style={{ background: '#fef9c3', borderRadius: 4, padding: '2px 6px', marginRight: 4 }}>
-              {splitDateTime(userSummary.lastUpdated).date}
-            </span>
-            <span style={{ background: '#fef9c3', borderRadius: 4, padding: '2px 6px' }}>
-              {splitDateTime(userSummary.lastUpdated).time}
-            </span>
-          </div>
-        </div>
-      </div>
+  const { date, time } = splitDateTime(userSummary.lastUpdated);
 
-      {/* Overall Accuracy */}
-      {userSummary.overallAccuracy && (
-        <div style={cardStyle}>
-          <h3 style={{ marginBottom: 8 }}>Overall Accuracy</h3>
-          <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
-            <div><strong>Avg MAE:</strong> <span style={{ background: '#bae6fd', borderRadius: 4, padding: '2px 6px' }}>{userSummary.overallAccuracy.avgMAE?.toFixed(2)}</span></div>
-            <div><strong>Avg RMSE:</strong> <span style={{ background: '#fcd34d', borderRadius: 4, padding: '2px 6px' }}>{userSummary.overallAccuracy.avgRMSE?.toFixed(2)}</span></div>
-            <div><strong>Avg Pearson:</strong> <span style={{ background: '#bbf7d0', borderRadius: 4, padding: '2px 6px' }}>{userSummary.overallAccuracy.avgPearson?.toFixed(3)}</span></div>
-            <div><strong>Avg MAPE:</strong> <span style={{ background: '#fca5a5', borderRadius: 4, padding: '2px 6px' }}>{userSummary.overallAccuracy.avgMAPE?.toFixed(2)}</span></div>
+  return (
+    <div className="flex flex-col gap-10">
+
+      {/* USER INFO */}
+      <CardWrapper>
+        <div className="mb-6">
+          <div className="text-3xl font-semibold tracking-tight text-gray-900">
+            {userSummary.userId.name}
+          </div>
+          <div className="text-sm text-gray-500 mt-1">
+            {userSummary.userId.email}
           </div>
         </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <StatCard
+            label="Total Sessions"
+            value={userSummary.totalSessions}
+          />
+          <StatCard
+            label="Last Updated"
+            value={`${date} • ${time}`}
+          />
+        </div>
+      </CardWrapper>
+
+      {/* OVERALL ACCURACY */}
+      {userSummary.overallAccuracy && (
+        <CardWrapper>
+          <div className="mb-6 text-lg font-medium text-gray-800">
+            Overall Accuracy
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <StatCard
+              label="Avg MAE"
+              value={userSummary.overallAccuracy.avgMAE?.toFixed(2)}
+            />
+            <StatCard
+              label="Avg RMSE"
+              value={userSummary.overallAccuracy.avgRMSE?.toFixed(2)}
+            />
+            <StatCard
+              label="Avg Pearson"
+              value={userSummary.overallAccuracy.avgPearson?.toFixed(3)}
+            />
+            <StatCard
+              label="Avg MAPE"
+              value={userSummary.overallAccuracy.avgMAPE?.toFixed(2)}
+            />
+          </div>
+        </CardWrapper>
       )}
 
-      
     </div>
   );
 };

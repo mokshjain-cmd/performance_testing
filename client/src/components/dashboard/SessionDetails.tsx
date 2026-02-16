@@ -1,4 +1,3 @@
-
 import React from 'react';
 import type { Session } from '../../types';
 import { splitDateTime } from '../../utils/dateTime';
@@ -7,58 +6,113 @@ interface Props {
   session: Session;
 }
 
-const badgeStyle = (bg: string): React.CSSProperties => ({
-  background: bg,
-  borderRadius: 4,
-  padding: '2px 6px'
-});
-
 const SessionDetails: React.FC<Props> = ({ session }) => {
   return (
-    <div style={{ marginBottom: 24, padding: 16, background: '#f9fafb', borderRadius: 8 }}>
-      <h2 style={{ marginBottom: 12 }}>Session Details</h2>
+    <div className="mb-8 rounded-2xl border border-gray-200 bg-gradient-to-br from-[#fafdff] to-[#f3f4f8] p-7 shadow-[0_4px_24px_0_rgba(60,60,67,0.10)]">
+      
+      <h2 className="mb-5 text-2xl font-bold text-gray-800">
+        Session Details
+      </h2>
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
-        <div><strong>ID:</strong> <span style={badgeStyle('#e0e7ff')}>{session._id}</span></div>
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 items-center text-sm">
 
+        {/* ID */}
+        <div>
+          <strong>ID:</strong>{' '}
+          <span className="rounded-lg bg-indigo-100 px-3 py-1 text-gray-800 shadow-sm">
+            {session._id}
+          </span>
+        </div>
+
+        {/* User */}
         <div>
           <strong>User:</strong>{' '}
-          <span style={badgeStyle('#e0e7ff')}>
+          <span className="rounded-lg bg-indigo-100 px-3 py-1 text-gray-800 shadow-sm">
             {session.userId?.name} ({session.userId?.email})
           </span>
         </div>
 
-        <div><strong>Activity:</strong> <span style={badgeStyle('#fef9c3')}>{session.activityType}</span></div>
+        {/* Activity */}
         <div>
-          <strong>Start:</strong> 
-          <span style={badgeStyle('#bbf7d0')}>{splitDateTime(session.startTime).date}</span>
-          <span style={badgeStyle('#bbf7d0')}>{splitDateTime(session.startTime).time}</span>
+          <strong>Activity:</strong>{' '}
+          <span className="rounded-lg bg-yellow-100 px-3 py-1 text-gray-800 shadow-sm">
+            {session.activityType}
+          </span>
         </div>
-        <div>
-          <strong>End:</strong> 
-          <span style={badgeStyle('#fca5a5')}>{splitDateTime(session.endTime).date}</span>
-          <span style={badgeStyle('#fca5a5')}>{splitDateTime(session.endTime).time}</span>
-        </div>
-        <div><strong>Duration:</strong> <span style={badgeStyle('#f3e8ff')}>{session.durationSec}s</span></div>
 
+        {/* Start */}
+        <div>
+          <strong>Start:</strong>{' '}
+          <span className="mr-2 rounded-lg bg-green-200 px-3 py-1 shadow-sm">
+            {splitDateTime(session.startTime).date}
+          </span>
+          <span className="rounded-lg bg-green-200 px-3 py-1 shadow-sm">
+            {splitDateTime(session.startTime).time}
+          </span>
+        </div>
+
+        {/* End */}
+        <div>
+          <strong>End:</strong>{' '}
+          <span className="mr-2 rounded-lg bg-red-200 px-3 py-1 shadow-sm">
+            {splitDateTime(session.endTime).date}
+          </span>
+          <span className="rounded-lg bg-red-200 px-3 py-1 shadow-sm">
+            {splitDateTime(session.endTime).time}
+          </span>
+        </div>
+
+        {/* Duration */}
+        <div>
+          <strong>Duration:</strong>{' '}
+          <span className="rounded-lg bg-purple-100 px-3 py-1 shadow-sm">
+            {session.durationSec}s
+          </span>
+        </div>
+
+        {/* Devices */}
         <div>
           <strong>Devices:</strong>{' '}
-          {session.devices.map(d => (
-            <span key={d.deviceId} style={{ ...badgeStyle('#bae6fd'), marginRight: 6 }}>
+          {session.devices.map((d) => (
+            <span
+              key={d.deviceId}
+              className="mr-2 inline-block rounded-lg bg-sky-200 px-3 py-1 shadow-sm"
+            >
               {d.deviceType}
             </span>
           ))}
         </div>
 
-        <div><strong>Benchmark:</strong> <span style={badgeStyle('#fcd34d')}>{session.benchmarkDeviceType}</span></div>
-        <div><strong>Band Position:</strong> <span style={badgeStyle('#fef08a')}>{session.bandPosition}</span></div>
+        {/* Benchmark */}
+        <div>
+          <strong>Benchmark:</strong>{' '}
+          <span className="rounded-lg bg-amber-300 px-3 py-1 shadow-sm">
+            {session.benchmarkDeviceType}
+          </span>
+        </div>
 
+        {/* Band Position */}
+        <div>
+          <strong>Band Position:</strong>{' '}
+          <span className="rounded-lg bg-yellow-200 px-3 py-1 shadow-sm">
+            {session.bandPosition}
+          </span>
+        </div>
+
+        {/* Valid */}
         <div>
           <strong>Valid:</strong>{' '}
-          <span style={badgeStyle(session.isValid ? '#bbf7d0' : '#fecaca')}>
+          <span
+            className={`rounded-lg px-3 py-1 shadow-sm ${
+              session.isValid
+                ? 'bg-green-200'
+                : 'bg-red-200'
+            }`}
+          >
             {session.isValid ? 'Yes' : 'No'}
           </span>
         </div>
+
       </div>
     </div>
   );

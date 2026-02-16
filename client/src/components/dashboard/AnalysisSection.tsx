@@ -1,30 +1,26 @@
 import React from 'react';
-import type{ Analysis } from '../../types';
+import type { Analysis } from '../../types';
 
 interface Props {
   analysis: Analysis;
 }
 
-const cardStyle: React.CSSProperties = {
-  background: '#f1f5f9',
-  borderRadius: 8,
-  padding: 12,
-  minWidth: 220
-};
-
 const AnalysisSection: React.FC<Props> = ({ analysis }) => {
   return (
-    <div style={{ marginBottom: 24 }}>
-      <h2 style={{ marginBottom: 12 }}>Session Analysis</h2>
+    <div className="mb-6">
+      <h2 className="mb-3 text-xl font-semibold">Session Analysis</h2>
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
-
+      <div className="flex flex-wrap gap-4">
+        
         {/* Device Stats */}
         {analysis?.deviceStats?.map((stat, idx) => (
-          <div key={idx} style={cardStyle}>
-            <div style={{ fontWeight: 600, marginBottom: 6 }}>
+          <div
+            key={idx}
+            className="min-w-[220px] rounded-lg bg-slate-100 p-3 shadow-sm"
+          >
+            <div className="mb-1.5 font-semibold">
               {stat.deviceType}{' '}
-              <span style={{ background: '#e0e7ff', borderRadius: 4, padding: '2px 6px', fontSize: 12 }}>
+              <span className="ml-1 rounded bg-indigo-100 px-1.5 py-0.5 text-xs">
                 {stat.firmwareVersion}
               </span>
             </div>
@@ -40,8 +36,11 @@ const AnalysisSection: React.FC<Props> = ({ analysis }) => {
 
         {/* Pairwise Comparisons */}
         {analysis?.pairwiseComparisons?.map((pair, idx) => (
-          <div key={idx} style={{ ...cardStyle, background: '#fef9c3' }}>
-            <div style={{ fontWeight: 600, marginBottom: 6 }}>
+          <div
+            key={idx}
+            className="min-w-[220px] rounded-lg bg-yellow-100 p-3 shadow-sm"
+          >
+            <div className="mb-1.5 font-semibold">
               {pair.d1} vs {pair.d2}
             </div>
 

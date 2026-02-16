@@ -27,48 +27,42 @@ function TableWithBar<T extends { [key: string]: any }>({
   BarGraph,
   barPosition = 'right',
 }: TableWithBarProps<T>) {
-  const tableStyle: React.CSSProperties = {
-    width: '100%',
-    borderCollapse: 'collapse',
-    marginTop: 8,
-  };
-  const thtd: React.CSSProperties = {
-    padding: 8,
-    border: '1px solid #eee',
-    textAlign: 'center',
-  };
   return (
-    <div style={{ display: 'flex', gap: 32, marginBottom: 32 }}>
+    <div className="flex gap-8 mb-8 items-start">
       {barPosition === 'left' && (
-        <div style={{ flex: 1, minWidth: 320 }}>
+        <div className="flex-1 min-w-[320px]">
           <BarGraph data={barData} title="" color={barColor} yLabel={yLabel} />
         </div>
       )}
-      <div style={{ flex: 1 }}>
-        <h3 style={{ marginBottom: 8 }}>{title}</h3>
-        <table style={tableStyle}>
-          <thead>
-            <tr style={{ background: '#f1f5f9' }}>
-              {columns.map(col => (
-                <th key={String(col.key)} style={thtd}>{col.label}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {data.map((row, i) => (
-              <tr key={row._id || i}>
+      <div className="flex-1">
+        <h3 className="mb-2 font-semibold text-lg">{title}</h3>
+        <div className="overflow-x-auto rounded-xl shadow bg-white/70">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="bg-slate-100">
                 {columns.map(col => (
-                  <td key={String(col.key)} style={thtd}>
-                    {col.render ? col.render(row[col.key], row) : row[col.key]}
-                  </td>
+                  <th key={String(col.key)} className="px-4 py-2 border border-slate-200 text-center text-base font-medium">
+                    {col.label}
+                  </th>
                 ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {data.map((row, i) => (
+                <tr key={row._id || i}>
+                  {columns.map(col => (
+                    <td key={String(col.key)} className="px-4 py-2 border border-slate-200 text-center text-base">
+                      {col.render ? col.render(row[col.key], row) : row[col.key]}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
       {barPosition === 'right' && (
-        <div style={{ flex: 1, minWidth: 320 }}>
+        <div className="flex-1 min-w-[320px]">
           <BarGraph data={barData} title="" color={barColor} yLabel={yLabel} />
         </div>
       )}

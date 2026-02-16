@@ -1,24 +1,10 @@
 import React from 'react';
 
-const spinnerStyle: React.CSSProperties = {
-  width: 48,
-  height: 48,
-  border: '6px solid #e0e7ff',
-  borderTop: '6px solid #38bdf8',
-  borderRadius: '50%',
-  animation: 'spin 1s linear infinite',
-  margin: 'auto',
-};
+
 
 const Loader: React.FC = () => (
-  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 120 }}>
-    <div style={spinnerStyle} />
-    <style>{`
-      @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-      }
-    `}</style>
+  <div className="flex justify-center items-center min-h-[120px] bg-transparent">
+    <div className="w-12 h-12 border-4 border-indigo-100 border-t-sky-400 rounded-full animate-spin shadow-md bg-gradient-to-br from-slate-50 to-slate-100" />
   </div>
 );
 
