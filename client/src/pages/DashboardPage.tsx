@@ -17,12 +17,16 @@ const DashboardPage: React.FC = () => {
 
   const userId = localStorage.getItem('userId');
 
-  useEffect(() => {
+  const fetchSessions = () => {
     if (userId) {
       axios.get(`http://localhost:3000/api/sessions/all/${userId}`)
         .then(res => setSessions(res.data.data || []))
         .catch(() => setSessions([]));
     }
+  };
+
+  useEffect(() => {
+    fetchSessions();
   }, [userId]);
 
   useEffect(() => {
@@ -50,6 +54,30 @@ const DashboardPage: React.FC = () => {
     }
   }, [userId, activeTab]);
 
+  const handleDeleteSession = async (sessionId: string) => {
+    if (!confirm('Are you sure you want to delete this session? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      await axios.delete(`http://localhost:3000/api/sessions/${sessionId}`);
+      
+      // If the deleted session was selected, clear selection
+      if (selectedSessionId === sessionId) {
+        setSelectedSessionId(null);
+        setSessionDetails(null);
+      }
+      
+      // Refresh the sessions list
+      fetchSessions();
+      
+      alert('Session deleted successfully!');
+    } catch (error) {
+      console.error('Error deleting session:', error);
+      alert('Failed to delete session. Please try again.');
+    }
+  };
+
   return (
     <DashboardLayout
       sidebar={
@@ -59,6 +87,7 @@ const DashboardPage: React.FC = () => {
           setActiveTab={setActiveTab}
           selectedSessionId={selectedSessionId}
           setSelectedSessionId={setSelectedSessionId}
+          onDeleteSession={handleDeleteSession}
         />
       }
     >

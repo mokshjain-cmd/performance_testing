@@ -6,6 +6,8 @@ import { parseLunaCsv } from '../parsers/lunaParser';
 import { parsePolarCsv } from '../parsers/polarParser';
 import { analyzeSession } from './sessionAnalysis.service';
 import { updateUserAccuracySummary } from './userAccuracySummary.service';
+import { updateLunaFirmwarePerformanceForSession } from './lunaFirmwarePerformanceUpdate.service';
+import { convertLunaTxtToCsv } from '../tools/lunaTxtToCsv';
 
 export async function ingestSessionFiles({
   sessionId,
@@ -38,7 +40,9 @@ export async function ingestSessionFiles({
       let readings: any[] = [];
 
       if (deviceType === "luna") {
-        readings = await parseLunaCsv(filePath, meta, startTime, endTime);
+        // Convert .txt to .csv with header if needed
+        const csvFilePath = await convertLunaTxtToCsv(filePath);
+        readings = await parseLunaCsv(csvFilePath, meta, startTime, endTime);
       }
       if (deviceType === "polar") { readings = await parsePolarCsv(filePath, meta, startTime, endTime); }
       console.log(`Parsed ${readings.length} readings from ${deviceType} file.`);
@@ -63,6 +67,8 @@ export async function ingestSessionFiles({
           await updateUserAccuracySummary(userId);
           console.log('User accuracy summary updated for user:', userId);
         }
+        // Update Luna firmware performance for this session
+        await updateLunaFirmwarePerformanceForSession(sessionId);
       } catch (err) {
         console.error('❌ Session analysis failed:', err);
       }

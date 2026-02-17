@@ -23,14 +23,18 @@ export async function analyzeSession(sessionId: Types.ObjectId) {
     calcDeviceStats(deviceType, arr)
   );
 
-  // Pairwise stats
+  // Pairwise stats - Only Luna vs other devices
   const deviceTypes = Object.keys(deviceMap);
   const pairwiseComparisons = [];
-  for (let i = 0; i < deviceTypes.length; i++) {
-    for (let j = i + 1; j < deviceTypes.length; j++) {
-      pairwiseComparisons.push(
-        ...calcPairwiseStats(deviceTypes[i], deviceMap[deviceTypes[i]], deviceTypes[j], deviceMap[deviceTypes[j]])
-      );
+  
+  // Only do pairwise analysis for Luna vs rest of the devices
+  if (deviceMap['luna']) {
+    for (const deviceType of deviceTypes) {
+      if (deviceType !== 'luna') {
+        pairwiseComparisons.push(
+          ...calcPairwiseStats('luna', deviceMap['luna'], deviceType, deviceMap[deviceType])
+        );
+      }
     }
   }
 

@@ -60,7 +60,7 @@ export async function parseLunaCsv(
     console.log("🕒 End Time:", endTime.toISOString());
     console.log("===============================\n");
 
-    const perSecondMap = new Map<number, (number | null)[]>(); // key = epoch second, value = HR values list
+    const perSecondMapWithQI = new Map<number, { hr: number | null; qi: number }[]>(); // key = epoch second, value = HR+QI list
     let timestampCol: string | null = null;
 
     let totalRows = 0;
@@ -138,36 +138,45 @@ export async function parseLunaCsv(
 
           const epochSec = Math.floor(ts.getTime() / 1000);
 
-          // Parse HR
+          // Parse HR and Hr_Qi
           const hrRaw = row["Hrs"];
+          const qiRaw = row["Hr_Qi"];
+          
           if (!hrRaw) {
             invalidHrRows++;
             skippedRows++;
             return;
           }
 
-
-
           let hr: number | null = parseFloat(hrRaw);
+          let qi: number = qiRaw ? parseFloat(qiRaw) : 0;
+          
           if (isNaN(hr)) {
             invalidHrRows++;
             skippedRows++;
             console.log("⚠️ Invalid HR found:", hrRaw, "at timestamp:", tsFull);
             return;
           }
-          // If HR is 255, treat as null (missing)
-          if (hr === 255) hr = null;
-
-          if (!perSecondMap.has(epochSec)) {
-            perSecondMap.set(epochSec, []);
+          
+          if (isNaN(qi)) {
+            qi = 0; // Default to 0 if QI is invalid
           }
 
-          perSecondMap.get(epochSec)!.push(hr);
+          // Mark as invalid if Hr_Qi == 0 AND Hrs == 255
+          if (qi === 0 && hr === 255) {
+            hr = null;
+          }
+
+          if (!perSecondMapWithQI.has(epochSec)) {
+            perSecondMapWithQI.set(epochSec, []);
+          }
+
+          perSecondMapWithQI.get(epochSec)!.push({ hr, qi });
 
           // Print first few rows for sanity check
           if (inRangeRows <= 5) {
             console.log(
-              `✅ Row ${totalRows} accepted: ts=${ts.toISOString()}, hr=${hr}`
+              `✅ Row ${totalRows} accepted: ts=${ts.toISOString()}, hr=${hr}, qi=${qi}`
             );
           }
         } catch (err) {
@@ -184,19 +193,33 @@ export async function parseLunaCsv(
         console.log("📌 Skipped Rows:", skippedRows);
         console.log("📌 Invalid Timestamp Rows:", invalidTimestampRows);
         console.log("📌 Invalid HR Rows:", invalidHrRows);
-        console.log("📌 Unique Seconds Buckets:", perSecondMap.size);
+        console.log("📌 Unique Seconds Buckets:", perSecondMapWithQI.size);
 
         const normalized: NormalizedReadingInput[] = [];
 
-        const sortedKeys = Array.from(perSecondMap.keys()).sort((a, b) => a - b);
+        const sortedKeys = Array.from(perSecondMapWithQI.keys()).sort((a, b) => a - b);
 
 
         for (const epochSec of sortedKeys) {
-          // Remove nulls before averaging
-          const values = perSecondMap.get(epochSec)!.filter((v) => v !== null);
+          // Get all readings for this second
+          const readings = perSecondMapWithQI.get(epochSec)!;
+          
+          // Filter valid readings (where hr is not null)
+          const validReadings = readings.filter((r) => r.hr !== null && r.qi > 0);
+          
           let avg: number | null = null;
-          if (values.length > 0) {
-            avg = values.reduce((a, b) => a + b, 0) / values.length;
+          
+          if (validReadings.length > 0) {
+            // Calculate weighted average using Hr_Qi as weights
+            const totalWeight = validReadings.reduce((sum, r) => sum + r.qi, 0);
+            
+            if (totalWeight > 0) {
+              const weightedSum = validReadings.reduce((sum, r) => sum + r.hr! * r.qi, 0);
+              avg = weightedSum / totalWeight;
+            } else {
+              // Fallback to simple average if all weights are 0
+              avg = validReadings.reduce((sum, r) => sum + r.hr!, 0) / validReadings.length;
+            }
           }
           normalized.push({
             meta: {

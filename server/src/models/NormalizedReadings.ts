@@ -51,6 +51,7 @@ const NormalizedReadingSchema = new Schema<INormalizedReading>(
 NormalizedReadingSchema.index({ "meta.sessionId": 1 });
 NormalizedReadingSchema.index({ "meta.deviceType": 1 });
 NormalizedReadingSchema.index({ "meta.firmwareVersion": 1 });
+NormalizedReadingSchema.index({ "meta.sessionId": 1, timestamp: 1 });
 
 export default model<INormalizedReading>(
   "NormalizedReading",

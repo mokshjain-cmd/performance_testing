@@ -4,6 +4,7 @@ import Session from '../models/Session';
 import Device from '../models/Devices';
 import mongoose from "mongoose";
 import { ingestSessionFiles } from '../services/sessionIngestion.service';
+import { deleteSession as deleteSessionService } from '../services/sessionDeletion.service';
 
 /**
  * Create a new session with device files
@@ -176,11 +177,12 @@ export const getSession = async (
 export const getSessionsByUserId = async (
   req: Request,
   res: Response
-) => {
+): Promise<void> => {
   try {
     const { userId } = req.query;
     if (!userId) {
-      return res.status(400).json({ success: false, message: 'userId required' });
+      res.status(400).json({ success: false, message: 'userId required' });
+      return;
     }
     const sessions = await Session.find({ userId })
       .populate('userId', 'email name')
@@ -232,7 +234,7 @@ export const getAllSessions = async (
 };
 
 /**
- * Delete session
+ * Delete session and recalculate summaries
  */
 export const deleteSession = async (
   req: Request,
@@ -241,21 +243,35 @@ export const deleteSession = async (
   try {
     const { id } = req.params;
 
-    const deleted = await Session.findByIdAndDelete(id);
+    // Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid session ID'
+      });
+      return;
+    }
 
-    if (!deleted) {
+    // Delete session and recalculate summaries
+    const result = await deleteSessionService(id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Session deleted successfully',
+      data: result
+    });
+  } catch (error) {
+    console.error('Error deleting session:', error);
+    
+    // Handle "Session not found" error
+    if (error instanceof Error && error.message === 'Session not found') {
       res.status(404).json({
         success: false,
         message: 'Session not found'
       });
       return;
     }
-    res.status(200).json({
-      success: true,
-      message: 'Session deleted successfully'
-    });
-  } catch (error) {
-    console.error('Error deleting session:', error);
+    
     res.status(500).json({
       success: false,
       message: 'Failed to delete session',

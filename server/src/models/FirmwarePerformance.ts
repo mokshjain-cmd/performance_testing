@@ -15,12 +15,6 @@ export interface IFirmwarePerformance extends Document {
     avgAccuracy: number;
     totalSessions: number;
   }[];
-  previousFirmware?: string;
-  improvementFromPrevious?: {
-    maeDelta?: number;
-    rmseDelta?: number;
-    accuracyDeltaPercent?: number;
-  };
   computedAt: Date;
 }
 
@@ -41,12 +35,6 @@ const FirmwarePerformanceSchema = new Schema<IFirmwarePerformance>({
       totalSessions: Number,
     },
   ],
-  previousFirmware: String,
-  improvementFromPrevious: {
-    maeDelta: Number,
-    rmseDelta: Number,
-    accuracyDeltaPercent: Number,
-  },
   computedAt: { type: Date, default: Date.now },
 });
 

@@ -104,10 +104,23 @@ export function calcPairwiseStats(
 
   const diffs = arrA.map((a, i) => a - arrB[i]);
 
-    // Calculate MAE manually since ss.meanAbsoluteError does not exist
-    const mae = arrA.length ? arrA.reduce((sum, a, i) => sum + Math.abs(a - arrB[i]), 0) / arrA.length : 0;
-    const rmse = ss.rootMeanSquare(diffs);
-    const pearsonR = ss.sampleCorrelation(arrA, arrB);
+  // Calculate MAE manually since ss.meanAbsoluteError does not exist
+  const mae = arrA.length ? arrA.reduce((sum, a, i) => sum + Math.abs(a - arrB[i]), 0) / arrA.length : 0;
+  
+  // Calculate MAPE (Mean Absolute Percentage Error)
+  // MAPE = (1/n) * Σ(|actual - predicted| / |actual|) * 100
+  // Using arrB as actual (reference device) and arrA as predicted (test device)
+  const mape = arrB.length 
+    ? arrB.reduce((sum, actual, i) => {
+        if (actual !== 0) { // Avoid division by zero
+          return sum + (Math.abs(actual - arrA[i]) / Math.abs(actual));
+        }
+        return sum;
+      }, 0) / arrB.length * 100 
+    : 0;
+  
+  const rmse = ss.rootMeanSquare(diffs);
+  const pearsonR = ss.sampleCorrelation(arrA, arrB);
   const rSquared = pearsonR * pearsonR;
   const meanBias = ss.mean(diffs);
   const sdDiff = ss.standardDeviation(diffs);
@@ -135,6 +148,7 @@ export function calcPairwiseStats(
       toleranceMs,
       mae,
       rmse,
+      mape,
       pearsonR,
       rSquared,
       meanBias,

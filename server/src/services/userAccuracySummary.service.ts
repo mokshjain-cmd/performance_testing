@@ -23,7 +23,7 @@ export async function updateUserAccuracySummary(userId: Types.ObjectId | string)
   // Overall accuracy (averages)
   let totalMAE = 0, totalRMSE = 0, totalPearson = 0, totalMAPE = 0, count = 0;
   let bestSession: any = null;
-  let bestAccuracy = -Infinity;
+  let bestAccuracy = Infinity; // Lower MAPE is better
 
   // For activity, firmware, band position
   const activityMap = new Map<string, { sum: number, count: number, duration: number }>();
@@ -37,25 +37,29 @@ export async function updateUserAccuracySummary(userId: Types.ObjectId | string)
     const duration = (new Date(session.endTime).getTime() - new Date(session.startTime).getTime()) / 1000;
     // Use first pairwise as main accuracy (if exists)
     const pair = analysis.pairwiseComparisons?.[0];
-    if (pair && typeof pair.pearsonR === 'number') {
+    if (pair && typeof pair.mape === 'number') {
       totalMAE += pair.mae || 0;
       totalRMSE += pair.rmse || 0;
-      totalPearson += pair.pearsonR;
-      totalMAPE += pair.meanBias || 0;
+      totalPearson += pair.pearsonR || 0;
+      totalMAPE += pair.mape || 0;
       count++;
-      // For best session (use Pearson as accuracy % for now)
-      if (pair.pearsonR > bestAccuracy) {
-        bestAccuracy = pair.pearsonR;
+      
+      // Calculate accuracy from MAPE: accuracy = 100 - MAPE
+      const sessionAccuracy = 100 - (pair.mape || 0);
+      
+      // For best session (lower MAPE = higher accuracy)
+      if (pair.mape < bestAccuracy) {
+        bestAccuracy = pair.mape;
         bestSession = {
           sessionId: analysis.sessionId,
           activityType: session.activityType,
-          accuracyPercent: pair.pearsonR * 100,
+          accuracyPercent: sessionAccuracy,
         };
       }
       // Activity
       if (session.activityType) {
         const a = activityMap.get(session.activityType) || { sum: 0, count: 0, duration: 0 };
-        a.sum += pair.pearsonR * 100;
+        a.sum += sessionAccuracy;
         a.count++;
         a.duration += duration;
         activityMap.set(session.activityType, a);
@@ -75,15 +79,15 @@ export async function updateUserAccuracySummary(userId: Types.ObjectId | string)
             count: 0,
         };
 
-        f.sum += pair.pearsonR * 100; // session accuracy
-        f.count += 1;                 // count session once
+        f.sum += sessionAccuracy; // session accuracy from MAPE
+        f.count += 1;             // count session once
         firmwareMap.set(firmwareVersion, f);
         }
 
       // Band position
       if (session.bandPosition) {
         const b = bandMap.get(session.bandPosition) || { sum: 0, count: 0, duration: 0 };
-        b.sum += pair.pearsonR * 100;
+        b.sum += sessionAccuracy;
         b.count++;
         b.duration += duration;
         bandMap.set(session.bandPosition, b);
