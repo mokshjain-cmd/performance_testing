@@ -44,17 +44,28 @@ export const createSession = async (
   try {
     const {
       userId,
+      sessionName,
       activityType,
       startTime,
       endTime,
       benchmarkDeviceType,
-      bandPosition
+      bandPosition,
+      firmwareVersion
     } = req.body;
 
     if (!userId || !activityType || !startTime || !endTime) {
       res.status(400).json({
         success: false,
         message: "Missing required fields: userId, activityType, startTime, endTime"
+      });
+      return;
+    }
+
+    // Validate firmwareVersion is provided (required for Luna)
+    if (!firmwareVersion) {
+      res.status(400).json({
+        success: false,
+        message: "firmwareVersion is required"
       });
       return;
     }
@@ -82,10 +93,24 @@ export const createSession = async (
       files.map(async (file) => {
         const deviceType = file.fieldname;
 
-        const device = await Device.findOne({ deviceType });
-
-        if (!device) {
-          throw new Error(`Device not registered: ${deviceType}`);
+        // For Luna devices, search by both deviceType and firmwareVersion
+        // For other devices, search by deviceType only
+        let device;
+        if (deviceType === 'luna') {
+          device = await Device.findOne({ 
+            deviceType, 
+            firmwareVersion 
+          });
+          
+          if (!device) {
+            throw new Error(`Luna device with firmware version ${firmwareVersion} not found. Please ensure this firmware version is registered.`);
+          }
+        } else {
+          device = await Device.findOne({ deviceType });
+          
+          if (!device) {
+            throw new Error(`Device not registered: ${deviceType}`);
+          }
         }
 
         return {
@@ -99,6 +124,7 @@ export const createSession = async (
     // Create session
     const session = await Session.create({
       userId,
+      name: sessionName,
       activityType,
       startTime: start,
       endTime: end,
@@ -282,3 +308,23 @@ export const deleteSession = async (
 
 
 
+//route to get all session for a user but its id only
+export const getSessionIdsByUserId = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { userId } = req.params;
+    console.error('Received userId:', userId);
+    if (!userId) {
+      res.status(400).json({ success: false, message: 'userId required' });
+      return;
+    }
+    const sessions = await Session.find({ userId }, '_id').exec();
+    console.error('session ids:', sessions);
+    res.status(200).json({ success: true, count: sessions.length, data: sessions });
+  } catch (error) {
+    console.error('Error fetching session IDs:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch session IDs', error: error instanceof Error ? error.message : 'Unknown error' });
+  }
+};

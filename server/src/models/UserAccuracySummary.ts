@@ -14,6 +14,11 @@ export interface IUserAccuracySummary extends Document {
     activityType: string;
     accuracyPercent: number;
   };
+  worstSession?: {
+    sessionId: Types.ObjectId;
+    activityType: string;
+    accuracyPercent: number;
+  };
   activityWiseAccuracy: {
     activityType: string;
     avgAccuracy: number;
@@ -44,6 +49,11 @@ const UserAccuracySummarySchema = new Schema<IUserAccuracySummary>({
     avgMAPE: Number,
   },
   bestSession: {
+    sessionId: { type: Schema.Types.ObjectId, ref: "Session" },
+    activityType: String,
+    accuracyPercent: Number,
+  },
+  worstSession: {
     sessionId: { type: Schema.Types.ObjectId, ref: "Session" },
     activityType: String,
     accuracyPercent: Number,

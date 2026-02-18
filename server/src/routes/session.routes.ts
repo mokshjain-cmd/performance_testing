@@ -1,6 +1,6 @@
 
 import { Router } from 'express';
-import { createSession, getSession, getAllSessions, deleteSession, getSessionsByUserId } from '../controllers/session.controller';
+import { createSession, getSession, getAllSessions, deleteSession, getSessionsByUserId, getSessionIdsByUserId } from '../controllers/session.controller';
 import { getSessionFullDetails } from '../controllers/sessionDetails.controller';
 import { uploadDeviceFiles } from '../middleware/upload.middleware';
 // Get full session details, analysis, and points for plotting
@@ -18,6 +18,7 @@ router.get('/:id', getSession);
 // Get all sessions
 
 router.get('/all/:userId', getAllSessions);
+router.get('/allid/:userId', getSessionIdsByUserId);
 
 
 

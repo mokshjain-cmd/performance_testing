@@ -27,7 +27,9 @@ const StatCard: React.FC<{
 );
 
 const SummaryCards: React.FC<Props> = ({ userSummary }) => {
-  const { date, time } = splitDateTime(userSummary.lastUpdated);
+  // Add 5:30 hours to convert UTC to IST
+  const istDate = new Date(new Date(userSummary.lastUpdated).getTime() + (5.5 * 60 * 60 * 1000));
+  const { date, time } = splitDateTime(istDate.toISOString());
 
   return (
     <div className="flex flex-col gap-10">

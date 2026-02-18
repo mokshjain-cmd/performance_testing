@@ -23,7 +23,9 @@ export async function updateUserAccuracySummary(userId: Types.ObjectId | string)
   // Overall accuracy (averages)
   let totalMAE = 0, totalRMSE = 0, totalPearson = 0, totalMAPE = 0, count = 0;
   let bestSession: any = null;
+  let worstSession: any = null;
   let bestAccuracy = Infinity; // Lower MAPE is better
+  let worstAccuracy = -Infinity; // Higher MAPE is worse
 
   // For activity, firmware, band position
   const activityMap = new Map<string, { sum: number, count: number, duration: number }>();
@@ -31,12 +33,16 @@ export async function updateUserAccuracySummary(userId: Types.ObjectId | string)
   const bandMap = new Map<string, { sum: number, count: number, duration: number }>();
 
   for (const analysis of analyses) {
-    // Assume benchmark device is first in deviceStats
+    // Get session to access benchmarkDeviceType
     const session = sessionMap.get(String(analysis.sessionId));
     if (!session) continue;
     const duration = (new Date(session.endTime).getTime() - new Date(session.startTime).getTime()) / 1000;
-    // Use first pairwise as main accuracy (if exists)
-    const pair = analysis.pairwiseComparisons?.[0];
+    
+    // Find the Luna vs benchmark device comparison
+    const pair = analysis.pairwiseComparisons?.find(
+      (p: any) => p.d1 === 'luna' && p.d2 === session.benchmarkDeviceType
+    );
+    
     if (pair && typeof pair.mape === 'number') {
       totalMAE += pair.mae || 0;
       totalRMSE += pair.rmse || 0;
@@ -56,6 +62,16 @@ export async function updateUserAccuracySummary(userId: Types.ObjectId | string)
           accuracyPercent: sessionAccuracy,
         };
       }
+      
+      // For worst session (higher MAPE = lower accuracy)
+      if (pair.mape > worstAccuracy) {
+        worstAccuracy = pair.mape;
+        worstSession = {
+          sessionId: analysis.sessionId,
+          activityType: session.activityType,
+          accuracyPercent: sessionAccuracy,
+        };
+      }
       // Activity
       if (session.activityType) {
         const a = activityMap.get(session.activityType) || { sum: 0, count: 0, duration: 0 };
@@ -68,7 +84,7 @@ export async function updateUserAccuracySummary(userId: Types.ObjectId | string)
         // --- Firmware (ONLY for Luna watch under test) ---
         const lunaDevice = (analysis.deviceStats || []).find(
         (stat: any) =>
-            stat.deviceName?.toLowerCase() === 'luna'
+            stat.deviceType?.toLowerCase() === 'luna'
         );
 
         if (lunaDevice?.firmwareVersion) {
@@ -106,6 +122,7 @@ export async function updateUserAccuracySummary(userId: Types.ObjectId | string)
       avgMAPE: totalMAPE / count,
     } : undefined,
     bestSession: bestSession || undefined,
+    worstSession: worstSession || undefined,
     activityWiseAccuracy: Array.from(activityMap.entries()).map(([activityType, v]) => ({
       activityType,
       avgAccuracy: v.count ? v.sum / v.count : 0,

@@ -3,14 +3,17 @@ import Session from '../models/Session';
 import SessionAnalysis from '../models/SessionAnalysis';
 import NormalizedReading from '../models/NormalizedReadings';
 
-export const getSessionFullDetails = async (req: Request, res: Response) => {
+export const getSessionFullDetails = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     // Get session
     const session = await Session.findById(id)
       .populate('userId', 'email name')
       .lean();
-    if (!session) return res.status(404).json({ success: false, message: 'Session not found' });
+    if (!session) {
+      res.status(404).json({ success: false, message: 'Session not found' });
+      return;
+    }
 
     // Get analysis
     const analysis = await SessionAnalysis.findOne({ sessionId: id }).lean();

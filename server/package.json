@@ -4,6 +4,7 @@
   "description": "Backend for performance testing platform",
   "main": "dist/server.js",
   "scripts": {
+    "predev": "kill-port 3000 || true",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
@@ -37,6 +38,7 @@
     "eslint": "^8.54.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.0.1",
+    "kill-port": "^2.0.1",
     "prettier": "^3.1.0",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.3.2"

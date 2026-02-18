@@ -8,6 +8,7 @@
 
     export interface ISession extends Document {
     userId: Types.ObjectId;
+    name?: string;
     activityType: string;
     startTime: Date;
     endTime: Date;
@@ -23,6 +24,7 @@
     const SessionSchema = new Schema<ISession>(
     {
         userId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
+        name: { type: String, index: true },
         activityType: { type: String, required: true, index: true },
         startTime: { type: Date, required: true, index: true },
         endTime: { type: Date, required: true },

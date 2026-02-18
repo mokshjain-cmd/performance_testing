@@ -109,3 +109,30 @@ export const getAllDevices = async (
     });
   }
 };
+
+export const getLunaFirmwareVersions = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const firmwareVersions = await Device.distinct('firmwareVersion', {
+      deviceType: 'luna'
+    });
+
+    res.status(200).json({
+      success: true,
+      deviceType: 'luna',
+      count: firmwareVersions.length,
+      data: firmwareVersions
+    });
+
+  } catch (error) {
+    console.error('Error fetching Luna firmware versions:', error);
+
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch Luna firmware versions',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+};

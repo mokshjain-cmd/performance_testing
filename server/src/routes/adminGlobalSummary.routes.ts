@@ -1,0 +1,14 @@
+import { Router } from 'express';
+import { getAdminGlobalSummary } from '../controllers/adminGlobalSummary.controller';
+
+// Uncomment the following line to enable role-based access control
+// import { verifyUserRole, requireAdmin } from '../middleware';
+
+const router = Router();
+
+// GET global summary
+// Add verifyUserRole and requireAdmin middleware to restrict access:
+// router.get('/', verifyUserRole, requireAdmin, getAdminGlobalSummary);
+router.get('/', getAdminGlobalSummary);
+
+export default router;

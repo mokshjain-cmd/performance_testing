@@ -15,13 +15,24 @@ export async function updateFirmwarePerformanceForLuna(firmwareVersion: string) 
   const analyses = await SessionAnalysis.find({ sessionId: { $in: sessionIds } }).lean();
   if (!analyses.length) return;
 
+  // Helper: get session by id
+  const sessionMap = new Map(sessions.map(s => [String(s._id), s]));
+
   // Aggregate overall accuracy
   let totalMAE = 0, totalRMSE = 0, totalPearson = 0, totalMAPE = 0, count = 0;
   const activityMap = new Map<string, { sum: number, count: number }>();
   const userSet = new Set<string>();
 
   for (const analysis of analyses) {
-    const pair = analysis.pairwiseComparisons?.[0];
+    // Get session to access benchmarkDeviceType
+    const session = sessionMap.get(String(analysis.sessionId));
+    if (!session) continue;
+    
+    // Find the Luna vs benchmark device comparison
+    const pair = analysis.pairwiseComparisons?.find(
+      (p: any) => p.d1 === 'luna' && p.d2 === session.benchmarkDeviceType
+    );
+    
     if (pair && typeof pair.mape === 'number') {
       totalMAE += pair.mae || 0;
       totalRMSE += pair.rmse || 0;
@@ -63,7 +74,7 @@ export async function updateFirmwarePerformanceForLuna(firmwareVersion: string) 
   };
 
   // Upsert
-  console.log('Updating firmware performance for Luna version:', firmwareVersion, 'with data:', doc);
+  //console.log('Updating firmware performance for Luna version:', firmwareVersion, 'with data:', doc);
   try{
         await FirmwarePerformance.findOneAndUpdate(
         { firmwareVersion },

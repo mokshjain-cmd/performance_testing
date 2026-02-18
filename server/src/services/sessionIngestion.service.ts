@@ -8,6 +8,10 @@ import { analyzeSession } from './sessionAnalysis.service';
 import { updateUserAccuracySummary } from './userAccuracySummary.service';
 import { updateLunaFirmwarePerformanceForSession } from './lunaFirmwarePerformanceUpdate.service';
 import { convertLunaTxtToCsv } from '../tools/lunaTxtToCsv';
+import { updateActivityPerformanceSummary } from './activityPerformanceSummary.service';
+import { updateAdminDailyTrend } from './adminDailyTrend.service';
+import { updateAdminGlobalSummary } from './adminGlobalSummary.service';
+import { updateBenchmarkComparisonSummariesForSession } from './benchmarkComparisonSummary.service';
 
 export async function ingestSessionFiles({
   sessionId,
@@ -62,13 +66,35 @@ export async function ingestSessionFiles({
       try {
         await analyzeSession(sessionId);
         console.log('Session analysis completed for session:', sessionId);
+        
         // Update user accuracy summary after analysis
         if (userId) {
           await updateUserAccuracySummary(userId);
           console.log('User accuracy summary updated for user:', userId);
         }
+        
         // Update Luna firmware performance for this session
         await updateLunaFirmwarePerformanceForSession(sessionId);
+        
+        // Update activity performance summary
+        if (activityType) {
+          await updateActivityPerformanceSummary(activityType);
+          console.log('Activity performance summary updated for:', activityType);
+        }
+        
+        // Update admin daily trend for session date
+        if (startTime) {
+          await updateAdminDailyTrend(startTime);
+          console.log('Admin daily trend updated for session date');
+        }
+        
+        // Update benchmark comparison summaries for devices in this session
+        await updateBenchmarkComparisonSummariesForSession(sessionId);
+        
+        // Update admin global summary
+        await updateAdminGlobalSummary();
+        console.log('Admin global summary updated');
+        
       } catch (err) {
         console.error('❌ Session analysis failed:', err);
       }

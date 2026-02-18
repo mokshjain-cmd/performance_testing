@@ -1,4 +1,6 @@
 import React from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Header } from '../common';
 
 interface DashboardLayoutProps {
   sidebar: React.ReactNode;
@@ -9,22 +11,62 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   sidebar,
   children,
 }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [isLoggedIn, setIsLoggedIn] = React.useState(!!localStorage.getItem('userId'));
+
+  React.useEffect(() => {
+    setIsLoggedIn(!!localStorage.getItem('userId'));
+  }, [location.pathname]);
+
+  const handleLogin = () => navigate('/login');
+  const handleLogout = () => {
+    localStorage.removeItem('userId');
+    localStorage.removeItem('userRole');
+    setIsLoggedIn(false);
+    navigate('/login');
+  };
+  const handleNavigate = (route: string) => {
+    if (route === 'dashboard') {
+      // Navigate to appropriate dashboard based on role
+      const userRole = localStorage.getItem('userRole');
+      if (userRole === 'admin') {
+        navigate('/admin/dashboard');
+      } else {
+        navigate('/dashboard');
+      }
+    } else if (route === 'create-session') {
+      navigate('/session/new');
+    } else {
+      navigate('/');
+    }
+  };
+
   return (
-    <div className="flex h-screen bg-[#ececf0]">
+    <div className="flex flex-col h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-gray-50">
+      <Header
+        isLoggedIn={isLoggedIn}
+        onLogin={handleLogin}
+        onLogout={handleLogout}
+        onNavigate={handleNavigate}
+      />
+      <div className="flex flex-1 overflow-hidden">
       
       {/* Sidebar */}
       <div
         className="
-          w-[260px]
-          m-3
-          p-5
+          w-[270px]
+          m-4
+          p-6
           flex
           flex-col
           min-h-[96vh]
-          bg-gradient-to-br from-[#f5f6fa] to-[#e9e9ee]
-          shadow-[2px_0_16px_0_rgba(60,60,67,0.08)]
-          rounded-tr-[18px]
-          rounded-br-[18px]
+          bg-white/80
+          backdrop-blur-xl
+          shadow-[0_8px_32px_rgba(0,0,0,0.06)]
+          border
+          border-gray-100/50
+          rounded-2xl
         "
       >
         {sidebar}
@@ -34,15 +76,19 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
       <div
         className="
           flex-1
-          m-3
+          m-4
           p-10
           overflow-y-auto
-          bg-gradient-to-br from-[#fafdff] to-[#f3f4f8]
-          rounded-[18px]
-          shadow-[0_4px_32px_0_rgba(60,60,67,0.10)]
+          bg-white/60
+          backdrop-blur-xl
+          rounded-2xl
+          shadow-[0_8px_32px_rgba(0,0,0,0.06)]
+          border
+          border-gray-100/50
         "
       >
         {children}
+      </div>
       </div>
     </div>
   );

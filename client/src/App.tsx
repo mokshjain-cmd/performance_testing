@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { HomePage, DashboardPage, LoginPage, SessionFormPage } from './pages';
+import { HomePage, DashboardPage, AdminDashboardPage, LoginPage, SessionFormPage } from './pages';
 import SignUpPage from './pages/SignUpPage';
-import { ProtectedRoute } from './components/common';
+import { ProtectedRoute, AdminRoute, TesterRoute } from './components/common';
 
 function App() {
   return (
@@ -10,11 +10,22 @@ function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignUpPage />} />
-        <Route path="/dashboard" element={
-          <ProtectedRoute>
-            <DashboardPage />
-          </ProtectedRoute>
+        
+        {/* Admin Dashboard - Only accessible by admins */}
+        <Route path="/admin/dashboard" element={
+          <AdminRoute>
+            <AdminDashboardPage />
+          </AdminRoute>
         } />
+        
+        {/* Tester Dashboard - Only accessible by testers */}
+        <Route path="/dashboard" element={
+          <TesterRoute>
+            <DashboardPage />
+          </TesterRoute>
+        } />
+        
+        {/* Session creation - Available to both roles */}
         <Route path="/session/new" element={
           <ProtectedRoute>
             <SessionFormPage />

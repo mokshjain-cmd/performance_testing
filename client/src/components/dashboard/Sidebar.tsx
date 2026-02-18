@@ -20,13 +20,13 @@ const Sidebar: React.FC<Props> = ({
   onDeleteSession,
 }) => {
   const baseButton =
-  "w-full text-left px-4 py-3 mb-2 rounded-xl text-base font-medium transition-all duration-200 shadow-sm truncate";
+  "w-full text-left px-5 py-3.5 mb-2 rounded-xl text-base font-medium transition-all duration-200 shadow-sm truncate";
 
   const inactiveButton =
-    "bg-gradient-to-r from-[#f7f8fa] to-[#f1f2f6] text-gray-800 hover:shadow-md border border-transparent hover:border-indigo-20";
+    "bg-gray-50 text-gray-700 hover:bg-gray-100 hover:shadow-md border border-gray-200/50 hover:border-gray-300 active:scale-[0.98]";
 
   const activeButton =
-    "bg-gradient-to-r from-indigo-100 to-blue-100 text-blue-600 shadow-md";
+    "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md border border-blue-500";
 
   return (
     <div>

@@ -4,6 +4,10 @@ import NormalizedReading from '../models/NormalizedReadings';
 import { Types } from 'mongoose';
 import { updateUserAccuracySummary } from './userAccuracySummary.service';
 import { updateFirmwarePerformanceForLuna } from './firmwarePerformance.service';
+import { updateActivityPerformanceSummary } from './activityPerformanceSummary.service';
+import { updateAdminDailyTrend } from './adminDailyTrend.service';
+import { updateAdminGlobalSummary } from './adminGlobalSummary.service';
+import { updateBenchmarkComparisonSummary } from './benchmarkComparisonSummary.service';
 
 /**
  * Delete a session and all related data, then recalculate summaries
@@ -16,10 +20,17 @@ export async function deleteSession(sessionId: Types.ObjectId | string) {
   }
 
   const userId = session.userId;
+  const activityType = session.activityType;
+  const startTime = session.startTime;
   
   // Find Luna firmware version used in this session (only one version per session)
   const lunaDevice = session.devices?.find(d => d.deviceType === 'luna');
   const firmwareVersion = lunaDevice?.firmwareVersion;
+
+  // Get benchmark devices used in this session for later recalculation
+  const benchmarkDevices = session.devices
+    ?.filter(d => d.deviceType !== 'luna')
+    .map(d => d.deviceType) || [];
 
   // 2. Delete all related data
   await Promise.all([
@@ -47,12 +58,36 @@ export async function deleteSession(sessionId: Types.ObjectId | string) {
     console.log(`✅ Recalculated firmware performance for version ${firmwareVersion}`);
   }
 
+  // 5. Recalculate activity performance summary
+  if (activityType) {
+    await updateActivityPerformanceSummary(activityType);
+    console.log(`✅ Recalculated activity performance for ${activityType}`);
+  }
+
+  // 6. Recalculate admin daily trend for session date
+  if (startTime) {
+    await updateAdminDailyTrend(startTime);
+    console.log(`✅ Recalculated admin daily trend for session date`);
+  }
+
+  // 7. Recalculate benchmark comparison summaries for devices used in this session
+  for (const deviceType of benchmarkDevices) {
+    await updateBenchmarkComparisonSummary(deviceType);
+    console.log(`✅ Recalculated benchmark comparison for ${deviceType}`);
+  }
+
+  // 8. Recalculate admin global summary
+  await updateAdminGlobalSummary();
+  console.log(`✅ Recalculated admin global summary`);
+
   return {
     success: true,
     deletedSessionId: sessionId,
     recalculated: {
       userId: userId,
-      firmwareVersion: firmwareVersion
+      firmwareVersion: firmwareVersion,
+      activityType: activityType,
+      benchmarkDevices: benchmarkDevices,
     }
   };
 }

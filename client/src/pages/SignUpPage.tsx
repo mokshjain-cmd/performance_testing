@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Input, Card } from '../components/common';
+import { Layout } from '../components/layout';
 
 export default function SignUpPage() {
   const [form, setForm] = useState({ name: '', email: '' });
@@ -27,10 +28,11 @@ export default function SignUpPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <Card className="w-full max-w-md">
-        <h2 className="text-2xl font-bold text-center mb-6">Sign Up</h2>
-        <form onSubmit={handleSignUp} className="space-y-4">
+    <Layout>
+      <div className="flex items-center justify-center min-h-[calc(100vh-250px)]">
+        <Card className="w-full max-w-md">
+        <h2 className="text-3xl font-bold text-center mb-8 bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent">Sign Up</h2>
+        <form onSubmit={handleSignUp} className="space-y-6">
           <Input
             type="text"
             label="Name"
@@ -49,11 +51,12 @@ export default function SignUpPage() {
             placeholder="Enter your email"
             required
           />
-          <Button type="submit" variant="primary" className="w-full">
+          <Button type="submit" variant="primary" className="w-full" size="lg">
             Sign Up
           </Button>
         </form>
-      </Card>
-    </div>
+        </Card>
+      </div>
+    </Layout>
   );
 }

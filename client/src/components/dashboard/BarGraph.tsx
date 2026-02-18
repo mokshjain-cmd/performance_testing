@@ -1,6 +1,5 @@
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, LabelList } from 'recharts';
-import type { UserSummary } from '../../types';
 
 interface BarProps {
   data: { name: string; accuracy: number }[];
