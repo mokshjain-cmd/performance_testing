@@ -575,11 +575,11 @@ const FirmwarePerformanceTab: React.FC = () => {
                           borderRadius: '8px',
                           padding: '12px',
                         }}
-                        formatter={(value: any, name: string, props) => {
+                        formatter={(value: any, name?: string) => {
                           if (name === 'accuracy') {
                             return [`${Number(value).toFixed(2)}%`, 'Accuracy'];
                           }
-                          return [value, name];
+                          return [value, name || ''];
                         }}
                         labelFormatter={(label, payload) => {
                           if (payload && payload.length > 0) {

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createOrUpdateDevice, getDeviceByType, getAllDevices, getLunaFirmwareVersions } from '../controllers/device.controller';
+import {getDeviceByType, getAllDevices, getLunaFirmwareVersions, createDevice, deleteDevice } from '../controllers/device.controller';
 
 const router = Router();
 
@@ -10,7 +10,8 @@ router.get('/:deviceType', getDeviceByType);
 // Get all devices
 
 router.get('/', getAllDevices);
-router.post('/', createOrUpdateDevice);
+router.post('/', createDevice);
+router.delete('/:deviceId', deleteDevice);
 
 
 export default router;

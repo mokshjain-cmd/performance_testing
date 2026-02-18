@@ -4,46 +4,87 @@ import Device from '../models/Devices';
 /**
  * Create or update a device
  */
-export const createOrUpdateDevice = async (
+
+
+
+export const createDevice = async (
   req: Request,
   res: Response
 ): Promise<void> => {
   try {
     const deviceData = req.body;
 
-    if (!deviceData.deviceType) {
+    const { deviceType, firmwareVersion } = deviceData;
+
+    if (!deviceType || !firmwareVersion) {
       res.status(400).json({
         success: false,
-        message: 'Device type is required'
+        message: 'Device type and firmware version are required'
       });
       return;
     }
 
-    // Check if device already exists
-    const existingDevice = await Device.findOne({ 
-      deviceType: deviceData.deviceType
+    // Check if same deviceType + firmwareVersion already exists
+    const existingDevice = await Device.findOne({
+      deviceType,
+      firmwareVersion
     });
 
-    let device;
     if (existingDevice) {
-      // Update existing device
-      Object.assign(existingDevice, deviceData);
-      device = await existingDevice.save();
-    } else {
-      // Create new device
-      device = await Device.create(deviceData);
+      res.status(409).json({
+        success: false,
+        message: 'Device with same type and firmware version already exists'
+      });
+      return;
     }
-
+    console.log('Creating device with data:', deviceData);
+    // Create new device
+    const device = await Device.create(deviceData);
+    console.log('Device created:', device);
     res.status(201).json({
       success: true,
-      message: 'Device saved successfully',
+      message: 'Device created successfully',
       data: device
     });
+
   } catch (error) {
-    console.error('Error saving device:', error);
+    console.error('Error creating device:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to save device',
+      message: 'Failed to create device',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+};
+
+
+export const deleteDevice = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    const device = await Device.findByIdAndDelete(id);
+
+    if (!device) {
+      res.status(404).json({
+        success: false,
+        message: 'Device not found'
+      });
+      return;
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Device deleted successfully'
+    });
+
+  } catch (error) {
+    console.error('Error deleting device:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete device',
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }

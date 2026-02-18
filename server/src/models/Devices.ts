@@ -1,6 +1,6 @@
 import { Schema, model, Document } from "mongoose";
 
-export type DeviceType = "luna" | "polar" | "apple" | "whoop";
+export type DeviceType = "luna" | "polar" | "apple" | "whoop" | "amazfit";
 
 export interface IDevice extends Document {
   deviceType: DeviceType;
@@ -14,9 +14,8 @@ const DeviceSchema = new Schema<IDevice>(
   {
     deviceType: {
       type: String,
-      enum: ["luna", "polar", "apple", "whoop"],
+      enum: ["luna", "polar", "apple", "whoop", "amazfit"],
       required: true,
-      unique: true,
       index: true,
     },
     hardwareVersion: String,
@@ -24,5 +23,8 @@ const DeviceSchema = new Schema<IDevice>(
   },
   { timestamps: true }
 );
+
+// Create compound unique index for deviceType + firmwareVersion combination
+DeviceSchema.index({ deviceType: 1, firmwareVersion: 1 }, { unique: true });
 
 export default model<IDevice>("Device", DeviceSchema);

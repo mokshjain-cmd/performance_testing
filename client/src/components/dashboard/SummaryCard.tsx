@@ -7,7 +7,7 @@ interface Props {
 }
 
 const CardWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div className="rounded-3xl border border-white/40 bg-white/70 backdrop-blur-xl shadow-[0_10px_40px_rgba(0,0,0,0.06)] p-8 transition-all duration-300 hover:shadow-[0_12px_50px_rgba(0,0,0,0.08)]">
+  <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.06)] border border-gray-100/50 p-8 transition-all duration-300 hover:shadow-[0_12px_48px_rgba(0,0,0,0.08)] hover:-translate-y-0.5">
     {children}
   </div>
 );
@@ -16,11 +16,11 @@ const StatCard: React.FC<{
   label: string;
   value: string | number | undefined;
 }> = ({ label, value }) => (
-  <div className="rounded-2xl bg-white/80 backdrop-blur-md border border-gray-100 p-5 shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-[2px]">
-    <div className="text-xs uppercase tracking-wide text-gray-500 mb-1">
+  <div className="bg-gradient-to-br from-gray-50 to-white p-5 rounded-xl border border-gray-100 shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-[2px]">
+    <div className="text-xs uppercase tracking-wide text-gray-500 font-medium mb-2">
       {label}
     </div>
-    <div className="text-lg font-semibold text-gray-900">
+    <div className="text-2xl font-bold text-gray-800">
       {value}
     </div>
   </div>
@@ -36,16 +36,23 @@ const SummaryCards: React.FC<Props> = ({ userSummary }) => {
 
       {/* USER INFO */}
       <CardWrapper>
-        <div className="mb-6">
-          <div className="text-3xl font-semibold tracking-tight text-gray-900">
-            {userSummary.userId.name}
-          </div>
-          <div className="text-sm text-gray-500 mt-1">
-            {userSummary.userId.email}
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xl font-bold shadow-lg">
+              {userSummary.userId.name.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-gray-900">
+                {userSummary.userId.name}
+              </div>
+              <div className="text-sm text-gray-500">
+                {userSummary.userId.email}
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <StatCard
             label="Total Sessions"
             value={userSummary.totalSessions}
@@ -60,11 +67,11 @@ const SummaryCards: React.FC<Props> = ({ userSummary }) => {
       {/* OVERALL ACCURACY */}
       {userSummary.overallAccuracy && (
         <CardWrapper>
-          <div className="mb-6 text-lg font-medium text-gray-800">
-            Overall Accuracy
+          <div className="mb-6 text-xl font-semibold text-gray-800">
+            📈 Overall Accuracy Metrics
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard
               label="Avg MAE"
               value={userSummary.overallAccuracy.avgMAE?.toFixed(2)}

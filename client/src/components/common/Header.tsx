@@ -1,6 +1,7 @@
-import React from 'react';
-import { LogIn, PlusCircle, LayoutDashboard, LogOut, Shield } from 'lucide-react';
+import React, { useState } from 'react';
+import { LogIn, PlusCircle, LayoutDashboard, LogOut, Shield, Cpu } from 'lucide-react';
 import { getUserRole } from '../../utils/auth';
+import DeviceManagement from '../admin/DeviceManagement';
 
 interface Props {
   isLoggedIn: boolean;
@@ -12,6 +13,7 @@ interface Props {
 const Header: React.FC<Props> = ({ isLoggedIn, onLogin, onLogout, onNavigate }) => {
   const userRole = getUserRole();
   const isAdmin = userRole === 'admin';
+  const [showDeviceManagement, setShowDeviceManagement] = useState(false);
 
   return (
     <header className="w-full bg-white/80 backdrop-blur-xl border-b border-gray-200/50 shadow-sm px-6 h-14 flex items-center justify-between sticky top-0 z-50">
@@ -42,6 +44,16 @@ const Header: React.FC<Props> = ({ isLoggedIn, onLogin, onLogout, onNavigate }) 
               <PlusCircle size={16} />
               <span className="hidden sm:inline">New Session</span>
             </button>
+            {isAdmin && (
+              <button
+                className="px-3 py-1.5 rounded-lg text-sm font-medium text-blue-700 hover:bg-blue-50 hover:text-blue-900 transition-all duration-200 flex items-center gap-1.5 border border-blue-200"
+                onClick={() => setShowDeviceManagement(true)}
+                title="Manage Devices"
+              >
+                <Cpu size={16} />
+                <span className="hidden sm:inline">Devices</span>
+              </button>
+            )}
           </>
         )}
       </div>
@@ -74,6 +86,12 @@ const Header: React.FC<Props> = ({ isLoggedIn, onLogin, onLogout, onNavigate }) 
           </div>
         )}
       </div>
+      
+      {/* Device Management Modal */}
+      <DeviceManagement 
+        isOpen={showDeviceManagement} 
+        onClose={() => setShowDeviceManagement(false)} 
+      />
     </header>
   );
 };

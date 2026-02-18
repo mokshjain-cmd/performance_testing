@@ -20,13 +20,13 @@ const Sidebar: React.FC<Props> = ({
   onDeleteSession,
 }) => {
   const baseButton =
-  "w-full text-left px-5 py-3.5 mb-2 rounded-xl text-base font-medium transition-all duration-200 shadow-sm truncate";
+  "w-full text-left px-5 py-3.5 mb-2 rounded-xl text-sm font-medium transition-all duration-200 shadow-sm truncate";
 
   const inactiveButton =
-    "bg-gray-50 text-gray-700 hover:bg-gray-100 hover:shadow-md border border-gray-200/50 hover:border-gray-300 active:scale-[0.98]";
+    "bg-white/80 text-gray-700 hover:bg-gray-100 hover:shadow-md border border-gray-200 hover:border-gray-300 active:scale-[0.98] backdrop-blur-sm";
 
   const activeButton =
-    "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md border border-blue-500";
+    "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg border border-blue-500 hover:from-blue-600 hover:to-blue-700";
 
   return (
     <div>
@@ -44,7 +44,7 @@ const Sidebar: React.FC<Props> = ({
       </button>
 
       {/* Sessions Header */}
-      <div className="mt-6 mb-3 text-lg font-bold tracking-wide text-gray-800">
+      <div className="mt-8 mb-3 text-sm font-semibold tracking-wide text-gray-600 uppercase">
         Sessions
       </div>
 
