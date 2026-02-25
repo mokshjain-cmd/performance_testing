@@ -70,8 +70,8 @@ class AuthService {
         }
       }
 
-      // Delete any existing unverified OTPs for this email and purpose
-      await OTP.deleteMany({ email: email.toLowerCase(), purpose, verified: false });
+      // Delete any existing OTPs for this email and purpose
+      await OTP.deleteMany({ email: email.toLowerCase(), purpose });
 
       // Generate new OTP
       const otpCode = this.generateOTP();
@@ -170,11 +170,10 @@ Please do not reply to this email.
     try {
       console.log(`🔍 Verifying OTP for ${purpose}: ${email}`);
 
-      // Find the most recent unverified OTP for this email and purpose
+      // Find the most recent OTP for this email and purpose that hasn't expired
       const otpRecord = await OTP.findOne({
         email: email.toLowerCase(),
         purpose,
-        verified: false,
         expiresAt: { $gt: new Date() }
       }).sort({ createdAt: -1 });
 
@@ -197,11 +196,10 @@ Please do not reply to this email.
         };
       }
 
-      // Mark OTP as verified
-      otpRecord.verified = true;
-      await otpRecord.save();
+      // Delete the OTP after successful verification
+      await OTP.deleteOne({ _id: otpRecord._id });
 
-      console.log(`✅ OTP verified successfully for ${email}`);
+      console.log(`✅ OTP verified and deleted successfully for ${email}`);
       return {
         success: true,
         message: 'OTP verified successfully'
