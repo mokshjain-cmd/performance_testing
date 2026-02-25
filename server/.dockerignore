@@ -1,0 +1,14 @@
+node_modules
+npm-debug.log
+.git
+.gitignore
+README.md
+*.md
+.env
+.env.*
+dist
+temp
+.vscode
+.DS_Store
+*.log
+test-gcs.js
