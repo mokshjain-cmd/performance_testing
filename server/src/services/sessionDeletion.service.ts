@@ -34,14 +34,17 @@ export async function deleteSession(sessionId: Types.ObjectId | string) {
     .map(d => d.deviceType) || [];
 
   // 2. Delete raw files from Google Cloud Storage
-  try {
-    console.log(`🗑️ Deleting raw files from GCS for session ${sessionId}`);
-    await storageService.deleteSessionFiles(sessionId.toString());
-    console.log(`✅ Raw files deleted from GCS for session ${sessionId}`);
-  } catch (error) {
-    console.error(`⚠️ Error deleting raw files from GCS:`, error);
-    // Continue with deletion even if GCS deletion fails
+  if(process.env.ENV=='production') {
+    try {
+        console.log(`🗑️ Deleting raw files from GCS for session ${sessionId}`);
+        await storageService.deleteSessionFiles(sessionId.toString());
+        console.log(`✅ Raw files deleted from GCS for session ${sessionId}`);
+      } catch (error) {
+        console.error(`⚠️ Error deleting raw files from GCS:`, error);
+        // Continue with deletion even if GCS deletion fails
+      }
   }
+  
 
   // 3. Delete all related data
   await Promise.all([

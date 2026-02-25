@@ -22,7 +22,17 @@ class MailService {
     // Remove spaces from Gmail app password
     const gmailPassword = (process.env.GMAIL_PASS || '').replace(/\s+/g, '');
     console.log(`📧 Gmail password configured: ${gmailPassword ? '✓' : '✗'}`);
-    this.transporter = nodemailer.createTransport({
+    if(process.env.ENV='development'){
+        this.transporter = nodemailer.createTransport({
+        host: process.env.EMAIL_HOST || 'smtp.mailtrap.io',
+        port: parseInt(process.env.EMAIL_PORT || '2525'),
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASS,
+        },
+      });
+    }else{
+        this.transporter = nodemailer.createTransport({
       host: process.env.GMAIL_HOST || 'smtp.gmail.com',
       port: parseInt(process.env.GMAIL_PORT || '587'),
       secure: false, // Use STARTTLS for port 587
@@ -34,6 +44,9 @@ class MailService {
         rejectUnauthorized: true
       }
     });
+    }
+    
+    
     
     console.log('✅ Mail Service initialized with Gmail SMTP');
   }

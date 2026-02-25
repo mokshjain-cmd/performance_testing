@@ -139,9 +139,10 @@ export const createSession = async (
     console.log(`📤 Uploading ${files.length} files to GCS for session ${session._id}`);
     console.log(`📂 Files to upload:`, files.map(f => ({ fieldname: f.fieldname, filename: f.filename, path: f.path })));
     let rawFiles: Record<string, string> = {};
-    
-    try {
+    if(process.env.ENV=='production') {
+      try {
       console.log('🔧 Calling storageService.uploadDeviceFiles...');
+
       rawFiles = await storageService.uploadDeviceFiles(files, session._id.toString());
       
       console.log(`📥 Received rawFiles from GCS:`, rawFiles);
@@ -161,6 +162,8 @@ export const createSession = async (
       // Continue with session creation even if upload fails
       // Files are still available locally for processing
     }
+    }
+    
 
     // Start ingestion process (async, don't wait)
     ingestSessionFiles({
