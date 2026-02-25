@@ -10,7 +10,27 @@ export const createApp = (): Express => {
 
   // Middleware
   app.use(helmet()); // Security headers
-  app.use(cors()); // Enable CORS
+  
+  // CORS configuration
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
+  : [];
+
+const corsOptions = {
+  origin: function (origin: string | undefined, callback: Function) {
+    // Allow requests with no origin (like Postman or server-to-server)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  optionsSuccessStatus: 200
+};
+  app.use(cors(corsOptions));
   app.use(morgan('dev')); // Logging
   app.use(express.json()); // Parse JSON bodies
   app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies

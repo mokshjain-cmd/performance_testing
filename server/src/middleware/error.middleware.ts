@@ -14,6 +14,7 @@ export const errorHandler = (
   const statusCode = err.statusCode || 500;
   const message = err.message || 'Internal Server Error';
 
+  // Log full error details server-side
   console.error('Error:', {
     statusCode,
     message,
@@ -22,9 +23,12 @@ export const errorHandler = (
     method: req.method
   });
 
+  // Send minimal error details to client in production
   res.status(statusCode).json({
     success: false,
-    message,
+    message: process.env.NODE_ENV === 'production' && statusCode === 500
+      ? 'An unexpected error occurred'
+      : message,
     ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
   });
 };

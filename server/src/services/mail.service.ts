@@ -21,7 +21,7 @@ class MailService {
     
     // Remove spaces from Gmail app password
     const gmailPassword = (process.env.GMAIL_PASS || '').replace(/\s+/g, '');
-    console.log(`📧 Gmail password is ${gmailPassword}`)    ;
+    console.log(`📧 Gmail password configured: ${gmailPassword ? '✓' : '✗'}`);
     this.transporter = nodemailer.createTransport({
       host: process.env.GMAIL_HOST || 'smtp.gmail.com',
       port: parseInt(process.env.GMAIL_PORT || '587'),
