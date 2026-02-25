@@ -165,7 +165,7 @@ export const createSession = async (
     }
     
 
-    // Start ingestion process (async, don't wait)
+    
     ingestSessionFiles({
         sessionId: session._id,
         userId,

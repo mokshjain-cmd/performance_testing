@@ -51,8 +51,11 @@ export async function ingestSessionFiles({
         // Convert .txt to .csv with header if needed
         const csvFilePath = await convertLunaTxtToCsv(filePath);
         readings = await parseLunaCsv(csvFilePath, meta, startTime, endTime);
+        console.log(`Parsed ${readings.length} readings from Luna file.`);
       }
-      if (deviceType === "polar") { readings = await parsePolarCsv(filePath, meta, startTime, endTime); }
+      if (deviceType === "polar") { 
+        console.log('Parsing Polar file:', filePath);
+        readings = await parsePolarCsv(filePath, meta, startTime, endTime); }
       console.log(`Parsed ${readings.length} readings from ${deviceType} file.`);
       if (readings.length > 0) {
         //console.log('First element of readings:', JSON.stringify(readings[0], null, 2));
