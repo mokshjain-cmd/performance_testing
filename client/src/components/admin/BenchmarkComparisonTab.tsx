@@ -136,23 +136,18 @@ const BenchmarkComparisonTab: React.FC = () => {
                         </td>
                         <td className={`py-3 px-4 text-center font-semibold ${bestMAE ? 'bg-green-50 text-green-700' : 'text-gray-700'}`}>
                           {comp.hrStats.avgMAE.toFixed(2)}
-                          {bestMAE && <span className="ml-2 text-xs">🟢</span>}
                         </td>
                         <td className={`py-3 px-4 text-center font-semibold ${bestRMSE ? 'bg-green-50 text-green-700' : 'text-gray-700'}`}>
                           {comp.hrStats.avgRMSE.toFixed(2)}
-                          {bestRMSE && <span className="ml-2 text-xs">🟢</span>}
                         </td>
                         <td className={`py-3 px-4 text-center font-semibold ${bestMAPE ? 'bg-green-50 text-green-700' : 'text-gray-700'}`}>
                           {comp.hrStats.avgMAPE.toFixed(2)}%
-                          {bestMAPE && <span className="ml-2 text-xs">🟢</span>}
                         </td>
                         <td className={`py-3 px-4 text-center font-semibold ${bestPearson ? 'bg-green-50 text-green-700' : 'text-gray-700'}`}>
                           {comp.hrStats.avgPearson.toFixed(3)}
-                          {bestPearson && <span className="ml-2 text-xs">🟢</span>}
                         </td>
                         <td className={`py-3 px-4 text-center font-semibold ${bestBias ? 'bg-green-50 text-green-700' : 'text-gray-700'}`}>
                           {comp.hrStats.avgBias.toFixed(2)}
-                          {bestBias && <span className="ml-2 text-xs">🟢</span>}
                         </td>
                       </tr>
                     );
@@ -164,20 +159,19 @@ const BenchmarkComparisonTab: React.FC = () => {
             {/* Metric Info */}
             <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <div className="text-sm text-blue-800">
-                <div className="font-semibold mb-2">📊 How to Interpret:</div>
+                <div className="font-semibold mb-2">How to Interpret:</div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  <div><span className="font-medium">MAE:</span> Average absolute error</div>
-                  <div><span className="font-medium">RMSE:</span> Penalizes large spikes</div>
-                  <div><span className="font-medium">MAPE:</span> Relative percentage error</div>
-                  <div><span className="font-medium">Pearson:</span> Signal similarity (higher is better)</div>
-                  <div><span className="font-medium">Bias:</span> Systematic over/under reading</div>
+                  <div><span className="font-medium">MAE:</span> Mean Absolute Error (BPM) | Lower is better | Target: &lt;5 BPM</div>
+                  <div><span className="font-medium">RMSE:</span> Root Mean Square Error (BPM) | Penalizes large spikes | Lower is better | Target: &lt;7 BPM</div>
+                  <div><span className="font-medium">MAPE:</span> Mean Absolute % Error | Lower is better | Target: &lt;10%</div>
+                  <div><span className="font-medium">Pearson:</span> Correlation (-1 to 1) | Higher is better | Target: &gt;0.9</div>
+                  <div><span className="font-medium">Bias:</span> Systematic error (BPM) | Closer to 0 is better | Target: ±2 BPM</div>
                 </div>
               </div>
             </div>
           </>
         ) : (
           <div className="text-center py-12 text-gray-500">
-            <div className="text-4xl mb-4">⚖️</div>
             <p>No benchmark data available</p>
             <p className="text-sm mt-2">Data will appear as sessions are recorded</p>
           </div>

@@ -262,7 +262,7 @@ export default function SessionFormPage() {
                 className="block w-full text-sm text-gray-600 file:mr-4 file:py-2.5 file:px-5 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-gradient-to-r file:from-blue-500 file:to-blue-600 file:text-white hover:file:from-blue-600 hover:file:to-blue-700 file:cursor-pointer file:shadow-sm file:transition-all cursor-pointer border border-gray-200 rounded-xl p-3 bg-white/50 backdrop-blur-sm hover:border-gray-300 transition-all"
               />
               {deviceFiles[device] && (
-                <span className="text-xs text-gray-500 ml-1">✓ Selected: {deviceFiles[device]?.name}</span>
+                <span className="text-xs text-gray-500 ml-1">Selected: {deviceFiles[device]?.name}</span>
               )}
             </div>
           ))}
@@ -274,7 +274,7 @@ export default function SessionFormPage() {
       </Card>
 
       {responseData?.success && responseData?.data && (
-        <Card title="✓ Session Created Successfully" className="mt-8">
+        <Card title="Session Created Successfully" className="mt-8">
           <div className="space-y-8">
             {/* Session ID */}
             <div className="pb-4 border-b border-gray-200">

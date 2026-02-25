@@ -1,5 +1,5 @@
 import React from 'react';
-import { Activity, Droplet, Wind, Thermometer } from 'lucide-react';
+import { Activity, Droplet, Wind, Thermometer, ChevronDown } from 'lucide-react';
 
 type Metric = 'hr' | 'spo2' | 'rr' | 'temp';
 
@@ -9,50 +9,45 @@ interface MetricsSelectorProps {
 }
 
 const METRICS = [
-  { value: 'hr' as Metric, label: 'Heart Rate', icon: Activity, color: 'text-red-500', bgColor: 'bg-red-50', borderColor: 'border-red-500' },
-  { value: 'spo2' as Metric, label: 'SpO₂', icon: Droplet, color: 'text-blue-500', bgColor: 'bg-blue-50', borderColor: 'border-blue-500' },
-  { value: 'rr' as Metric, label: 'Respiratory Rate', icon: Wind, color: 'text-green-500', bgColor: 'bg-green-50', borderColor: 'border-green-500' },
-  { value: 'temp' as Metric, label: 'Temperature', icon: Thermometer, color: 'text-orange-500', bgColor: 'bg-orange-50', borderColor: 'border-orange-500' },
+  { value: 'hr' as Metric, label: 'Heart Rate', icon: Activity, color: 'text-red-500' },
+  { value: 'spo2' as Metric, label: 'SpO₂', icon: Droplet, color: 'text-blue-500' },
+  { value: 'rr' as Metric, label: 'Respiratory Rate', icon: Wind, color: 'text-green-500' },
+  { value: 'temp' as Metric, label: 'Temperature', icon: Thermometer, color: 'text-orange-500' },
 ];
 
 const MetricsSelector: React.FC<MetricsSelectorProps> = ({
   selectedMetric,
   onSelectMetric,
 }) => {
+  const selectedMetricObj = METRICS.find(m => m.value === selectedMetric);
+  const SelectedIcon = selectedMetricObj?.icon || Activity;
+  
   return (
-    <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.06)] border border-gray-100/50 p-4">
-      <div className="flex items-center gap-2 mb-3">
-        <span className="text-sm font-semibold text-gray-700">Select Metric:</span>
-      </div>
-      
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {METRICS.map((metric) => {
-          const Icon = metric.icon;
-          const isSelected = selectedMetric === metric.value;
-          
-          return (
-            <button
-              key={metric.value}
-              onClick={() => onSelectMetric(metric.value)}
-              className={`
-                flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200
-                border-2
-                ${isSelected 
-                  ? `${metric.bgColor} ${metric.borderColor} shadow-md scale-105` 
-                  : 'bg-white border-gray-200 hover:border-gray-300 hover:shadow-sm'
-                }
-              `}
-            >
-              <Icon 
-                size={20} 
-                className={isSelected ? metric.color : 'text-gray-400'}
-              />
-              <span className={`text-sm font-medium ${isSelected ? metric.color : 'text-gray-600'}`}>
-                {metric.label}
-              </span>
-            </button>
-          );
-        })}
+    <div className="relative inline-block">
+      <label className="block text-xs font-medium text-gray-600 mb-1">Metric</label>
+      <div className="relative">
+        <select
+          value={selectedMetric}
+          onChange={(e) => onSelectMetric(e.target.value as Metric)}
+          className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-10 text-sm font-medium text-gray-700 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all cursor-pointer min-w-[180px]"
+        >
+          {METRICS.map((metric) => (
+            <option key={metric.value} value={metric.value}>
+              {metric.label}
+            </option>
+          ))}
+        </select>
+        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+          <ChevronDown size={16} className="text-gray-500" />
+        </div>
+        <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+          <SelectedIcon size={16} className={selectedMetricObj?.color || 'text-gray-500'} />
+        </div>
+        <style>{`
+          select {
+            padding-left: 2.5rem;
+          }
+        `}</style>
       </div>
     </div>
   );

@@ -9,6 +9,7 @@ import benchmarkComparisonRoutes from './benchmarkComparison.routes';
 import adminDailyTrendRoutes from './adminDailyTrend.routes';
 import adminGlobalSummaryRoutes from './adminGlobalSummary.routes';
 import firmwarePerformanceRoutes from './firmwarePerformance.routes';
+import cronRoutes from './cron.routes';
 
 const router = Router();
 
@@ -23,5 +24,6 @@ router.use('/benchmark-comparisons', benchmarkComparisonRoutes);
 router.use('/admin/daily-trends', adminDailyTrendRoutes);
 router.use('/admin/global-summary', adminGlobalSummaryRoutes);
 router.use('/firmware-performance', firmwarePerformanceRoutes);
+router.use('/cron', cronRoutes);
 
 export default router;

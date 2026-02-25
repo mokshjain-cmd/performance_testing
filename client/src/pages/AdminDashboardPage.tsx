@@ -162,9 +162,9 @@ const AdminDashboardPage: React.FC = () => {
         </div>
 
         {/* Main Content Area */}
-        <div className="flex-1 space-y-6 overflow-y-auto">
+        <div className="flex-1 space-y-4 overflow-y-auto">
           {/* Header */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-start justify-between gap-4">
             <div>
               <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 Admin Dashboard
@@ -175,17 +175,15 @@ const AdminDashboardPage: React.FC = () => {
                 {selectedView === 'session' && 'Session Details'}
               </p>
             </div>
-            <div className="flex items-center gap-2 px-4 py-2 bg-purple-100 text-purple-700 rounded-lg font-medium">
-              <span className="text-2xl">👑</span>
-              <span>Admin</span>
+            <div className="flex items-center gap-4">
+              {/* Metrics Selector */}
+              <MetricsSelector
+                selectedMetric={selectedMetric}
+                onSelectMetric={setSelectedMetric}
+              />
+              
             </div>
           </div>
-
-          {/* Metrics Selector */}
-          <MetricsSelector
-            selectedMetric={selectedMetric}
-            onSelectMetric={setSelectedMetric}
-          />
 
           {/* Sub Tab Bar - Only show in overview mode */}
           {selectedView === 'overview' && (

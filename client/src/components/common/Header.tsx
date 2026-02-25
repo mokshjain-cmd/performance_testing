@@ -20,10 +20,10 @@ const Header: React.FC<Props> = ({ isLoggedIn, onLogin, onLogout, onNavigate }) 
       {/* Left Section - Logo & Navigation */}
       <div className="flex items-center gap-2">
         <div className="flex items-center gap-2 mr-4">
-          <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center shadow-sm">
-            <span className="text-white font-bold text-sm">PT</span>
+          <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center shadow-sm">
+            <span className="text-white font-bold text-sm">B&T</span>
           </div>
-          <span className="font-semibold text-gray-800 text-sm hidden sm:block">Performance Testing</span>
+          <span className="font-semibold text-gray-800 text-sm hidden sm:block">BenchMark & Testing</span>
         </div>
         
         {isLoggedIn && (

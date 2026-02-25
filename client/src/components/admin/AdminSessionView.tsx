@@ -43,7 +43,6 @@ const AdminSessionView: React.FC<AdminSessionViewProps> = ({ sessionId, userId: 
   if (!sessionDetails) {
     return (
       <div className="text-center py-12 text-gray-500">
-        <div className="text-4xl mb-4">📊</div>
         <p>No session data available</p>
       </div>
     );
@@ -51,10 +50,10 @@ const AdminSessionView: React.FC<AdminSessionViewProps> = ({ sessionId, userId: 
 
   // Reuse the existing SessionDetails component from tester dashboard
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <SessionDetails session={sessionDetails.session} />
+      <HeartRateChart points={sessionDetails.points} analysis={sessionDetails.analysis} />
       <AnalysisSection analysis={sessionDetails.analysis} />
-      <HeartRateChart points={sessionDetails.points} />
     </div>
   );
 };

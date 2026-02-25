@@ -16,14 +16,21 @@ const storage = multer.diskStorage({
   },
 
   filename: (req: Request, file: Express.Multer.File, cb) => {
-    const deviceType = file.fieldname; // 🔥 This is key
-
-    const uniqueSuffix =
-      Date.now() + "-" + Math.round(Math.random() * 1e9);
+    const deviceType = file.fieldname; // The device type (e.g., 'luna', 'polar')
+    const userId = req.body.userId || 'unknown';
+    
+    // Format timestamps for filename (remove special characters)
+    const startTime = req.body.startTime 
+      ? req.body.startTime.replace(/[:-]/g, '').replace('T', '_') 
+      : Date.now().toString();
+    const endTime = req.body.endTime 
+      ? req.body.endTime.replace(/[:-]/g, '').replace('T', '_')
+      : Date.now().toString();
 
     const ext = path.extname(file.originalname);
 
-    cb(null, `${deviceType}-${uniqueSuffix}${ext}`);
+    // Format: <deviceType>_<userid>_<starttime>_<endtime>.<ext>
+    cb(null, `${deviceType}_${userId}_${startTime}_${endTime}${ext}`);
   }
 });
 

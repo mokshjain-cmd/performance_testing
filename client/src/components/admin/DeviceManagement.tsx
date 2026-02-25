@@ -126,7 +126,7 @@ const DeviceManagement: React.FC<Props> = ({ isOpen, onClose }) => {
           {/* Existing Devices */}
           <div>
             <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-              📱 Existing Devices ({devices.length})
+              Existing Devices ({devices.length})
               {loading && <Loader2 size={16} className="animate-spin text-blue-500" />}
             </h3>
             

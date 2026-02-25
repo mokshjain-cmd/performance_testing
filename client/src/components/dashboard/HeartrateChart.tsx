@@ -3,16 +3,18 @@ import React, { useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { splitDateTime } from '../../utils/dateTime';
 import { HeartPulse } from 'lucide-react';
+import type { Analysis } from '../../types';
 
 interface Props {
   points: Record<string, any[]>;
+  analysis?: Analysis;
 }
 
 
-const HeartRateChart: React.FC<Props> = ({ points }) => {
-    console.log("🔥 HeartRateChart received points:", points);
+const HeartRateChart: React.FC<Props> = ({ points, analysis }) => {
+    console.log("HeartRateChart received points:", points);
   const deviceTypes = Object.keys(points);
-  console.log("📱 Device Types:", deviceTypes);
+  console.log("Device Types:", deviceTypes);
   const [visibleDevices, setVisibleDevices] = useState<string[]>(deviceTypes);
 
   const handleToggle = (dt: string) => {
@@ -40,48 +42,64 @@ const HeartRateChart: React.FC<Props> = ({ points }) => {
   };
 
   return (
-    <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.06)] border border-gray-100/50 p-8 transition-all duration-300 hover:shadow-[0_12px_48px_rgba(0,0,0,0.08)]">
-        <h2 className="mb-6 text-2xl font-semibold text-gray-800 flex items-center gap-2">
+    <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.06)] border border-gray-100/50 p-4 transition-all duration-300 hover:shadow-[0_12px_48px_rgba(0,0,0,0.08)]">
+        <h2 className="mb-3 text-xl font-semibold text-gray-800 flex items-center gap-2">
             <HeartPulse className="w-6 h-6 text-red-500" />
             Heart Rate Timeline
         </h2>
 
-      {/* Device toggles */}
-      <div className="mb-6 flex flex-wrap gap-3">
-        {deviceTypes.map((dt, idx) => {
-          const color = getDeviceColor(idx);
-          const isVisible = visibleDevices.includes(dt);
-          
-          return (
-            <label 
-              key={dt} 
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer transition-all duration-200 border-2 ${
-                isVisible 
-                  ? 'bg-opacity-10 shadow-md' 
-                  : 'bg-gray-50 opacity-60'
-              }`}
-              style={{ 
-                borderColor: isVisible ? color : '#e5e7eb',
-                backgroundColor: isVisible ? `${color}15` : undefined 
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={isVisible}
-                onChange={() => handleToggle(dt)}
-                className="w-4 h-4"
-                style={{ accentColor: color }}
-              />
-              <span 
-                className="font-medium text-sm"
-                style={{ color: isVisible ? color : '#6b7280' }}
+      {/* Device Statistics - All Devices */}
+      {analysis?.deviceStats && analysis.deviceStats.length > 0 && (
+        <div className="mb-3">
+          <h3 className="mb-2 text-sm font-medium text-gray-700">Device Statistics</h3>
+          <div className="space-y-2">
+            {analysis.deviceStats.map((stat, idx) => (
+              <div
+                key={idx}
+                className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200 shadow-sm"
               >
-                {dt}
-              </span>
-            </label>
-          );
-        })}
-      </div>
+                <div className="flex items-center justify-between gap-6">
+                  {/* Device Name and Version */}
+                  <div className="flex items-center gap-2 min-w-fit">
+                    <span className="font-semibold text-gray-800 text-base">{stat.deviceType}</span>
+                    <span className="text-xs bg-indigo-100 px-2 py-0.5 rounded-full text-indigo-700 font-medium">
+                      {stat.firmwareVersion}
+                    </span>
+                  </div>
+                  
+                  {/* Stats spread across full width */}
+                  <div className="flex items-center justify-between flex-1 gap-4 text-sm">
+                    <div className="flex flex-col items-center">
+                      <span className="text-gray-600 text-xs">Min</span>
+                      <span className="font-semibold text-gray-800">{stat.hr.min.toFixed(1)} <span className="text-xs text-gray-500">BPM</span></span>
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <span className="text-gray-600 text-xs">Max</span>
+                      <span className="font-semibold text-gray-800">{stat.hr.max.toFixed(1)} <span className="text-xs text-gray-500">BPM</span></span>
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <span className="text-gray-600 text-xs">Avg</span>
+                      <span className="font-semibold text-gray-800">{stat.hr.avg.toFixed(1)} <span className="text-xs text-gray-500">BPM</span></span>
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <span className="text-gray-600 text-xs">Median</span>
+                      <span className="font-semibold text-gray-800">{stat.hr.median.toFixed(1)} <span className="text-xs text-gray-500">BPM</span></span>
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <span className="text-gray-600 text-xs">Std Dev</span>
+                      <span className="font-semibold text-gray-800">{stat.hr.stdDev.toFixed(1)} <span className="text-xs text-gray-500">BPM</span></span>
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <span className="text-gray-600 text-xs">Range</span>
+                      <span className="font-semibold text-gray-800">{stat.hr.range.toFixed(1)} <span className="text-xs text-gray-500">BPM</span></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="h-[400px]">
         <ResponsiveContainer width="100%" height="100%">
@@ -142,6 +160,43 @@ const HeartRateChart: React.FC<Props> = ({ points }) => {
             ))}
           </LineChart>
         </ResponsiveContainer>
+      </div>
+
+      {/* Device toggles - Moved below graph */}
+      <div className="mt-3 flex flex-wrap gap-2">
+        {deviceTypes.map((dt, idx) => {
+          const color = getDeviceColor(idx);
+          const isVisible = visibleDevices.includes(dt);
+          
+          return (
+            <label 
+              key={dt} 
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer transition-all duration-200 border-2 ${
+                isVisible 
+                  ? 'bg-opacity-10 shadow-sm' 
+                  : 'bg-gray-50 opacity-60'
+              }`}
+              style={{ 
+                borderColor: isVisible ? color : '#e5e7eb',
+                backgroundColor: isVisible ? `${color}15` : undefined 
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={isVisible}
+                onChange={() => handleToggle(dt)}
+                className="w-4 h-4"
+                style={{ accentColor: color }}
+              />
+              <span 
+                className="font-medium text-sm"
+                style={{ color: isVisible ? color : '#6b7280' }}
+              >
+                {dt}
+              </span>
+            </label>
+          );
+        })}
       </div>
     </div>
   );

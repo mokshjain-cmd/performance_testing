@@ -15,7 +15,8 @@ const CardWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 const StatCard: React.FC<{
   label: string;
   value: string | number | undefined;
-}> = ({ label, value }) => (
+  description?: string;
+}> = ({ label, value, description }) => (
   <div className="bg-gradient-to-br from-gray-50 to-white p-5 rounded-xl border border-gray-100 shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-[2px]">
     <div className="text-xs uppercase tracking-wide text-gray-500 font-medium mb-2">
       {label}
@@ -23,6 +24,11 @@ const StatCard: React.FC<{
     <div className="text-2xl font-bold text-gray-800">
       {value}
     </div>
+    {description && (
+      <div className="text-xs text-gray-500 mt-2">
+        {description}
+      </div>
+    )}
   </div>
 );
 
@@ -68,25 +74,29 @@ const SummaryCards: React.FC<Props> = ({ userSummary }) => {
       {userSummary.overallAccuracy && (
         <CardWrapper>
           <div className="mb-6 text-xl font-semibold text-gray-800">
-            📈 Overall Accuracy Metrics
+            Overall Accuracy Metrics
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard
               label="Avg MAE"
-              value={userSummary.overallAccuracy.avgMAE?.toFixed(2)}
+              value={userSummary.overallAccuracy.avgMAE ? `${userSummary.overallAccuracy.avgMAE.toFixed(2)} BPM` : undefined}
+              description="Lower is better | Target: <5 BPM"
             />
             <StatCard
               label="Avg RMSE"
-              value={userSummary.overallAccuracy.avgRMSE?.toFixed(2)}
+              value={userSummary.overallAccuracy.avgRMSE ? `${userSummary.overallAccuracy.avgRMSE.toFixed(2)} BPM` : undefined}
+              description="Lower is better | Target: <7 BPM"
             />
             <StatCard
               label="Avg Pearson"
               value={userSummary.overallAccuracy.avgPearson?.toFixed(3)}
+              description="Higher is better | Target: >0.9"
             />
             <StatCard
               label="Avg MAPE"
               value={userSummary.overallAccuracy.avgMAPE?.toFixed(2)}
+              description="Lower is better | Target: <10%"
             />
           </div>
         </CardWrapper>

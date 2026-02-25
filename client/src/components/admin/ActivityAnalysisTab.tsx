@@ -126,7 +126,7 @@ const ActivityAnalysisTab: React.FC = () => {
                                 className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded"
                                 title="Low sample size - results may not be reliable"
                               >
-                                ⚠️ Low Sample
+                                Low Sample
                               </span>
                             )}
                           </div>
@@ -136,15 +136,12 @@ const ActivityAnalysisTab: React.FC = () => {
                         </td>
                         <td className={`py-3 px-4 text-center font-semibold ${bestMAE ? 'bg-green-50 text-green-700' : 'text-gray-700'}`}>
                           {activity.avgMAE.toFixed(2)}
-                          {bestMAE && <span className="ml-2 text-xs">🟢</span>}
                         </td>
                         <td className={`py-3 px-4 text-center font-semibold ${bestRMSE ? 'bg-green-50 text-green-700' : 'text-gray-700'}`}>
                           {activity.avgRMSE.toFixed(2)}
-                          {bestRMSE && <span className="ml-2 text-xs">🟢</span>}
                         </td>
                         <td className={`py-3 px-4 text-center font-semibold ${bestPearson ? 'bg-green-50 text-green-700' : 'text-gray-700'}`}>
                           {activity.avgPearson.toFixed(3)}
-                          {bestPearson && <span className="ml-2 text-xs">🟢</span>}
                         </td>
                       </tr>
                     );
@@ -156,19 +153,18 @@ const ActivityAnalysisTab: React.FC = () => {
             {/* Metric Info */}
             <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <div className="text-sm text-blue-800">
-                <div className="font-semibold mb-2">📊 How to Interpret:</div>
+                <div className="font-semibold mb-2">How to Interpret:</div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  <div><span className="font-medium">MAE:</span> Average absolute error (lower is better)</div>
-                  <div><span className="font-medium">RMSE:</span> Penalizes large spikes (lower is better)</div>
-                  <div><span className="font-medium">Pearson:</span> Signal similarity (higher is better)</div>
-                  <div><span className="font-medium">⚠️ Low Sample:</span> Activities with &lt;3 sessions may not be reliable</div>
+                  <div><span className="font-medium">MAE:</span> Mean Absolute Error (BPM) | Lower is better | Target: &lt;5 BPM</div>
+                  <div><span className="font-medium">RMSE:</span> Root Mean Square Error (BPM) | Penalizes large spikes | Lower is better | Target: &lt;7 BPM</div>
+                  <div><span className="font-medium">Pearson:</span> Correlation (-1 to 1) | Higher is better | Target: &gt;0.9</div>
+                  <div><span className="font-medium">Low Sample:</span> Activities with &lt;3 sessions may not be reliable</div>
                 </div>
               </div>
             </div>
           </>
         ) : (
           <div className="text-center py-12 text-gray-500">
-            <div className="text-4xl mb-4">🏃</div>
             <p>No activity data available</p>
             <p className="text-sm mt-2">Data will appear as sessions are recorded</p>
           </div>
@@ -258,7 +254,7 @@ const ActivityAnalysisTab: React.FC = () => {
                             <div className="text-xs text-gray-600">Sessions: {data.sessions}</div>
                             {lowSample && (
                               <div className="text-xs text-yellow-700 bg-yellow-50 px-2 py-1 rounded mt-1">
-                                ⚠️ Low sample size
+                                Low sample size
                               </div>
                             )}
                           </div>

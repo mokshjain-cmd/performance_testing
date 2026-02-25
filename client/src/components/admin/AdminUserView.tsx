@@ -79,7 +79,6 @@ const AdminUserView: React.FC<AdminUserViewProps> = ({ userId, metric: _metric }
     return (
       <Card>
         <div className="text-center py-12 text-gray-500">
-          <div className="text-4xl mb-4">👤</div>
           <p>No data available for this user</p>
         </div>
       </Card>
@@ -105,6 +104,7 @@ const AdminUserView: React.FC<AdminUserViewProps> = ({ userId, metric: _metric }
             <p className="text-3xl font-bold bg-gradient-to-r from-green-500 to-green-600 bg-clip-text text-transparent">
               {userSummary.overallAccuracy?.avgMAPE ? `${userSummary.overallAccuracy.avgMAPE.toFixed(2)}%` : '--'}
             </p>
+            <p className="text-xs text-gray-500">% Error | Lower is better | Target: &lt;10%</p>
           </div>
         </Card>
 
@@ -112,8 +112,9 @@ const AdminUserView: React.FC<AdminUserViewProps> = ({ userId, metric: _metric }
           <div className="space-y-2">
             <p className="text-sm text-gray-500 uppercase tracking-wide">Avg MAE</p>
             <p className="text-3xl font-bold bg-gradient-to-r from-purple-500 to-purple-600 bg-clip-text text-transparent">
-              {userSummary.overallAccuracy?.avgMAE ? userSummary.overallAccuracy.avgMAE.toFixed(2) : '--'}
+              {userSummary.overallAccuracy?.avgMAE ? `${userSummary.overallAccuracy.avgMAE.toFixed(2)} BPM` : '--'}
             </p>
+            <p className="text-xs text-gray-500">Mean Absolute Error | Lower is better | Target: &lt;5 BPM</p>
           </div>
         </Card>
 
@@ -123,6 +124,7 @@ const AdminUserView: React.FC<AdminUserViewProps> = ({ userId, metric: _metric }
             <p className="text-3xl font-bold bg-gradient-to-r from-orange-500 to-orange-600 bg-clip-text text-transparent">
               {userSummary.overallAccuracy?.avgPearson ? userSummary.overallAccuracy.avgPearson.toFixed(3) : '--'}
             </p>
+            <p className="text-xs text-gray-500">Correlation | Higher is better | Target: &gt;0.9</p>
           </div>
         </Card>
       </div>
@@ -132,7 +134,7 @@ const AdminUserView: React.FC<AdminUserViewProps> = ({ userId, metric: _metric }
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {userSummary.bestSession && (
             <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-              <div className="text-sm text-green-600 font-medium mb-2">🏆 Best Session</div>
+              <div className="text-sm text-green-600 font-medium mb-2">Best Session</div>
               <div className="text-xs text-gray-600 mb-1">Activity: {userSummary.bestSession.activityType}</div>
               <div className="text-2xl font-bold text-green-700">
                 {userSummary.bestSession.accuracyPercent?.toFixed(1)}%
@@ -142,7 +144,7 @@ const AdminUserView: React.FC<AdminUserViewProps> = ({ userId, metric: _metric }
           
           {userSummary.worstSession && (
             <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-              <div className="text-sm text-red-600 font-medium mb-2">📉 Worst Session</div>
+              <div className="text-sm text-red-600 font-medium mb-2">Worst Session</div>
               <div className="text-xs text-gray-600 mb-1">Activity: {userSummary.worstSession.activityType}</div>
               <div className="text-2xl font-bold text-red-700">
                 {userSummary.worstSession.accuracyPercent?.toFixed(1)}%

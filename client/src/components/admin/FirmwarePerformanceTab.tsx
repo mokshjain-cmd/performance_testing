@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Card } from '../common';
 import axios from 'axios';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from 'recharts';
@@ -35,6 +35,14 @@ const FirmwarePerformanceTab: React.FC = () => {
   const [selectedFirmware, setSelectedFirmware] = useState<FirmwarePerformance | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>('firmwareVersion');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
+  const detailViewRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (selectedFirmware && detailViewRef.current) {
+      // Scroll to detailed view with smooth behavior
+      detailViewRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [selectedFirmware]);
 
   useEffect(() => {
     setLoading(true);
@@ -179,7 +187,6 @@ const FirmwarePerformanceTab: React.FC = () => {
     return (
       <Card title="Firmware Performance">
         <div className="text-center py-12 text-gray-500">
-          <div className="text-4xl mb-4">🔧</div>
           <p>No firmware data available</p>
           <p className="text-sm mt-2">Data will appear as sessions are recorded</p>
         </div>
@@ -278,19 +285,15 @@ const FirmwarePerformanceTab: React.FC = () => {
                     </td>
                     <td className={`py-3 px-4 text-center font-semibold ${bestMAE ? 'bg-green-50 text-green-700' : 'text-gray-700'}`}>
                       {firmware.overallAccuracy.avgMAE.toFixed(2)}
-                      {bestMAE && <span className="ml-2 text-xs">🟢</span>}
                     </td>
                     <td className={`py-3 px-4 text-center font-semibold ${bestRMSE ? 'bg-green-50 text-green-700' : 'text-gray-700'}`}>
                       {firmware.overallAccuracy.avgRMSE.toFixed(2)}
-                      {bestRMSE && <span className="ml-2 text-xs">🟢</span>}
                     </td>
                     <td className={`py-3 px-4 text-center font-semibold ${bestMAPE ? 'bg-green-50 text-green-700' : 'text-gray-700'}`}>
                       {firmware.overallAccuracy.avgMAPE.toFixed(2)}%
-                      {bestMAPE && <span className="ml-2 text-xs">🟢</span>}
                     </td>
                     <td className={`py-3 px-4 text-center font-semibold ${bestPearson ? 'bg-green-50 text-green-700' : 'text-gray-700'}`}>
                       {firmware.overallAccuracy.avgPearson.toFixed(3)}
-                      {bestPearson && <span className="ml-2 text-xs">🟢</span>}
                     </td>
                   </tr>
                 );
@@ -298,8 +301,22 @@ const FirmwarePerformanceTab: React.FC = () => {
             </tbody>
           </table>
         </div>
+        
+        {/* Metric Info */}
+        <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="text-sm text-blue-800">
+            <div className="font-semibold mb-2">How to Interpret:</div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <div><span className="font-medium">MAE:</span> Mean Absolute Error (BPM) | Lower is better | Target: &lt;5 BPM</div>
+              <div><span className="font-medium">RMSE:</span> Root Mean Square Error (BPM) | Penalizes large spikes | Lower is better | Target: &lt;7 BPM</div>
+              <div><span className="font-medium">MAPE:</span> Mean Absolute % Error | Lower is better | Target: &lt;10%</div>
+              <div><span className="font-medium">Pearson:</span> Correlation (-1 to 1) | Higher is better | Target: &gt;0.9</div>
+            </div>
+          </div>
+        </div>
+        
         <div className="mt-4 text-sm text-gray-600 text-center">
-          💡 Click on any firmware version to view detailed breakdown
+          Click on any firmware version to view detailed breakdown
         </div>
       </Card>
 
@@ -461,32 +478,37 @@ const FirmwarePerformanceTab: React.FC = () => {
             </ResponsiveContainer>
           </div>
           <div className="text-center text-sm text-gray-600 mt-4">
-            📈 Shows how {getMetricLabel(selectedMetric)} evolved across firmware releases
+            Shows how {getMetricLabel(selectedMetric)} evolved across firmware releases
           </div>
         </Card>
       )}
 
       {/* 3. Firmware Detail View (Click-to-Drill) */}
       {selectedFirmware && (
-        <Card title={`🔍 Firmware ${selectedFirmware.firmwareVersion} - Detailed Analysis`}>
+        <div ref={detailViewRef}>
+          <Card title={`Firmware ${selectedFirmware.firmwareVersion} - Detailed Analysis`}>
           <div className="space-y-6">
             {/* KPI Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg border border-blue-200">
                 <div className="text-sm text-blue-600 font-medium mb-1">MAE</div>
-                <div className="text-2xl font-bold text-blue-900">{selectedFirmware.overallAccuracy.avgMAE.toFixed(2)}</div>
+                <div className="text-2xl font-bold text-blue-900">{selectedFirmware.overallAccuracy.avgMAE.toFixed(2)} <span className="text-base text-blue-700">BPM</span></div>
+                <div className="text-xs text-blue-600 mt-1">Lower is better | Target: &lt;5 BPM</div>
               </div>
               <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg border border-purple-200">
                 <div className="text-sm text-purple-600 font-medium mb-1">RMSE</div>
-                <div className="text-2xl font-bold text-purple-900">{selectedFirmware.overallAccuracy.avgRMSE.toFixed(2)}</div>
+                <div className="text-2xl font-bold text-purple-900">{selectedFirmware.overallAccuracy.avgRMSE.toFixed(2)} <span className="text-base text-purple-700">BPM</span></div>
+                <div className="text-xs text-purple-600 mt-1">Lower is better | Target: &lt;7 BPM</div>
               </div>
               <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-4 rounded-lg border border-orange-200">
                 <div className="text-sm text-orange-600 font-medium mb-1">MAPE</div>
                 <div className="text-2xl font-bold text-orange-900">{selectedFirmware.overallAccuracy.avgMAPE.toFixed(2)}%</div>
+                <div className="text-xs text-orange-600 mt-1">Lower is better | Target: &lt;10%</div>
               </div>
               <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg border border-green-200">
                 <div className="text-sm text-green-600 font-medium mb-1">Pearson</div>
                 <div className="text-2xl font-bold text-green-900">{selectedFirmware.overallAccuracy.avgPearson.toFixed(3)}</div>
+                <div className="text-xs text-green-600 mt-1">Higher is better | Target: &gt;0.9</div>
               </div>
             </div>
 
@@ -509,7 +531,7 @@ const FirmwarePerformanceTab: React.FC = () => {
             {/* Activity-wise Performance Table */}
             {selectedFirmware.activityWise.length > 0 && (
               <div>
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">📊 Activity-wise Performance</h3>
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Activity-wise Performance</h3>
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
@@ -602,6 +624,7 @@ const FirmwarePerformanceTab: React.FC = () => {
             )}
           </div>
         </Card>
+        </div>
       )}
 
       {/* 5. Activity × Firmware Matrix */}
@@ -646,7 +669,7 @@ const FirmwarePerformanceTab: React.FC = () => {
             </table>
           </div>
           <div className="mt-4 text-sm text-gray-600">
-            💡 This matrix shows how each activity performs across different firmware versions
+            This matrix shows how each activity performs across different firmware versions
           </div>
         </Card>
       )}

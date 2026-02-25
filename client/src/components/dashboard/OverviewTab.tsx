@@ -15,7 +15,6 @@ const OverviewTab: React.FC<Props> = ({ userSummary, loading }) => {
   if (!userSummary) return (
     <div className="flex items-center justify-center py-20">
       <div className="text-center">
-        <div className="text-4xl mb-4">📊</div>
         <p className="text-gray-600">No summary data found</p>
       </div>
     </div>
@@ -35,7 +34,7 @@ const OverviewTab: React.FC<Props> = ({ userSummary, loading }) => {
       {/* Activity Wise Accuracy */}
       {activityData.length > 0 && (
         <TableWithBar
-          title="📊 Activity Wise Accuracy"
+          title="Activity Wise Accuracy"
           data={userSummary.activityWiseAccuracy}
           columns={[
             { key: 'activityType', label: 'Activity' },
@@ -53,7 +52,7 @@ const OverviewTab: React.FC<Props> = ({ userSummary, loading }) => {
       {/* Band Position Wise Accuracy */}
       {bandData.length > 0 && (
         <TableWithBar
-          title="📍 Band Position Wise Accuracy"
+          title="Band Position Wise Accuracy"
           data={userSummary.bandPositionWiseAccuracy}
           columns={[
             { key: 'bandPosition', label: 'Band Position' },
@@ -71,7 +70,7 @@ const OverviewTab: React.FC<Props> = ({ userSummary, loading }) => {
       {/* Firmware Wise Accuracy */}
       {firmwareData.length > 0 && (
         <TableWithBar
-          title="🔧 Firmware Wise Accuracy"
+          title="Firmware Wise Accuracy"
           data={userSummary.firmwareWiseAccuracy}
           columns={[
             { key: 'firmwareVersion', label: 'Firmware Version' },

@@ -121,93 +121,112 @@ const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({ metric, subTab }) =
 
   return (
     <div className="space-y-6">
-      {/* Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card>
-          <div className="space-y-2">
-            <p className="text-sm text-gray-500 uppercase tracking-wide">Total Users</p>
-            <p className="text-3xl font-bold bg-gradient-to-r from-blue-500 to-blue-600 bg-clip-text text-transparent">
-              {globalSummary?.totalUsers || 0}
-            </p>
-            <p className="text-xs text-gray-500">Registered users</p>
-          </div>
-        </Card>
+      {/* Summary Stats - Only show on overview tab */}
+      {subTab === 'overview' && (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <Card>
+              <div className="space-y-2">
+                <p className="text-sm text-gray-500 uppercase tracking-wide">Total Users</p>
+                <p className="text-3xl font-bold bg-gradient-to-r from-blue-500 to-blue-600 bg-clip-text text-transparent">
+                  {globalSummary?.totalUsers || 0}
+                </p>
+                <p className="text-xs text-gray-500">Registered users</p>
+              </div>
+            </Card>
 
-        <Card>
-          <div className="space-y-2">
-            <p className="text-sm text-gray-500 uppercase tracking-wide">Total Luna Readings</p>
-            <p className="text-3xl font-bold bg-gradient-to-r from-green-500 to-green-600 bg-clip-text text-transparent">
-              {globalSummary?.totalReadings.toLocaleString() || 0}
-            </p>
-            <p className="text-xs text-gray-500">Recorded data points</p>
-          </div>
-        </Card>
+            <Card>
+              <div className="space-y-2">
+                <p className="text-sm text-gray-500 uppercase tracking-wide">Total Luna Readings</p>
+                <p className="text-3xl font-bold bg-gradient-to-r from-green-500 to-green-600 bg-clip-text text-transparent">
+                  {globalSummary?.totalReadings.toLocaleString() || 0}
+                </p>
+                <p className="text-xs text-gray-500">Recorded data points</p>
+              </div>
+            </Card>
 
-        <Card>
-          <div className="space-y-2">
-            <p className="text-sm text-gray-500 uppercase tracking-wide">Total Sessions</p>
-            <p className="text-3xl font-bold bg-gradient-to-r from-purple-500 to-purple-600 bg-clip-text text-transparent">
-              {globalSummary?.totalSessions || 0}
-            </p>
-            <p className="text-xs text-gray-500">Across all users</p>
-          </div>
-        </Card>
+            <Card>
+              <div className="space-y-2">
+                <p className="text-sm text-gray-500 uppercase tracking-wide">Total Sessions</p>
+                <p className="text-3xl font-bold bg-gradient-to-r from-purple-500 to-purple-600 bg-clip-text text-transparent">
+                  {globalSummary?.totalSessions || 0}
+                </p>
+                <p className="text-xs text-gray-500">Across all users</p>
+              </div>
+            </Card>
 
-        <Card>
-          <div className="space-y-2">
-            <p className="text-sm text-gray-500 uppercase tracking-wide">Last Updated</p>
-            <p className="text-3xl font-bold bg-gradient-to-r from-orange-500 to-orange-600 bg-clip-text text-transparent">
-              {globalSummary?.computedAt ? formatLastUpdated(globalSummary.computedAt) : '--'}
-            </p>
-            <p className="text-xs text-gray-500">Data freshness</p>
+            <Card>
+              <div className="space-y-2">
+                <p className="text-sm text-gray-500 uppercase tracking-wide">Last Updated</p>
+                <p className="text-3xl font-bold bg-gradient-to-r from-orange-500 to-orange-600 bg-clip-text text-transparent">
+                  {globalSummary?.computedAt ? formatLastUpdated(globalSummary.computedAt) : '--'}
+                </p>
+                <p className="text-xs text-gray-500">Data freshness</p>
+              </div>
+            </Card>
           </div>
-        </Card>
-      </div>
 
-      {/* Additional Stats */}
-      {globalSummary && (
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          <Card>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">MAE</span>
-              <span className="text-lg font-semibold text-gray-800">
-                {globalSummary.lunaStats.avgMAE.toFixed(2)}
-              </span>
+          {/* Additional Stats */}
+          {globalSummary && (
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+              <Card>
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600 font-medium">MAE</span>
+                    <span className="text-lg font-semibold text-gray-800">
+                      {globalSummary.lunaStats.avgMAE.toFixed(2)} <span className="text-sm text-gray-500">BPM</span>
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500">Mean Absolute Error. Lower is better. Ideal: &lt;5 BPM</p>
+                </div>
+              </Card>
+              <Card>
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600 font-medium">RMSE</span>
+                    <span className="text-lg font-semibold text-gray-800">
+                      {globalSummary.lunaStats.avgRMSE.toFixed(2)} <span className="text-sm text-gray-500">BPM</span>
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500">Penalizes large spikes. Lower is better. Ideal: &lt;7 BPM</p>
+                </div>
+              </Card>
+              <Card>
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600 font-medium">Pearson R</span>
+                    <span className="text-lg font-semibold text-gray-800">
+                      {globalSummary.lunaStats.avgPearson.toFixed(3)}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500">Correlation strength. Higher is better. Ideal: &gt;0.9</p>
+                </div>
+              </Card>
+              <Card>
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600 font-medium">MAPE</span>
+                    <span className="text-lg font-semibold text-gray-800">
+                      {globalSummary.lunaStats.avgMAPE.toFixed(2)}%
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500">% Error. Lower is better. Ideal: &lt;10%</p>
+                </div>
+              </Card>
+              <Card>
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600 font-medium">Mean Bias</span>
+                    <span className="text-lg font-semibold text-gray-800">
+                      {globalSummary.lunaStats.avgBias.toFixed(2)} <span className="text-sm text-gray-500">BPM</span>
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500">Systematic error. Closer to 0 is better. Ideal: ±2 BPM</p>
+                </div>
+              </Card>
             </div>
-          </Card>
-          <Card>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">RMSE</span>
-              <span className="text-lg font-semibold text-gray-800">
-                {globalSummary.lunaStats.avgRMSE.toFixed(2)}
-              </span>
-            </div>
-          </Card>
-          <Card>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">Pearson R</span>
-              <span className="text-lg font-semibold text-gray-800">
-                {globalSummary.lunaStats.avgPearson.toFixed(3)}
-              </span>
-            </div>
-          </Card>
-          <Card>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">MAPE</span>
-              <span className="text-lg font-semibold text-gray-800">
-                {globalSummary.lunaStats.avgMAPE.toFixed(2)}%
-              </span>
-            </div>
-          </Card>
-          <Card>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">Mean Bias</span>
-              <span className="text-lg font-semibold text-gray-800">
-                {globalSummary.lunaStats.avgBias.toFixed(2)}
-              </span>
-            </div>
-          </Card>
-        </div>
+          )}
+        </>
       )}
 
       {/* Content based on sub-tab */}
@@ -304,7 +323,6 @@ const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({ metric, subTab }) =
               </div>
             ) : (
               <div className="text-center py-12 text-gray-500">
-                <div className="text-4xl mb-4">📊</div>
                 <p>No trend data available</p>
                 <p className="text-sm mt-2">Data will appear as sessions are recorded</p>
               </div>
