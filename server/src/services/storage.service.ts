@@ -15,16 +15,17 @@ class StorageService {
     console.log('📋 Environment check:');
     console.log('  - GCP_PROJECT_ID:', process.env.GCP_PROJECT_ID || '❌ NOT SET');
     console.log('  - GCS_BUCKET_NAME:', process.env.GCS_BUCKET_NAME || '❌ NOT SET');
-    console.log('  - GOOGLE_APPLICATION_CREDENTIALS:', process.env.GOOGLE_APPLICATION_CREDENTIALS || '❌ NOT SET');
+    console.log('  - GCP_CREDENTIALS:', process.env.GCP_CREDENTIALS ? '✅ SET' : '⚠️  NOT SET (will use Application Default Credentials)');
     
     // Initialize Google Cloud Storage
-    // For local development, set GOOGLE_APPLICATION_CREDENTIALS env var
+    // For local development, set GCP_CREDENTIALS env var or use gcloud auth
     // For Cloud Run, authentication is automatic
     this.storage = new Storage({
       projectId: process.env.GCP_PROJECT_ID,
       // Credentials will be automatically loaded from:
-      // 1. GOOGLE_APPLICATION_CREDENTIALS environment variable
-      // 2. Cloud Run service account (in production)
+      // 1. GCP_CREDENTIALS environment variable (JSON string)
+      // 2. Application Default Credentials (gcloud CLI)
+      // 3. Cloud Run service account (in production)
       ...(process.env.GCP_CREDENTIALS && {
         credentials: JSON.parse(process.env.GCP_CREDENTIALS)
       })

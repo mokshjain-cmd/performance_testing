@@ -139,7 +139,7 @@ export const createSession = async (
     console.log(`📤 Uploading ${files.length} files to GCS for session ${session._id}`);
     console.log(`📂 Files to upload:`, files.map(f => ({ fieldname: f.fieldname, filename: f.filename, path: f.path })));
     let rawFiles: Record<string, string> = {};
-    if(process.env.ENV=='production') {
+    if(process.env.ENV==='production') {
       try {
       console.log('🔧 Calling storageService.uploadDeviceFiles...');
 

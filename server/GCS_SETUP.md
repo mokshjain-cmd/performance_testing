@@ -133,18 +133,31 @@ Update `server/.env`:
 # Google Cloud Storage
 GCP_PROJECT_ID=performance-testing-platform
 GCS_BUCKET_NAME=performance-testing-device-logs
-GOOGLE_APPLICATION_CREDENTIALS=/Users/yourusername/.gcp/performance-testing-gcs-key.json
+
+# Option 1: Set credentials as environment variable (recommended)
+# Copy the entire JSON key file content as a single line:
+GCP_CREDENTIALS='{"type":"service_account","project_id":"...","private_key":"..."}'
+
+# Option 2: Use gcloud CLI authentication (no credential needed)
+# Run: gcloud auth application-default login
 ```
 
-**For Cloud Run Deployment:**
+**For Cloud Run / Docker Deployment:**
 
-Cloud Run automatically authenticates using the service account, so you don't need `GOOGLE_APPLICATION_CREDENTIALS`:
+Set the credentials as an environment variable:
 
 ```bash
 # Set environment variables in Cloud Run
 gcloud run services update performance-testing-api \
   --set-env-vars "GCP_PROJECT_ID=performance-testing-platform" \
-  --set-env-vars "GCS_BUCKET_NAME=performance-testing-device-logs"
+  --set-env-vars "GCS_BUCKET_NAME=performance-testing-device-logs" \
+  --set-env-vars "GCP_CREDENTIALS=$(cat /path/to/key.json | tr -d '\n')"
+```
+
+Or use Docker:
+```bash
+# Set as environment variable in docker-compose or docker run
+docker run -e GCP_CREDENTIALS="$(cat key.json | tr -d '\n')" ...
 ```
 
 ### 6. Grant Cloud Run Service Account Access
@@ -370,12 +383,15 @@ gsutil ls gs://performance-testing-device-logs/
 **Solution:**
 1. Verify service account has `storage.objectAdmin` role
 2. Check that `GCP_PROJECT_ID` is set correctly
-3. For local dev, verify `GOOGLE_APPLICATION_CREDENTIALS` path is correct
+3. For local dev, verify `GCP_CREDENTIALS` is set correctly or use gcloud auth
 
 ```bash
 # Test credentials
 gcloud auth list
 gcloud auth application-default print-access-token
+
+# Or verify your GCP_CREDENTIALS env var is valid JSON
+echo $GCP_CREDENTIALS | jq .
 ```
 
 ### Issue: "Files not uploading"
