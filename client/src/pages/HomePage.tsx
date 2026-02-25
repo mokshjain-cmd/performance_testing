@@ -1,4 +1,4 @@
-import { Button, Card } from '../components/common';
+import { Card } from '../components/common';
 import { Layout } from '../components/layout';
 
 export default function HomePage() {
