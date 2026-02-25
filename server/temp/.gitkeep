@@ -1,3 +1,2 @@
-# Don't track uploaded files
-temp/
-*.log
+# This file ensures the temp directory is tracked in git
+# All other files in this directory should be temporary and will be ignored

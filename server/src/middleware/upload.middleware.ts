@@ -5,8 +5,16 @@ import { Request } from 'express';
 
 // Ensure temp directory exists
 const tempDir = path.join(process.cwd(), 'temp');
-if (!fs.existsSync(tempDir)) {
-  fs.mkdirSync(tempDir, { recursive: true });
+try {
+  if (!fs.existsSync(tempDir)) {
+    fs.mkdirSync(tempDir, { recursive: true });
+    console.log(`✅ Created temp directory: ${tempDir}`);
+  } else {
+    console.log(`✅ Temp directory exists: ${tempDir}`);
+  }
+} catch (error) {
+  console.error('❌ Error creating temp directory:', error);
+  throw error;
 }
 
 // Configure storage

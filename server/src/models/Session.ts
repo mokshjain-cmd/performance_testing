@@ -16,6 +16,7 @@
     bandPosition?: string;
     devices: ISessionDeviceSnapshot[];
     benchmarkDeviceType?: string;
+    rawFiles?: Record<string, string>; // { deviceType: downloadUrl }
     isValid: boolean;
     createdAt: Date;
     updatedAt: Date;
@@ -38,6 +39,11 @@
         ],
         benchmarkDeviceType: String,
         bandPosition: { type: String, default: "wrist" }, //add a default value here i.e wrist
+        rawFiles: {
+          type: Map,
+          of: String,
+          default: {}
+        },
         isValid: { type: Boolean, default: true, index: true },
     },
     { timestamps: true }

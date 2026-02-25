@@ -5,6 +5,7 @@ import Device from '../models/Devices';
 import mongoose from "mongoose";
 import { ingestSessionFiles } from '../services/sessionIngestion.service';
 import { deleteSession as deleteSessionService } from '../services/sessionDeletion.service';
+import storageService from '../services/storage.service';
 
 /**
  * Create a new session with device files
@@ -134,6 +135,34 @@ export const createSession = async (
       bandPosition,
     });
 
+    // Upload files to Google Cloud Storage and get download URLs
+    console.log(`📤 Uploading ${files.length} files to GCS for session ${session._id}`);
+    console.log(`📂 Files to upload:`, files.map(f => ({ fieldname: f.fieldname, filename: f.filename, path: f.path })));
+    let rawFiles: Record<string, string> = {};
+    
+    try {
+      console.log('🔧 Calling storageService.uploadDeviceFiles...');
+      rawFiles = await storageService.uploadDeviceFiles(files, session._id.toString());
+      
+      console.log(`📥 Received rawFiles from GCS:`, rawFiles);
+      
+      // Update session with raw file URLs
+      session.rawFiles = rawFiles;
+      console.log('💾 Saving session with rawFiles...');
+      await session.save();
+      
+      console.log(`✅ Raw files uploaded and URLs stored in session ${session._id}`);
+      console.log(`✅ Session rawFiles:`, session.rawFiles);
+    } catch (uploadError) {
+      console.error('❌ DETAILED ERROR uploading files to GCS:');
+      console.error('Error message:', uploadError instanceof Error ? uploadError.message : uploadError);
+      console.error('Error stack:', uploadError instanceof Error ? uploadError.stack : 'No stack trace');
+      console.error('Full error object:', uploadError);
+      // Continue with session creation even if upload fails
+      // Files are still available locally for processing
+    }
+
+    // Start ingestion process (async, don't wait)
     ingestSessionFiles({
         sessionId: session._id,
         userId,

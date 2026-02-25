@@ -43,6 +43,7 @@ export interface Session {
   createdAt: string;
   updatedAt: string;
   name?: string;
+  rawFiles?: Record<string, string>; // { deviceType: downloadUrl }
 }
 
 // ========================

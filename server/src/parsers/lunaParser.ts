@@ -72,12 +72,12 @@ export async function parseLunaCsv(
 
     // Always use the date from startTime for all rows that only have a time
     const fileDate = startTime.toISOString().split("T")[0];
-    console.log("📌 Using date from startTime:", fileDate);
+    //console.log("📌 Using date from startTime:", fileDate);
 
     fs.createReadStream(filePath)
       .pipe(csvParser())
       .on("headers", (headers: string[]) => {
-        console.log("📌 CSV Headers Found:", headers);
+        //console.log("📌 CSV Headers Found:", headers);
 
         for (const col of headers) {
           if (col.toLowerCase().includes("time")) {
@@ -86,10 +86,10 @@ export async function parseLunaCsv(
           }
         }
 
-        console.log("📌 Detected Timestamp Column:", timestampCol);
+        //console.log("📌 Detected Timestamp Column:", timestampCol);
 
         if (!timestampCol) {
-          console.log("❌ No timestamp column detected!");
+          //console.log("❌ No timestamp column detected!");
           reject(new Error("No timestamp column found in Luna CSV"));
         }
       })

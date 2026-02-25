@@ -65,7 +65,7 @@ export async function parsePolarCsv(
     throw new Error("Could not find data section in Polar CSV");
   }
 
-  console.log("📌 Data starts at line index:", dataStartIdx);
+  //console.log("📌 Data starts at line index:", dataStartIdx);
 
   // Extract metadata date + start time (line 0 = headers, line 1 = values)
   let baseDatetime = new Date();
@@ -109,7 +109,7 @@ export async function parsePolarCsv(
     }
   }
 
-  console.log("📌 Base Datetime Detected:", baseDatetime.toISOString());
+  //console.log("📌 Base Datetime Detected:", baseDatetime.toISOString());
 
   // Data lines (including header row)
   const dataLines = lines.slice(dataStartIdx);
@@ -188,7 +188,7 @@ export async function parsePolarCsv(
 
     // Debug first few
     if (acceptedRows <= 5) {
-      console.log(`✅ Accepted: ts=${ts.toISOString()} hr=${hr}`);
+      //console.log(`✅ Accepted: ts=${ts.toISOString()} hr=${hr}`);
     }
   }
 

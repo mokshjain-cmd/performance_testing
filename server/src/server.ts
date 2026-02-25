@@ -1,10 +1,12 @@
 import dotenv from 'dotenv';
+
+// Load environment variables FIRST, before any other imports
+dotenv.config();
+
+// Now import modules that depend on env vars
 import { createApp } from './app';
 import { connectDatabase } from './config/database';
 import { startSessionReminderCron } from './crons/sessionReminder.cron';
-
-// Load environment variables
-dotenv.config();
 
 const PORT = process.env.PORT || 3000;
 

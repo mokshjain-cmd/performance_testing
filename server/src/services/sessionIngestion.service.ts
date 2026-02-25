@@ -12,6 +12,10 @@ import { updateActivityPerformanceSummary } from './activityPerformanceSummary.s
 import { updateAdminDailyTrend } from './adminDailyTrend.service';
 import { updateAdminGlobalSummary } from './adminGlobalSummary.service';
 import { updateBenchmarkComparisonSummariesForSession } from './benchmarkComparisonSummary.service';
+import fs from 'fs';
+import { promisify } from 'util';
+
+const unlinkAsync = promisify(fs.unlink);
 
 export async function ingestSessionFiles({
   sessionId,
@@ -51,11 +55,11 @@ export async function ingestSessionFiles({
       if (deviceType === "polar") { readings = await parsePolarCsv(filePath, meta, startTime, endTime); }
       console.log(`Parsed ${readings.length} readings from ${deviceType} file.`);
       if (readings.length > 0) {
-        console.log('First element of readings:', JSON.stringify(readings[0], null, 2));
+        //console.log('First element of readings:', JSON.stringify(readings[0], null, 2));
       }
       if (readings.length > 0) {
         const result = await NormalizedReading.insertMany(readings, { ordered: false });
-        console.log('Insert result:', result);
+        //console.log('Insert result:', result);
         console.log('for time range:', startTime.toISOString(), '-', endTime.toISOString());
         console.log(`✅ Inserted ${readings.length} readings for ${deviceType}`);
         anyInserted = true;
@@ -99,6 +103,20 @@ export async function ingestSessionFiles({
         console.error('❌ Session analysis failed:', err);
       }
     }
+    
+    // Delete temp files after all processing is complete
+    console.log(`🗑️ Deleting ${files.length} temp files after processing`);
+    await Promise.allSettled(
+      files.map(async (file: any) => {
+        try {
+          await unlinkAsync(file.path);
+          console.log(`✅ Deleted temp file: ${file.filename}`);
+        } catch (deleteError) {
+          console.warn(`⚠️ Could not delete temp file ${file.filename}:`, deleteError);
+        }
+      })
+    );
+    
     }
     // After all device files processed, run analysis if any readings were inserted
     

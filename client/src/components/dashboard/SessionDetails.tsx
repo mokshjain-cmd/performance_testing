@@ -79,12 +79,24 @@ const SessionDetails: React.FC<Props> = ({ session }) => {
           <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Devices</span>
           <div className="flex flex-wrap gap-1">
             {session.devices.map((d) => (
-              <span
-                key={d.deviceId}
-                className="text-sm bg-gray-50 px-2 py-1 rounded border border-gray-200"
-                >
-                {d.deviceType}
-              </span>
+              <div key={d.deviceId} className="flex items-center gap-1 text-sm bg-gray-50 px-2 py-1 rounded border border-gray-200">
+                <span>{d.deviceType}</span>
+                {/* Download Raw File Icon */}
+                {session.rawFiles && session.rawFiles[d.deviceType] && (
+                  <a
+                    href={session.rawFiles[d.deviceType]}
+                    download
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:text-blue-800 transition-colors duration-200"
+                    title="Download raw file"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                  </a>
+                )}
+              </div>
             ))}
           </div>
         </div>
