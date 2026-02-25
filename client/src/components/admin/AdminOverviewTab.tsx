@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Card } from '../common';
 import type { Metric } from './MetricsSelector';
 import type { SubTab } from './SubTabBar';
-import axios from 'axios';
+import apiClient from '../../services/api';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import ActivityAnalysisTab from './ActivityAnalysisTab';
 import BenchmarkComparisonTab from './BenchmarkComparisonTab';
@@ -49,7 +49,7 @@ const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({ metric, subTab }) =
   useEffect(() => {
     // Fetch global summary
     setLoading(true);
-    axios.get('http://localhost:3000/api/admin/global-summary')
+    apiClient.get('/admin/global-summary')
       .then(res => {
         setGlobalSummary(res.data.data);
       })
@@ -62,7 +62,7 @@ const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({ metric, subTab }) =
     tenDaysAgo.setDate(today.getDate() - 10);
     const startDate = tenDaysAgo.toISOString().split('T')[0];
 
-    axios.get(`http://localhost:3000/api/admin/daily-trends?startDate=${startDate}`)
+    apiClient.get(`/admin/daily-trends?startDate=${startDate}`)
       .then(res => {
         setDailyTrends(res.data.data || []);
         console.log('Fetched daily trends:', res.data.data);

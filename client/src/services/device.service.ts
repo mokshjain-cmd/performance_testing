@@ -21,7 +21,7 @@ export const deviceService = {
       success: boolean;
       count: number;
       data: Device[];
-    }>('api/devices');
+    }>('/devices');
     return response.data;
   },
 
@@ -30,7 +30,7 @@ export const deviceService = {
       success: boolean;
       message: string;
       data: Device;
-    }>('api/devices', device);
+    }>('/devices', device);
     return response.data;
   },
 
@@ -38,7 +38,7 @@ export const deviceService = {
     const response = await apiClient.delete<{
       success: boolean;
       message: string;
-    }>(`api/devices/${deviceId}`);
+    }>(`/devices/${deviceId}`);
     return response.data;
   },
 };

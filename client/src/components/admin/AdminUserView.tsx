@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Card } from '../common';
 import BarGraph from '../dashboard/BarGraph';
 import type { Metric } from './MetricsSelector';
-import axios from 'axios';
+import apiClient from '../../services/api';
 
 interface UserSummary {
   totalSessions: number;
@@ -55,7 +55,7 @@ const AdminUserView: React.FC<AdminUserViewProps> = ({ userId, metric: _metric }
     // TODO: Fetch user summary data
     // API: GET /api/users/summary/{userId}
     setLoading(true);
-    axios.get(`http://localhost:3000/api/users/summary/${userId}`)
+    apiClient.get(`/users/summary/${userId}`)
       .then(res => {
         console.log('Fetched user summary:', res.data);
         setUserSummary(res.data.summary);

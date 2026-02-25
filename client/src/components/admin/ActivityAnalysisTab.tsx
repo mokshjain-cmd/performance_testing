@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Card } from '../common';
-import axios from 'axios';
+import apiClient from '../../services/api';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 interface ActivityPerformance {
@@ -20,7 +20,7 @@ const ActivityAnalysisTab: React.FC = () => {
   const [selectedActivityMetric, setSelectedActivityMetric] = useState<ActivityMetric>('avgMAE');
 
   useEffect(() => {
-    axios.get('http://localhost:3000/api/activity-performance')
+    apiClient.get('/activity-performance')
       .then(res => {
         setActivityPerformances(res.data.data || []);
         console.log('Fetched activity performance:', res.data.data);

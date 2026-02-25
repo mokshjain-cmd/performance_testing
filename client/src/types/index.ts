@@ -1,4 +1,13 @@
 // ========================
+// API RESPONSE
+// ========================
+export interface ApiResponse<T = any> {
+  success: boolean;
+  data: T;
+  message?: string;
+}
+
+// ========================
 // USER
 // ========================
 export interface User {

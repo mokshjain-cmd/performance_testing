@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Card } from '../common';
-import axios from 'axios';
+import apiClient from '../../services/api';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from 'recharts';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 
@@ -46,7 +46,7 @@ const FirmwarePerformanceTab: React.FC = () => {
 
   useEffect(() => {
     setLoading(true);
-    axios.get('http://localhost:3000/api/firmware-performance')
+    apiClient.get('/firmware-performance')
       .then(res => {
         setFirmwareData(res.data.data || []);
         console.log('Fetched firmware performance:', res.data.data);

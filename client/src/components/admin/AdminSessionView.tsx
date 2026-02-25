@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import apiClient from '../../services/api';
 import type { Metric } from './MetricsSelector';
 import type { SessionFullDetails } from '../../types';
 import SessionDetails from '../dashboard/SessionDetails';
@@ -20,7 +20,7 @@ const AdminSessionView: React.FC<AdminSessionViewProps> = ({ sessionId, userId: 
     // TODO: Fetch session details
     // API: GET /api/sessions/full/{sessionId}
     setLoading(true);
-    axios.get(`http://localhost:3000/api/sessions/full/${sessionId}`)
+    apiClient.get(`/sessions/full/${sessionId}`)
       .then(res => {
         console.log('Fetched session details:', res.data);
         setSessionDetails(res.data);

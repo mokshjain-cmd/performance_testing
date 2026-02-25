@@ -131,15 +131,9 @@ const DeviceManagement: React.FC<Props> = ({ isOpen, onClose }) => {
             </h3>
             
             {/* Debug info */}
-            <div className="mb-2 text-xs text-gray-500 bg-yellow-100 p-2 rounded">
-              Status: {loading ? 'Loading...' : 'Loaded'} | Devices count: {devices.length} | Array is: {Array.isArray(devices) ? 'YES' : 'NO'}
-            </div>
+
             
-            {/* Always show this section for debugging */}
-            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded text-xs">
-              <div className="font-bold mb-1">Debug - Raw devices state:</div>
-              <pre className="overflow-auto max-h-32">{JSON.stringify(devices, null, 2)}</pre>
-            </div>
+           
             
             {loading && devices.length === 0 ? (
               <div className="text-center py-8 text-gray-500">

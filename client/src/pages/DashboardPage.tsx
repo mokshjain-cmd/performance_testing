@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import apiClient from '../services/api';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
 import Sidebar from '../components/dashboard/Sidebar';
 import OverviewTab from '../components/dashboard/OverviewTab';
@@ -19,7 +19,7 @@ const DashboardPage: React.FC = () => {
 
   const fetchSessions = () => {
     if (userId) {
-      axios.get(`http://localhost:3000/api/sessions/all/${userId}`)
+      apiClient.get('/sessions/all')
         .then(res => setSessions(res.data.data || []))
         .catch(() => setSessions([]));
     }
@@ -32,7 +32,7 @@ const DashboardPage: React.FC = () => {
   useEffect(() => {
     if (selectedSessionId) {
       setLoading(true);
-      axios.get(`http://localhost:3000/api/sessions/full/${selectedSessionId}`)
+      apiClient.get(`/sessions/full/${selectedSessionId}`)
         .then(res => {
           console.log('Fetched session details:', res.data);
           setSessionDetails(res.data);
@@ -45,7 +45,7 @@ const DashboardPage: React.FC = () => {
   useEffect(() => {
     if (userId && activeTab === 'overview') {
       setSummaryLoading(true);
-      axios.get(`http://localhost:3000/api/users/summary/${userId}`)
+      apiClient.get('/users/summary')
         .then(res => {
           setUserSummary(res.data.summary);
           setSummaryLoading(false);
@@ -53,30 +53,6 @@ const DashboardPage: React.FC = () => {
         .catch(() => setSummaryLoading(false));
     }
   }, [userId, activeTab]);
-
-  const handleDeleteSession = async (sessionId: string) => {
-    if (!confirm('Are you sure you want to delete this session? This action cannot be undone.')) {
-      return;
-    }
-
-    try {
-      await axios.delete(`http://localhost:3000/api/sessions/${sessionId}`);
-      
-      // If the deleted session was selected, clear selection
-      if (selectedSessionId === sessionId) {
-        setSelectedSessionId(null);
-        setSessionDetails(null);
-      }
-      
-      // Refresh the sessions list
-      fetchSessions();
-      
-      alert('Session deleted successfully!');
-    } catch (error) {
-      console.error('Error deleting session:', error);
-      alert('Failed to delete session. Please try again.');
-    }
-  };
 
   return (
     <DashboardLayout
@@ -87,7 +63,6 @@ const DashboardPage: React.FC = () => {
           setActiveTab={setActiveTab}
           selectedSessionId={selectedSessionId}
           setSelectedSessionId={setSelectedSessionId}
-          onDeleteSession={handleDeleteSession}
         />
       }
     >

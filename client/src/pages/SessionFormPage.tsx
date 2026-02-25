@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Layout } from '../components/layout';
 import { Button, Input, Select, Card } from '../components/common';
+import apiClient from '../services/api';
 
 const DEVICE_OPTIONS = [
   { label: 'Luna', value: 'luna', always: true },
@@ -56,11 +57,10 @@ export default function SessionFormPage() {
 
   // Fetch firmware versions for Luna
   useEffect(() => {
-    fetch('http://localhost:3000/api/devices/firmware?deviceType=luna')
-      .then(res => res.json())
-      .then(data => {
-        if (data.success && data.data) {
-          const versions = data.data.map((version: string) => ({
+    apiClient.get('/devices/firmware?deviceType=luna')
+      .then(res => {
+        if (res.data.success && res.data.data) {
+          const versions = res.data.data.map((version: string) => ({
             value: version,
             label: version,
           }));
@@ -135,12 +135,12 @@ export default function SessionFormPage() {
     });
 
     try {
-      const res = await fetch('http://localhost:3000/api/sessions/create', {
-        method: 'POST',
-        body: form,
+      const res = await apiClient.post('/sessions/create', form, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
-      if (!res.ok) throw new Error('Failed to create session');
-      const data = await res.json();
+      const data = res.data;
       //console.log('Session creation response:', data);
       setResponseData(data);
       alert('Session created successfully!');

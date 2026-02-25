@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Card } from '../common';
-import axios from 'axios';
+import apiClient from '../../services/api';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 interface BenchmarkComparison {
@@ -24,7 +24,7 @@ const BenchmarkComparisonTab: React.FC = () => {
   const [selectedBenchmarkMetric, setSelectedBenchmarkMetric] = useState<BenchmarkMetric>('avgMAE');
 
   useEffect(() => {
-    axios.get('http://localhost:3000/api/benchmark-comparisons')
+    apiClient.get('/benchmark-comparisons')
       .then(res => {
         setBenchmarkComparisons(res.data.data || []);
         console.log('Fetched benchmark comparisons:', res.data.data);

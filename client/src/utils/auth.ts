@@ -11,6 +11,20 @@ export const getUserRole = (): 'admin' | 'tester' | null => {
   return role as 'admin' | 'tester' | null;
 };
 
+export const getToken = (): string | null => {
+  return localStorage.getItem('token');
+};
+
+export const getUser = (): { id: string; name: string; email: string; role: 'admin' | 'tester' } | null => {
+  const userStr = localStorage.getItem('user');
+  if (!userStr) return null;
+  try {
+    return JSON.parse(userStr);
+  } catch {
+    return null;
+  }
+};
+
 export const isAdmin = (): boolean => {
   return getUserRole() === 'admin';
 };
@@ -20,10 +34,12 @@ export const isTester = (): boolean => {
 };
 
 export const isLoggedIn = (): boolean => {
-  return !!getUserId();
+  return !!getToken() && !!getUserId();
 };
 
 export const logout = (): void => {
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
   localStorage.removeItem('userId');
   localStorage.removeItem('userRole');
 };
@@ -33,7 +49,14 @@ export const setAuth = (userId: string, role: 'admin' | 'tester'): void => {
   localStorage.setItem('userRole', role);
 };
 
+export const setAuthToken = (token: string, user: { id: string; name: string; email: string; role: 'admin' | 'tester' }): void => {
+  localStorage.setItem('token', token);
+  localStorage.setItem('user', JSON.stringify(user));
+  localStorage.setItem('userId', user.id);
+  localStorage.setItem('userRole', user.role);
+};
+
 export const getAuthHeaders = (): Record<string, string> => {
-  const userId = getUserId();
-  return userId ? { 'X-User-Id': userId } : {};
+  const token = getToken();
+  return token ? { 'Authorization': `Bearer ${token}` } : {};
 };

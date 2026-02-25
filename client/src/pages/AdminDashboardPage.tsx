@@ -8,7 +8,7 @@ import type { SubTab } from '../components/admin/SubTabBar';
 import AdminOverviewTab from '../components/admin/AdminOverviewTab';
 import AdminUserView from '../components/admin/AdminUserView';
 import AdminSessionView from '../components/admin/AdminSessionView';
-import axios from 'axios';
+import apiClient from '../services/api';
 
 interface User {
   _id: string;
@@ -46,7 +46,7 @@ const AdminDashboardPage: React.FC = () => {
   // Fetch all users
   useEffect(() => {
     setLoading(true);
-    axios.get('http://localhost:3000/api/users/')
+    apiClient.get('/users/')
       .then(res => {
         const usersData = res.data.data || [];
         const usersWithSessions = usersData.map((user: User) => ({
@@ -71,7 +71,7 @@ const AdminDashboardPage: React.FC = () => {
     }
     
     try {
-      const res = await axios.get(`http://localhost:3000/api/sessions/allid/${userId}`);
+      const res = await apiClient.get(`/sessions/user/${userId}/ids`);
       const sessions = res.data.data || [];
       setUserSessions(prev => new Map(prev).set(userId, sessions));
       
@@ -111,7 +111,7 @@ const AdminDashboardPage: React.FC = () => {
     }
 
     try {
-      await axios.delete(`http://localhost:3000/api/sessions/${sessionId}`);
+      await apiClient.delete(`/sessions/${sessionId}`);
       
       // Remove session from user's sessions in state
       setUsers(prev => prev.map(user => 

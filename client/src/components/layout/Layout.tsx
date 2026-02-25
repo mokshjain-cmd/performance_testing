@@ -1,6 +1,7 @@
 import React, { type ReactNode } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Header } from '../common';
+import { isLoggedIn as checkIsLoggedIn, logout } from '../../utils/auth';
 
 interface LayoutProps {
   children: ReactNode;
@@ -11,16 +12,15 @@ export default function Layout({ children, fullWidth = false }: LayoutProps) {
 
   const navigate = useNavigate();
   const location = useLocation();
-  const [isLoggedIn, setIsLoggedIn] = React.useState(!!localStorage.getItem('userId'));
+  const [isLoggedIn, setIsLoggedIn] = React.useState(checkIsLoggedIn());
 
   React.useEffect(() => {
-    setIsLoggedIn(!!localStorage.getItem('userId'));
+    setIsLoggedIn(checkIsLoggedIn());
   }, [location.pathname]);
 
   const handleLogin = () => navigate('/login');
   const handleLogout = () => {
-    localStorage.removeItem('userId');
-    localStorage.removeItem('userRole');
+    logout();
     setIsLoggedIn(false);
     navigate('/login');
   };
