@@ -10,20 +10,25 @@ import adminDailyTrendRoutes from './adminDailyTrend.routes';
 import adminGlobalSummaryRoutes from './adminGlobalSummary.routes';
 import firmwarePerformanceRoutes from './firmwarePerformance.routes';
 import cronRoutes from './cron.routes';
+import authRoutes from './auth.routes';
+import { authenticateJWT, requireRole, verifyUserRole } from '../middleware/auth.middleware';
 
 const router = Router();
 
 
-// Register all routes here
+// Public routes (no authentication required)
+router.use('/auth', authRoutes);
 router.use('/health', healthRoutes);
-router.use('/sessions', sessionRoutes);
-router.use('/devices', deviceRoutes);
-router.use('/users', userRoutes);
-router.use('/activity-performance', activityPerformanceRoutes);
-router.use('/benchmark-comparisons', benchmarkComparisonRoutes);
-router.use('/admin/daily-trends', adminDailyTrendRoutes);
-router.use('/admin/global-summary', adminGlobalSummaryRoutes);
-router.use('/firmware-performance', firmwarePerformanceRoutes);
-router.use('/cron', cronRoutes);
+
+// Protected routes (authentication required)
+router.use('/sessions', authenticateJWT, sessionRoutes);
+router.use('/devices', authenticateJWT, deviceRoutes);
+router.use('/users', authenticateJWT, userRoutes);
+router.use('/activity-performance', authenticateJWT, requireRole('admin'),activityPerformanceRoutes);
+router.use('/benchmark-comparisons', authenticateJWT, requireRole('admin'),benchmarkComparisonRoutes);
+router.use('/admin/daily-trends', authenticateJWT, requireRole('admin'), adminDailyTrendRoutes);
+router.use('/admin/global-summary', authenticateJWT, requireRole('admin'), adminGlobalSummaryRoutes);
+router.use('/firmware-performance', authenticateJWT, requireRole('admin'), firmwarePerformanceRoutes);
+router.use('/cron', authenticateJWT, requireRole('admin'),   cronRoutes);
 
 export default router;

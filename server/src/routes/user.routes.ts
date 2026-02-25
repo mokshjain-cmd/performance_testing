@@ -9,14 +9,17 @@ const router = Router();
 
 // POST /api/users/create
 
-router.post('/create', createUser);
+//router.post('/create', createUser);
 
 // GET /api/users/by-email?email=foo@bar.com
-router.get('/by-email', getUserByEmail);
+router.get('/by-email', requireRole('admin'),getUserByEmail);
 
-// GET /api/users/summary/:userId
-router.get('/summary/:userId', getUserOverallSummary);
+// GET /api/users/summary - Get current user's summary (from JWT)
+router.get('/summary', getUserOverallSummary);
 
-router.get('/',getAllUsers);
+// GET /api/users/summary/:userId - Admin can view any user's summary
+router.get('/summary/:userId', requireRole('admin'), getUserOverallSummary);
+
+router.get('/',requireRole('admin'),getAllUsers);
 
 export default router;

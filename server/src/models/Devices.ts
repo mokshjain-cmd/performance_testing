@@ -16,7 +16,6 @@ const DeviceSchema = new Schema<IDevice>(
       type: String,
       enum: ["luna", "polar", "apple", "whoop", "amazfit"],
       required: true,
-      index: true,
     },
     hardwareVersion: String,
     firmwareVersion: String,
@@ -25,6 +24,7 @@ const DeviceSchema = new Schema<IDevice>(
 );
 
 // Create compound unique index for deviceType + firmwareVersion combination
+// This allows multiple devices with same deviceType but different firmwareVersion
 DeviceSchema.index({ deviceType: 1, firmwareVersion: 1 }, { unique: true });
 
 export default model<IDevice>("Device", DeviceSchema);

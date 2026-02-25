@@ -42,8 +42,8 @@ export const createSession = async (
   res: Response
 ): Promise<void> => {
   try {
+    const userId = req.userId; 
     const {
-      userId,
       sessionName,
       activityType,
       startTime,
@@ -205,7 +205,7 @@ export const getSessionsByUserId = async (
   res: Response
 ): Promise<void> => {
   try {
-    const { userId } = req.query;
+    const userId = req.userId;
     if (!userId) {
       res.status(400).json({ success: false, message: 'userId required' });
       return;
@@ -228,8 +228,11 @@ export const getAllSessions = async (
   res: Response
 ): Promise<void> => {
   try {
-    const { userId } = req.params;
-
+    const userId = req.userId;
+    if (!userId) {
+      res.status(400).json({ success: false, message: 'userId required' });
+      return;
+    }
     // Validate ObjectId
     if (!mongoose.Types.ObjectId.isValid(userId)) {
       res.status(400).json({
@@ -314,7 +317,7 @@ export const getSessionIdsByUserId = async (
   res: Response
 ): Promise<void> => {
   try {
-    const { userId } = req.params;
+    const userId  = req.userId;
     console.error('Received userId:', userId);
     if (!userId) {
       res.status(400).json({ success: false, message: 'userId required' });
@@ -322,6 +325,26 @@ export const getSessionIdsByUserId = async (
     }
     const sessions = await Session.find({ userId }, '_id').exec();
     console.error('session ids:', sessions);
+    res.status(200).json({ success: true, count: sessions.length, data: sessions });
+  } catch (error) {
+    console.error('Error fetching session IDs:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch session IDs', error: error instanceof Error ? error.message : 'Unknown error' });
+  }
+};
+
+// Admin-only: Get session IDs for a specific user by userId param
+export const getSessionIdsByUserIdParam = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { userId } = req.params;
+    console.log('Admin fetching session IDs for userId:', userId);
+    if (!userId) {
+      res.status(400).json({ success: false, message: 'userId required' });
+      return;
+    }
+    const sessions = await Session.find({ userId }, '_id name activityType startTime').exec();
     res.status(200).json({ success: true, count: sessions.length, data: sessions });
   } catch (error) {
     console.error('Error fetching session IDs:', error);

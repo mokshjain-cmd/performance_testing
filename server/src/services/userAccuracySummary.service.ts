@@ -10,12 +10,35 @@ import { Types } from 'mongoose';
 export async function updateUserAccuracySummary(userId: Types.ObjectId | string) {
   // Get all sessions for the user
   const sessions = await Session.find({ userId }).lean();
-  if (!sessions.length) return;
+  
+  // If no sessions remain, delete the UserAccuracySummary document
+  if (!sessions.length) {
+    await UserAccuracySummary.deleteOne({ userId });
+    console.log(`✅ Deleted UserAccuracySummary for user ${userId} (no sessions remaining)`);
+    return;
+  }
 
   // Get all analyses for the user's sessions
   const sessionIds = sessions.map(s => s._id);
   const analyses = await SessionAnalysis.find({ sessionId: { $in: sessionIds } }).lean();
-  if (!analyses.length) return;
+  
+  // If no analyses, update with basic session count only
+  if (!analyses.length) {
+    await UserAccuracySummary.findOneAndUpdate(
+      { userId },
+      {
+        userId: new Types.ObjectId(userId),
+        totalSessions: sessions.length,
+        activityWiseAccuracy: [],
+        firmwareWiseAccuracy: [],
+        bandPositionWiseAccuracy: [],
+        lastUpdated: new Date(),
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+    console.log(`✅ Updated UserAccuracySummary for user ${userId} (sessions exist but no analyses yet)`);
+    return;
+  }
 
   // Helper: get session by id
   const sessionMap = new Map(sessions.map(s => [String(s._id), s]));

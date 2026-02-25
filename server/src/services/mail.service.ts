@@ -2,10 +2,12 @@ import nodemailer, { Transporter } from 'nodemailer';
 require("dotenv").config();
 
 interface MailOptions {
+  from: string;
   to: string;
   subject: string;
   text?: string;
   html?: string;
+  replyTo?: string;
 }
 
 class MailService {
@@ -13,21 +15,27 @@ class MailService {
 
   constructor() {
     console.log('📧 Initializing Mail Service...');
-    console.log(`📧 Mail Host: ${process.env.MAIL_HOST || 'sandbox.smtp.mailtrap.io'}`);
-    console.log(`📧 Mail Port: ${process.env.MAIL_PORT || '2525'}`);
-    console.log(`📧 Mail User: ${process.env.MAIL_USER ? '***' + process.env.MAIL_USER.slice(-4) : 'NOT SET'}`);
+    console.log(`📧 Mail Host: ${process.env.GMAIL_HOST || 'smtp.gmail.com'}`);
+    console.log(`📧 Mail Port: ${process.env.GMAIL_PORT || '587'}`);
+    console.log(`📧 Mail User: ${process.env.GMAIL_USER ? '***' + process.env.GMAIL_USER.slice(-4) : 'NOT SET'}`);
     
+    // Remove spaces from Gmail app password
+    const gmailPassword = (process.env.GMAIL_PASS || '').replace(/\s+/g, '');
+    console.log(`📧 Gmail password is ${gmailPassword}`)    ;
     this.transporter = nodemailer.createTransport({
-      host: process.env.MAIL_HOST || 'sandbox.smtp.mailtrap.io',
-      port: parseInt(process.env.MAIL_PORT || '2525'),
-      secure: false, // Mailtrap doesn't require secure connection
+      host: process.env.GMAIL_HOST || 'smtp.gmail.com',
+      port: parseInt(process.env.GMAIL_PORT || '587'),
+      secure: false, // Use STARTTLS for port 587
       auth: {
-        user: process.env.MAIL_USER || '',
-        pass: process.env.MAIL_PASS || ''
+        user: process.env.GMAIL_USER || '',
+        pass: gmailPassword
+      },
+      tls: {
+        rejectUnauthorized: true
       }
     });
     
-    console.log('✅ Mail Service initialized');
+    console.log('✅ Mail Service initialized with Gmail SMTP');
   }
 
   /**
@@ -40,14 +48,14 @@ class MailService {
       console.log(`   📝 Subject: ${options.subject}`);
       console.log(`   📏 Text length: ${options.text?.length || 0} chars`);
       console.log(`   🎨 HTML length: ${options.html?.length || 0} chars`);
-     
       
       const mailOptions = {
-        from: process.env.MAIL_FROM || 'noreply@perftesting.com',
+        from: `"${process.env.MAIL_FROM_NAME}" <${process.env.GMAIL_USER}>`,
         to: options.to,
         subject: options.subject,
         text: options.text,
-        html: options.html
+        html: options.html,
+        replyTo: options.replyTo || process.env.MAIL_REPLY_TO || undefined
       };
 
       console.log(`   🚀 Sending email from ${mailOptions.from}...`);
@@ -122,10 +130,12 @@ If you have any questions, please contact your administrator.
     `;
 
     return this.sendMail({
+      from: `${process.env.MAIL_FROM_NAME || 'Performance Testing Platform'}`,
       to: userEmail,
       subject,
       text,
-      html
+      html,
+      replyTo: process.env.MAIL_REPLY_TO || 'noreply@perftesting.com'
     });
   }
 
