@@ -1,5 +1,6 @@
 // API base URL configuration
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://performance-testing-326803110924.asia-south2.run.app/api';
+//export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://performance-testing-326803110924.asia-south2.run.app/api';
+export const API_BASE_URL = 'http://localhost:3000/api';
 
 // App configuration
 export const APP_NAME = 'Performance Testing Platform';

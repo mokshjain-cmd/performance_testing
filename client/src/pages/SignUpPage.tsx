@@ -128,17 +128,7 @@ export default function SignUpPage() {
                     />
                     <span className="text-sm">Tester</span>
                   </label>
-                  <label className="flex items-center cursor-pointer">
-                    <input
-                      type="radio"
-                      name="role"
-                      value="admin"
-                      checked={role === 'admin'}
-                      onChange={(e) => setRole(e.target.value as 'admin')}
-                      className="mr-2"
-                    />
-                    <span className="text-sm">Admin</span>
-                  </label>
+                  
                 </div>
               </div>
 
