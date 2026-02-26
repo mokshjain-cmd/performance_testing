@@ -7,7 +7,7 @@ export default function HomePage() {
       <div className="space-y-12">
 
         {/* Hero Section */}
-        <Card title="Performance Benchmark & Testing Platform">
+        <Card title="Noise - Benchmark and Performance Testing Platform">
           <div className="space-y-6">
             <p className="text-gray-600 text-lg leading-relaxed">
               Analyze, benchmark, and validate device performance with 

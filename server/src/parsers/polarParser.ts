@@ -104,9 +104,14 @@ export async function parsePolarCsv(
         !isNaN(min) &&
         !isNaN(sec)
       ) {
-        // Parse timestamp numbers as-is (same as parseISTString in controller)
-        // No timezone conversion - just use the numbers directly
-        baseDatetime = new Date(Date.UTC(yyyy, mm - 1, dd, hh, min, sec));
+        // In production (Cloud Run), server runs in UTC, so use UTC directly
+        // In local development, server runs in IST, so add IST offset
+        if (process.env.ENV === 'production') {
+          baseDatetime = new Date(Date.UTC(yyyy, mm - 1, dd, hh, min, sec));
+        console.log("📌 Extracted base datetime from metadata:", baseDatetime.toISOString());
+        } else {
+          baseDatetime = new Date(yyyy, mm - 1, dd, hh+5, min+30, sec);
+        }
       }
     }
   }
