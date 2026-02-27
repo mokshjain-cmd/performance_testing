@@ -3,13 +3,16 @@ import FirmwarePerformance from '../models/FirmwarePerformance';
 
 /**
  * Get all firmware performance data
+ * Query params: metric (optional, defaults to 'HR')
  */
 export const getAllFirmwarePerformance = async (
   req: Request,
   res: Response
 ): Promise<void> => {
   try {
-    const performances = await FirmwarePerformance.find()
+    const metric = (req.query.metric as string) || 'HR';
+    
+    const performances = await FirmwarePerformance.find({ metric })
       .sort({ firmwareVersion: -1 }) // Sort by version descending (newest first)
       .exec();
 
@@ -30,6 +33,7 @@ export const getAllFirmwarePerformance = async (
 
 /**
  * Get firmware performance for a specific version
+ * Query params: metric (optional, defaults to 'HR')
  */
 export const getFirmwarePerformance = async (
   req: Request,
@@ -37,9 +41,11 @@ export const getFirmwarePerformance = async (
 ): Promise<void> => {
   try {
     const { version } = req.params;
+    const metric = (req.query.metric as string) || 'HR';
 
     const performance = await FirmwarePerformance.findOne({
       firmwareVersion: version,
+      metric,
     });
 
     if (!performance) {

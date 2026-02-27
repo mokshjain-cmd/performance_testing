@@ -6,8 +6,8 @@ import apiClient from '../services/api';
 
 const DEVICE_OPTIONS = [
   { label: 'Luna', value: 'luna', always: true },
-  { label: 'Polar', value: 'polar' },
-  { label: 'Coros', value: 'coros' },
+  { label: 'Polar', value: 'polar', hrOnly: true },
+  { label: 'Masimo', value: 'masimo', spo2Only: true },
 ];
 
 const ACTIVITY_OPTIONS = [
@@ -16,6 +16,8 @@ const ACTIVITY_OPTIONS = [
   { value: 'walk', label: 'Walk' },
   { value: 'running', label: 'Running' },
   { value: 'cycling', label: 'Cycling' },
+  { value: 'badminton', label: 'Badminton' },
+  { value: 'table tennis', label: 'Table Tennis' },
   { value: 'yoga', label: 'Yoga' },
   { value: 'swimming', label: 'Swimming' },
   { value: 'hiking', label: 'Hiking' },
@@ -24,14 +26,20 @@ const ACTIVITY_OPTIONS = [
   { value: 'other', label: 'Other' },
 ];
 
-const BENCHMARK_DEVICE_OPTIONS = [
+const METRIC_OPTIONS = [
+  { value: 'HR', label: 'Heart Rate (HR)' },
+  { value: 'SPO2', label: 'Blood Oxygen (SPO2)' },
+  { value: 'Sleep', label: 'Sleep' },
+  { value: 'Calories', label: 'Calories' },
+  { value: 'Steps', label: 'Steps' },
+];
+
+const BENCHMARK_DEVICE_OPTIONS_HR = [
   { value: 'polar', label: 'Polar' },
-  { value: 'garmin', label: 'Garmin' },
-  { value: 'apple watch', label: 'Apple Watch' },
-  { value: 'fitbit', label: 'Fitbit' },
-  { value: 'whoop', label: 'Whoop' },
-  { value: 'coros', label: 'Coros' },
-  { value: 'suunto', label: 'Suunto' },
+];
+
+const BENCHMARK_DEVICE_OPTIONS_SPO2 = [
+  { value: 'masimo', label: 'Masimo' },
 ];
 
 const BAND_POSITION_OPTIONS = [
@@ -41,8 +49,8 @@ const BAND_POSITION_OPTIONS = [
 
 export default function SessionFormPage() {
   const [formData, setFormData] = useState({
-    sessionName: '',
     activity: '',
+    metric: 'HR',
     startTime: '',
     endTime: '',
     benchmarkDeviceType: '',
@@ -54,6 +62,7 @@ export default function SessionFormPage() {
   const [responseData, setResponseData] = useState<any>(null);
   const [fileInputKey, setFileInputKey] = useState<number>(0);
   const [firmwareVersions, setFirmwareVersions] = useState<Array<{ value: string; label: string }>>([]);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   // Fetch firmware versions for Luna
   useEffect(() => {
@@ -71,14 +80,88 @@ export default function SessionFormPage() {
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+    const { name, value } = e.target;
+    
+    // If metric changed to SPO2, force activity to 'sitting' and remove incompatible devices
+    if (name === 'metric' && value === 'SPO2') {
+      const compatibleDevices = formData.devices.filter(d => d === 'luna' || d === 'masimo');
+      // Ensure masimo is in devices since it's the benchmark for SPO2
+      const updatedDevices = compatibleDevices.includes('masimo') 
+        ? compatibleDevices 
+        : [...compatibleDevices, 'masimo'];
+      setFormData({
+        ...formData,
+        metric: value,
+        activity: 'sitting',
+        benchmarkDeviceType: 'masimo',
+        devices: updatedDevices.length > 0 ? updatedDevices : ['luna', 'masimo'],
+      });
+      // Remove files for incompatible devices
+      const newDeviceFiles = { ...deviceFiles };
+      Object.keys(newDeviceFiles).forEach(d => {
+        if (d !== 'luna' && d !== 'masimo') {
+          delete newDeviceFiles[d];
+        }
+      });
+      // Initialize masimo file input if not present
+      if (!newDeviceFiles.masimo) {
+        newDeviceFiles.masimo = null;
+      }
+      setDeviceFiles(newDeviceFiles);
+    } 
+    // If metric changed FROM SPO2 to something else, remove SPO2-only devices
+    else if (name === 'metric' && formData.metric === 'SPO2' && value !== 'SPO2') {
+      const compatibleDevices = formData.devices.filter(d => d !== 'masimo');
+      // If switching to HR, ensure polar is added as benchmark device
+      const updatedDevices = value === 'HR' && !compatibleDevices.includes('polar')
+        ? [...compatibleDevices, 'polar']
+        : compatibleDevices;
+      setFormData({
+        ...formData,
+        metric: value,
+        benchmarkDeviceType: value === 'HR' ? 'polar' : '',
+        devices: updatedDevices.length > 0 ? updatedDevices : ['luna'],
+      });
+      // Remove masimo files if present
+      const newDeviceFiles = { ...deviceFiles };
+      delete newDeviceFiles.masimo;
+      // Initialize polar file input if HR metric
+      if (value === 'HR' && !newDeviceFiles.polar) {
+        newDeviceFiles.polar = null;
+      }
+      setDeviceFiles(newDeviceFiles);
+    }
+    // If benchmark device is changed, automatically select that device
+    else if (name === 'benchmarkDeviceType' && value) {
+      const updatedDevices = formData.devices.includes(value)
+        ? formData.devices
+        : [...formData.devices, value];
+      setFormData({
+        ...formData,
+        benchmarkDeviceType: value,
+        devices: updatedDevices,
+      });
+      // Initialize file input for the new device if not present
+      if (!deviceFiles[value]) {
+        setDeviceFiles(prev => ({ ...prev, [value]: null }));
+      }
+    }
+    else {
+      setFormData({
+        ...formData,
+        [name]: value,
+      });
+    }
   };
 
   const handleDeviceToggle = (device: string) => {
     setFormData((prev) => {
+      // Prevent deselecting benchmark device
+      if (device === prev.benchmarkDeviceType && prev.devices.includes(device)) {
+        alert(`Cannot deselect ${DEVICE_OPTIONS.find(d => d.value === device)?.label || device} as it is the selected benchmark device.`);
+        return prev;
+      }
+      
       const devices = prev.devices.includes(device)
         ? prev.devices.filter((d) => d !== device)
         : [...prev.devices, device];
@@ -109,19 +192,51 @@ export default function SessionFormPage() {
     return `${date} ${time}`;
   };
 
+  // Helper to compute session name from start time: "19-feb-26 | 17:45"
+  const computeSessionName = (startTimeValue: string) => {
+    if (!startTimeValue) return '';
+    try {
+      const date = new Date(startTimeValue);
+      const day = String(date.getDate()).padStart(2, '0');
+      const monthNames = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+      const month = monthNames[date.getMonth()];
+      const year = String(date.getFullYear()).slice(-2);
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      return `${day}-${month}-${year} | ${hours}:${minutes}`;
+    } catch (error) {
+      return '';
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
+    
+    // Validate that all selected devices have files uploaded
+    const missingFiles = formData.devices.filter(device => !deviceFiles[device]);
+    if (missingFiles.length > 0) {
+      const deviceNames = missingFiles.map(d => DEVICE_OPTIONS.find(opt => opt.value === d)?.label || d).join(', ');
+      alert(`Please upload files for all selected devices: ${deviceNames}`);
+      setIsSubmitting(false);
+      return;
+    }
+    
     const form = new FormData();
     // Get userId from localStorage
     const userId = localStorage.getItem('userId');
     if (!userId) {
       alert('User not logged in. Please login first.');
+      setIsSubmitting(false);
       return;
     }
+    // Compute session name from start time
+    const sessionName = computeSessionName(formData.startTime);
     // Attach session fields
     form.append('userId', userId);
-    form.append('sessionName', formData.sessionName);
+    form.append('sessionName', sessionName);
     form.append('activityType', formData.activity);
+    form.append('metric', formData.metric);
     form.append('startTime', ensureSeconds(formData.startTime));
     form.append('endTime', ensureSeconds(formData.endTime));
     form.append('benchmarkDeviceType', formData.benchmarkDeviceType);
@@ -141,13 +256,13 @@ export default function SessionFormPage() {
         },
       });
       const data = res.data;
-      //console.log('Session creation response:', data);
       setResponseData(data);
+      setIsSubmitting(false);
       alert('Session created successfully!');
       // Reset form
       setFormData({
-        sessionName: '',
         activity: '',
+        metric: 'HR',
         startTime: '',
         endTime: '',
         benchmarkDeviceType: '',
@@ -159,6 +274,7 @@ export default function SessionFormPage() {
       setFileInputKey(prev => prev + 1); // Force file input reset
     } catch (err) {
       alert('Error creating session.');
+      setIsSubmitting(false);
     }
   };
 
@@ -166,13 +282,13 @@ export default function SessionFormPage() {
     <Layout>
       <Card title="Create New Session">
         <form onSubmit={handleSubmit} className="space-y-6">
-          <Input
-            type="text"
-            label="Session Name"
-            name="sessionName"
-            value={formData.sessionName}
+          <Select
+            label="Metric"
+            name="metric"
+            value={formData.metric}
             onChange={handleChange}
-            placeholder="Enter session name"
+            options={METRIC_OPTIONS}
+            placeholder="Select metric type"
             required
           />
           <Select
@@ -183,7 +299,13 @@ export default function SessionFormPage() {
             options={ACTIVITY_OPTIONS}
             placeholder="Select activity type"
             required
+            disabled={formData.metric === 'SPO2'}
           />
+          {formData.metric === 'SPO2' && (
+            <p className="text-xs text-gray-500 -mt-4 ml-1">
+              SPO2 sessions are only for sitting activity
+            </p>
+          )}
           <Input
             type="datetime-local"
             label="Start Time"
@@ -205,10 +327,15 @@ export default function SessionFormPage() {
             name="benchmarkDeviceType"
             value={formData.benchmarkDeviceType}
             onChange={handleChange}
-            options={BENCHMARK_DEVICE_OPTIONS}
+            options={formData.metric === 'SPO2' ? BENCHMARK_DEVICE_OPTIONS_SPO2 : BENCHMARK_DEVICE_OPTIONS_HR}
             placeholder="Select benchmark device"
             required
           />
+          {formData.benchmarkDeviceType && (
+            <p className="text-xs text-blue-600 -mt-4 ml-1">
+              ℹ️ {DEVICE_OPTIONS.find(d => d.value === formData.benchmarkDeviceType)?.label} will be automatically selected as a device below
+            </p>
+          )}
           <Select
             label="Band Position"
             name="bandPosition"
@@ -232,19 +359,38 @@ export default function SessionFormPage() {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">Select Devices</label>
             <div className="flex gap-6">
-              {DEVICE_OPTIONS.map((opt) => (
-                <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={formData.devices.includes(opt.value)}
-                    disabled={!!opt.always}
-                    onChange={() => handleDeviceToggle(opt.value)}
-                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <span className="text-sm text-gray-700">{opt.label}</span>
-                </label>
-              ))}
+              {DEVICE_OPTIONS.filter((opt) => {
+                // Always show Luna
+                if (opt.always) return true;
+                // For SPO2, only show SPO2-compatible devices
+                if (formData.metric === 'SPO2') return opt.spo2Only;
+                // For HR, only show HR-compatible devices
+                if (formData.metric === 'HR') return opt.hrOnly;
+                // For other metrics, hide both HR and SPO2 specific devices
+                return !opt.hrOnly && !opt.spo2Only;
+              }).map((opt) => {
+                const isBenchmark = opt.value === formData.benchmarkDeviceType;
+                const isDisabled = !!opt.always || isBenchmark;
+                return (
+                  <label key={opt.value} className={`flex items-center gap-2 ${isDisabled ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'}`}>
+                    <input
+                      type="checkbox"
+                      checked={formData.devices.includes(opt.value)}
+                      disabled={isDisabled}
+                      onChange={() => handleDeviceToggle(opt.value)}
+                      className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-700">
+                      {opt.label}
+                      {isBenchmark && <span className="ml-1 text-xs text-blue-600">(Benchmark)</span>}
+                    </span>
+                  </label>
+                );
+              })}
             </div>
+            <p className="text-xs text-gray-500 mt-2 ml-1">
+              ⚠️ Files must be uploaded for all selected devices before submission
+            </p>
           </div>
 
           {/* Per-device file upload */}
@@ -252,6 +398,7 @@ export default function SessionFormPage() {
             <div key={device} className="flex flex-col gap-3">
               <label className="text-sm font-medium text-gray-700">
                 Upload {DEVICE_OPTIONS.find((d) => d.value === device)?.label} File
+                <span className="text-red-500 ml-1">*</span>
               </label>
               <input
                 key={`${device}-${fileInputKey}`}
@@ -267,8 +414,8 @@ export default function SessionFormPage() {
             </div>
           ))}
 
-          <Button type="submit" variant="primary" size="lg" className="w-full">
-            Submit
+          <Button type="submit" variant="primary" size="lg" className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? 'Submitting...' : 'Submit'}
           </Button>
         </form>
       </Card>

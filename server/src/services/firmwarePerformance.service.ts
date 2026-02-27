@@ -6,10 +6,12 @@ import { Types } from 'mongoose';
 /**
  * Update or create the FirmwarePerformance document for a Luna firmware version.
  * Should be called after session analysis and user accuracy summary update.
+ * @param firmwareVersion - The firmware version to update
+ * @param metric - The metric to calculate performance for (HR, SPO2, etc.)
  */
-export async function updateFirmwarePerformanceForLuna(firmwareVersion: string) {
-  // Find all sessions and analyses for Luna with this firmware
-  const sessions = await Session.find({ 'devices.deviceType': 'luna', 'devices.firmwareVersion': firmwareVersion }).lean();
+export async function updateFirmwarePerformanceForLuna(firmwareVersion: string, metric: 'HR' | 'SPO2' | 'Sleep' | 'Calories' | 'Steps' = 'HR') {
+  // Find all sessions and analyses for Luna with this firmware and metric
+  const sessions = await Session.find({ 'devices.deviceType': 'luna', 'devices.firmwareVersion': firmwareVersion, metric }).lean();
   if (!sessions.length) return;
   const sessionIds = sessions.map(s => s._id);
   const analyses = await SessionAnalysis.find({ sessionId: { $in: sessionIds } }).lean();
@@ -17,6 +19,9 @@ export async function updateFirmwarePerformanceForLuna(firmwareVersion: string) 
 
   // Helper: get session by id
   const sessionMap = new Map(sessions.map(s => [String(s._id), s]));
+
+  // Convert metric to lowercase for comparison (stored as 'hr', 'spo2' in DB)
+  const metricLower = metric.toLowerCase();
 
   // Aggregate overall accuracy
   let totalMAE = 0, totalRMSE = 0, totalPearson = 0, totalMAPE = 0, count = 0;
@@ -28,9 +33,9 @@ export async function updateFirmwarePerformanceForLuna(firmwareVersion: string) 
     const session = sessionMap.get(String(analysis.sessionId));
     if (!session) continue;
     
-    // Find the Luna vs benchmark device comparison
+    // Find the Luna vs benchmark device comparison for this metric
     const pair = analysis.pairwiseComparisons?.find(
-      (p: any) => p.d1 === 'luna' && p.d2 === session.benchmarkDeviceType
+      (p: any) => p.d1 === 'luna' && p.d2 === session.benchmarkDeviceType && p.metric === metricLower
     );
     
     if (pair && typeof pair.mape === 'number') {
@@ -57,6 +62,7 @@ export async function updateFirmwarePerformanceForLuna(firmwareVersion: string) 
   // Prepare doc
   const doc: Partial<IFirmwarePerformance> = {
     firmwareVersion,
+    metric,
     totalSessions: count,
     totalUsers: userSet.size,
     overallAccuracy: count ? {
@@ -77,7 +83,7 @@ export async function updateFirmwarePerformanceForLuna(firmwareVersion: string) 
   //console.log('Updating firmware performance for Luna version:', firmwareVersion, 'with data:', doc);
   try{
         await FirmwarePerformance.findOneAndUpdate(
-        { firmwareVersion },
+        { firmwareVersion, metric },
         doc,
         { upsert: true, new: true, setDefaultsOnInsert: true }
     );
@@ -86,5 +92,5 @@ export async function updateFirmwarePerformanceForLuna(firmwareVersion: string) 
     return;
   }
   
-  console.log('Firmware performance updated for Luna version:', firmwareVersion);
+  console.log('Firmware performance updated for Luna version:', firmwareVersion, 'metric:', metric);
 }

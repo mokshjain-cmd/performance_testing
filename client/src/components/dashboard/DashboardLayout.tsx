@@ -61,6 +61,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           flex
           flex-col
           min-h-[96vh]
+          overflow-y-auto
           bg-white/80
           backdrop-blur-xl
           shadow-[0_8px_32px_rgba(0,0,0,0.06)]

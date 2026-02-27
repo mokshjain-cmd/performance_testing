@@ -1,6 +1,7 @@
 
 import Session from '../models/Session';
 import Device from '../models/Devices';
+import User from '../models/Users';
 import NormalizedReading from '../models/NormalizedReadings';
 import { parseLunaCsv } from '../parsers/lunaParser';
 import { parsePolarCsv } from '../parsers/polarParser';
@@ -12,6 +13,7 @@ import { updateActivityPerformanceSummary } from './activityPerformanceSummary.s
 import { updateAdminDailyTrend } from './adminDailyTrend.service';
 import { updateAdminGlobalSummary } from './adminGlobalSummary.service';
 import { updateBenchmarkComparisonSummariesForSession } from './benchmarkComparisonSummary.service';
+import { mailService } from './mail.service';
 import fs from 'fs';
 import { promisify } from 'util';
 
@@ -26,7 +28,29 @@ export async function ingestSessionFiles({
   endTime,
   files,
 }: any) {
+    let userEmail: string | undefined;
+    let userName: string | undefined;
+    let sessionName: string | undefined;
+    const metric = 'HR';
+    
     try {
+    // Fetch user details for email notification
+    if (userId) {
+      const user = await User.findById(userId);
+      if (user) {
+        userEmail = user.email;
+        userName = user.name;
+      }
+    }
+    
+    // Fetch session name for email notification
+    if (sessionId) {
+      const session = await Session.findById(sessionId);
+      if (session) {
+        sessionName = session.name;
+      }
+    }
+    
     let anyInserted = false;
     for (const file of files) {
       const deviceType = file.fieldname;
@@ -74,33 +98,37 @@ export async function ingestSessionFiles({
         await analyzeSession(sessionId);
         console.log('Session analysis completed for session:', sessionId);
         
+        // Get session to access metric
+        const session = await Session.findById(sessionId);
+        const metric = session?.metric || 'HR';
+        
         // Update user accuracy summary after analysis
         if (userId) {
-          await updateUserAccuracySummary(userId);
-          console.log('User accuracy summary updated for user:', userId);
+          await updateUserAccuracySummary(userId, metric);
+          console.log('User accuracy summary updated for user:', userId, 'metric:', metric);
         }
         
         // Update Luna firmware performance for this session
         await updateLunaFirmwarePerformanceForSession(sessionId);
         
-        // Update activity performance summary
-        if (activityType) {
+        // Update activity performance summary (only for HR sessions)
+        if (activityType && metric === 'HR') {
           await updateActivityPerformanceSummary(activityType);
           console.log('Activity performance summary updated for:', activityType);
         }
         
         // Update admin daily trend for session date
         if (startTime) {
-          await updateAdminDailyTrend(startTime);
-          console.log('Admin daily trend updated for session date');
+          await updateAdminDailyTrend(startTime, metric);
+          console.log('Admin daily trend updated for session date, metric:', metric);
         }
         
         // Update benchmark comparison summaries for devices in this session
         await updateBenchmarkComparisonSummariesForSession(sessionId);
         
         // Update admin global summary
-        await updateAdminGlobalSummary();
-        console.log('Admin global summary updated');
+        await updateAdminGlobalSummary(metric);
+        console.log('Admin global summary updated for metric:', metric);
         
       } catch (err) {
         console.error('❌ Session analysis failed:', err);
@@ -120,10 +148,39 @@ export async function ingestSessionFiles({
       })
     );
     
+    // Send success email notification
+    if (userEmail && userName && sessionId && sessionName) {
+      console.log('📧 Sending session completion email...');
+      await mailService.sendSessionAnalysisNotification(
+        userEmail,
+        userName,
+        sessionId.toString(),
+        sessionName,
+        'success',
+        metric
+      );
+    }
+    
     }
     // After all device files processed, run analysis if any readings were inserted
     
   catch (err) {
-    console.error("❌ Background parsing failed:", err);
+    console.error("❌ HR session ingestion failed:", err);
+    
+    // Send failure email notification
+    if (userEmail && userName && sessionId && sessionName) {
+      console.log('📧 Sending session failure email...');
+      await mailService.sendSessionAnalysisNotification(
+        userEmail,
+        userName,
+        sessionId.toString(),
+        sessionName,
+        'failed',
+        metric,
+        err instanceof Error ? err.message : 'Unknown error occurred'
+      );
+    }
+    
+    throw err;
   }
 }

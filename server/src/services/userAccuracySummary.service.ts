@@ -6,15 +6,17 @@ import { Types } from 'mongoose';
 /**
  * Recalculate and update the UserAccuracySummary for a user.
  * Call this after a new session analysis is created or updated.
+ * @param userId - The user ID to update summary for
+ * @param metric - The metric to calculate summary for (HR, SPO2, etc.)
  */
-export async function updateUserAccuracySummary(userId: Types.ObjectId | string) {
-  // Get all sessions for the user
-  const sessions = await Session.find({ userId }).lean();
+export async function updateUserAccuracySummary(userId: Types.ObjectId | string, metric: 'HR' | 'SPO2' | 'Sleep' | 'Calories' | 'Steps' = 'HR') {
+  // Get all sessions for the user with this metric
+  const sessions = await Session.find({ userId, metric }).lean();
   
   // If no sessions remain, delete the UserAccuracySummary document
   if (!sessions.length) {
-    await UserAccuracySummary.deleteOne({ userId });
-    console.log(`✅ Deleted UserAccuracySummary for user ${userId} (no sessions remaining)`);
+    await UserAccuracySummary.deleteOne({ userId, metric });
+    console.log(`✅ Deleted UserAccuracySummary for user ${userId} metric ${metric} (no sessions remaining)`);
     return;
   }
 
@@ -25,9 +27,10 @@ export async function updateUserAccuracySummary(userId: Types.ObjectId | string)
   // If no analyses, update with basic session count only
   if (!analyses.length) {
     await UserAccuracySummary.findOneAndUpdate(
-      { userId },
+      { userId, metric },
       {
         userId: new Types.ObjectId(userId),
+        metric,
         totalSessions: sessions.length,
         activityWiseAccuracy: [],
         firmwareWiseAccuracy: [],
@@ -36,12 +39,15 @@ export async function updateUserAccuracySummary(userId: Types.ObjectId | string)
       },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
-    console.log(`✅ Updated UserAccuracySummary for user ${userId} (sessions exist but no analyses yet)`);
+    console.log(`✅ Updated UserAccuracySummary for user ${userId} metric ${metric} (sessions exist but no analyses yet)`);
     return;
   }
 
   // Helper: get session by id
   const sessionMap = new Map(sessions.map(s => [String(s._id), s]));
+
+  // Convert metric to lowercase for comparison (stored as 'hr', 'spo2' in DB)
+  const metricLower = metric.toLowerCase();
 
   // Overall accuracy (averages)
   let totalMAE = 0, totalRMSE = 0, totalPearson = 0, totalMAPE = 0, count = 0;
@@ -61,9 +67,9 @@ export async function updateUserAccuracySummary(userId: Types.ObjectId | string)
     if (!session) continue;
     const duration = (new Date(session.endTime).getTime() - new Date(session.startTime).getTime()) / 1000;
     
-    // Find the Luna vs benchmark device comparison
+    // Find the Luna vs benchmark device comparison for this metric
     const pair = analysis.pairwiseComparisons?.find(
-      (p: any) => p.d1 === 'luna' && p.d2 === session.benchmarkDeviceType
+      (p: any) => p.d1 === 'luna' && p.d2 === session.benchmarkDeviceType && p.metric === metricLower
     );
     
     if (pair && typeof pair.mape === 'number') {
@@ -137,6 +143,7 @@ export async function updateUserAccuracySummary(userId: Types.ObjectId | string)
   // Prepare summary doc
   const summary: Partial<IUserAccuracySummary> = {
     userId: new Types.ObjectId(userId),
+    metric,
     totalSessions: sessions.length,
     overallAccuracy: count ? {
       avgMAE: totalMAE / count,
@@ -168,7 +175,7 @@ export async function updateUserAccuracySummary(userId: Types.ObjectId | string)
 
   // Upsert summary
   await UserAccuracySummary.findOneAndUpdate(
-    { userId },
+    { userId, metric },
     summary,
     { upsert: true, new: true, setDefaultsOnInsert: true }
   );

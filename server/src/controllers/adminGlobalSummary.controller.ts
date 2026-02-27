@@ -4,13 +4,16 @@ import AdminGlobalSummary from '../models/AdminGlobalSummary';
 /**
  * Get admin global summary
  * Returns the latest global summary (single document)
+ * Query params: metric (optional, defaults to 'HR')
  */
 export const getAdminGlobalSummary = async (
   req: Request,
   res: Response
 ): Promise<void> => {
   try {
-    const summary = await AdminGlobalSummary.findOne()
+    const metric = (req.query.metric as string) || 'HR';
+    
+    const summary = await AdminGlobalSummary.findOne({ metric })
       .sort({ computedAt: -1 }) // Get the most recent one
       .exec();
 

@@ -35,15 +35,17 @@ const Header: React.FC<Props> = ({ isLoggedIn, onLogin, onLogout, onNavigate }) 
               onClick={() => onNavigate('dashboard')}
             >
               {isAdmin ? <Shield size={16} /> : <LayoutDashboard size={16} />}
-              <span className="hidden sm:inline">{isAdmin ? 'Admin' : 'Dashboard'}</span>
+              <span className="hidden sm:inline">{isAdmin ? 'Dashboard' : 'Dashboard'}</span>
             </button>
-            <button
-              className="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100/80 hover:text-gray-900 transition-all duration-200 flex items-center gap-1.5"
-              onClick={() => onNavigate('create-session')}
-            >
-              <PlusCircle size={16} />
-              <span className="hidden sm:inline">New Session</span>
-            </button>
+            {!isAdmin && (
+              <button
+                className="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100/80 hover:text-gray-900 transition-all duration-200 flex items-center gap-1.5"
+                onClick={() => onNavigate('create-session')}
+              >
+                <PlusCircle size={16} />
+                <span className="hidden sm:inline">New Session</span>
+              </button>
+            )}
             {isAdmin && (
               <button
                 className="px-3 py-1.5 rounded-lg text-sm font-medium text-blue-700 hover:bg-blue-50 hover:text-blue-900 transition-all duration-200 flex items-center gap-1.5 border border-blue-200"

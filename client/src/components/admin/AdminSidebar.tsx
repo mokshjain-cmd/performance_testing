@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChevronDown, ChevronRight, Users as UsersIcon, Activity, User, BarChart3, Trash2 } from 'lucide-react';
 
 interface Session {
@@ -6,6 +6,7 @@ interface Session {
   name?: string;
   activityType?: string;
   startTime?: string;
+  metric?: string;
 }
 
 interface User {
@@ -20,6 +21,7 @@ interface AdminSidebarProps {
   activeView: 'overview' | 'user' | 'session';
   selectedUserId: string | null;
   selectedSessionId: string | null;
+  selectedMetric: 'hr' | 'spo2';
   onSelectOverview: () => void;
   onSelectUser: (userId: string) => void;
   onSelectSession: (sessionId: string, userId: string) => void;
@@ -32,6 +34,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
   activeView,
   selectedUserId,
   selectedSessionId,
+  selectedMetric,
   onSelectOverview,
   onSelectUser,
   onSelectSession,
@@ -39,6 +42,15 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
   onDeleteSession,
 }) => {
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
+
+  // Refetch sessions for all expanded users when metric changes
+  useEffect(() => {
+    if (expandedUsers.size > 0 && onUserExpand) {
+      expandedUsers.forEach(userId => {
+        onUserExpand(userId);
+      });
+    }
+  }, [selectedMetric]);
 
   const toggleUserExpansion = (userId: string) => {
     setExpandedUsers(prev => {
@@ -134,7 +146,14 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
                           >
                             <Activity size={14} />
                             <div className="flex-1 min-w-0">
-                              <div className="truncate">Session {session._id.slice(-8)}</div>
+                              <div className="flex items-center gap-2">
+                                <span className="truncate">{session.name || `Session ${session._id.slice(-8)}`}</span>
+                                {session.metric && (
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium flex-shrink-0">
+                                    {session.metric}
+                                  </span>
+                                )}
+                              </div>
                               {session.activityType && (
                                 <div className="text-xs text-gray-500 capitalize">{session.activityType}</div>
                               )}
@@ -160,7 +179,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
 
                 {isExpanded && user.sessions.length === 0 && (
                   <div className="ml-10 mt-1 px-3 py-2 text-xs text-gray-400 italic">
-                    No sessions
+                    No {selectedMetric.toUpperCase()} sessions
                   </div>
                 )}
               </div>

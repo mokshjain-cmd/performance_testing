@@ -22,7 +22,7 @@ const StatCard: React.FC<{
       {label}
     </div>
     <div className="text-2xl font-bold text-gray-800">
-      {value}
+      {value !== undefined ? value : '--'}
     </div>
     {description && (
       <div className="text-xs text-gray-500 mt-2">
@@ -61,7 +61,7 @@ const SummaryCards: React.FC<Props> = ({ userSummary }) => {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <StatCard
             label="Total Sessions"
-            value={userSummary.totalSessions}
+            value={userSummary.totalSessions ?? 0}
           />
           <StatCard
             label="Last Updated"
@@ -80,22 +80,22 @@ const SummaryCards: React.FC<Props> = ({ userSummary }) => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard
               label="Avg MAE"
-              value={userSummary.overallAccuracy.avgMAE ? `${userSummary.overallAccuracy.avgMAE.toFixed(2)} BPM` : undefined}
+              value={userSummary.overallAccuracy.avgMAE != null ? `${userSummary.overallAccuracy.avgMAE.toFixed(2)} BPM` : undefined}
               description="Lower is better | Target: <5 BPM"
             />
             <StatCard
               label="Avg RMSE"
-              value={userSummary.overallAccuracy.avgRMSE ? `${userSummary.overallAccuracy.avgRMSE.toFixed(2)} BPM` : undefined}
+              value={userSummary.overallAccuracy.avgRMSE != null ? `${userSummary.overallAccuracy.avgRMSE.toFixed(2)} BPM` : undefined}
               description="Lower is better | Target: <7 BPM"
             />
             <StatCard
               label="Avg Pearson"
-              value={userSummary.overallAccuracy.avgPearson?.toFixed(3)}
+              value={userSummary.overallAccuracy.avgPearson != null ? userSummary.overallAccuracy.avgPearson.toFixed(3) : undefined}
               description="Higher is better | Target: >0.9"
             />
             <StatCard
               label="Avg MAPE"
-              value={userSummary.overallAccuracy.avgMAPE?.toFixed(2)}
+              value={userSummary.overallAccuracy.avgMAPE != null ? userSummary.overallAccuracy.avgMAPE.toFixed(2) : undefined}
               description="Lower is better | Target: <10%"
             />
           </div>

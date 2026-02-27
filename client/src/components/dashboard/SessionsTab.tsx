@@ -24,7 +24,11 @@ const SessionsTab: React.FC<Props> = ({ loading, sessionDetails }) => {
   return (
     <div className="space-y-4">
       <SessionDetails session={sessionDetails.session} />
-      <HeartRateChart points={sessionDetails.points} analysis={sessionDetails.analysis} />
+      <HeartRateChart 
+        points={sessionDetails.points} 
+        analysis={sessionDetails.analysis}
+        metric={sessionDetails.session.metric || 'HR'}
+      />
       <AnalysisSection analysis={sessionDetails.analysis} />
     </div>
   );

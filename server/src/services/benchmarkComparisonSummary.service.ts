@@ -5,18 +5,23 @@ import BenchmarkComparisonSummary from '../models/BenchmarkComparisonSummary';
  * Update benchmark comparison summary for a specific device type
  * Aggregates Luna vs benchmark device stats across all sessions
  * @param benchmarkDeviceType - The device type to compare against Luna (e.g., 'polar', 'coros')
+ * @param metric - The metric to calculate comparison for (HR, SPO2, etc.)
  */
-export async function updateBenchmarkComparisonSummary(benchmarkDeviceType: string) {
-  console.log(`\n🔄 Updating BenchmarkComparisonSummary for: ${benchmarkDeviceType}`);
+export async function updateBenchmarkComparisonSummary(benchmarkDeviceType: string, metric: 'HR' | 'SPO2' | 'Sleep' | 'Calories' | 'Steps' = 'HR') {
+  console.log(`\n🔄 Updating BenchmarkComparisonSummary for: ${benchmarkDeviceType}, metric: ${metric}`);
 
-  // Get all session analyses that have Luna vs this benchmark device comparisons
+  // Convert metric to lowercase for comparison (stored as 'hr', 'spo2' in DB)
+  const metricLower = metric.toLowerCase();
+
+  // Get all session analyses that have Luna vs this benchmark device comparisons for this metric
   const analyses = await SessionAnalysis.find({
     isValid: true,
+    metric,
     pairwiseComparisons: {
       $elemMatch: {
         d1: 'luna',
         d2: benchmarkDeviceType,
-        metric: 'hr',
+        metric: metricLower,
       },
     },
   });
@@ -44,7 +49,7 @@ export async function updateBenchmarkComparisonSummary(benchmarkDeviceType: stri
       if (
         comparison.d1 === 'luna' &&
         comparison.d2 === benchmarkDeviceType &&
-        comparison.metric === 'hr'
+        comparison.metric === metricLower
       ) {
         if (comparison.mae !== undefined && comparison.mae !== null) {
           totalMAE += comparison.mae;
@@ -72,6 +77,7 @@ export async function updateBenchmarkComparisonSummary(benchmarkDeviceType: stri
 
   const summary = {
     benchmarkDeviceType,
+    metric,
     totalSessions: analyses.length,
     hrStats: {
       avgMAE: countMAE > 0 ? totalMAE / countMAE : undefined,
@@ -85,7 +91,7 @@ export async function updateBenchmarkComparisonSummary(benchmarkDeviceType: stri
 
   // Upsert the summary
   const result = await BenchmarkComparisonSummary.findOneAndUpdate(
-    { benchmarkDeviceType },
+    { benchmarkDeviceType, metric },
     summary,
     { upsert: true, new: true }
   );
@@ -117,6 +123,8 @@ export async function updateBenchmarkComparisonSummariesForSession(sessionId: an
     return [];
   }
 
+  const metric = analysis.metric || 'HR';
+
   // Extract unique benchmark device types (d2) from Luna comparisons
   const benchmarkDevices = new Set<string>();
   analysis.pairwiseComparisons.forEach((comparison) => {
@@ -128,7 +136,7 @@ export async function updateBenchmarkComparisonSummariesForSession(sessionId: an
   // Update summary for each benchmark device
   const results = [];
   for (const deviceType of benchmarkDevices) {
-    const result = await updateBenchmarkComparisonSummary(deviceType);
+    const result = await updateBenchmarkComparisonSummary(deviceType, metric);
     if (result) {
       results.push(result);
     }

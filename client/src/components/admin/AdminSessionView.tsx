@@ -1,10 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import apiClient from '../../services/api';
+import { exportToPDF, generateSessionFilename } from '../../utils/pdfExport';
 import type { Metric } from './MetricsSelector';
 import type { SessionFullDetails } from '../../types';
 import SessionDetails from '../dashboard/SessionDetails';
 import HeartRateChart from '../dashboard/HeartrateChart';
 import AnalysisSection from '../dashboard/AnalysisSection';
+import { Download } from 'lucide-react';
 
 interface AdminSessionViewProps {
   sessionId: string;
@@ -15,6 +17,28 @@ interface AdminSessionViewProps {
 const AdminSessionView: React.FC<AdminSessionViewProps> = ({ sessionId, userId: _userId, metric: _metric }) => {
   const [sessionDetails, setSessionDetails] = useState<SessionFullDetails | null>(null);
   const [loading, setLoading] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  const handleDownloadPDF = async () => {
+    if (!contentRef.current || !sessionDetails) return;
+
+    setDownloading(true);
+    try {
+      const filename = generateSessionFilename(
+        sessionDetails.session.name,
+        sessionId
+      );
+      
+      await exportToPDF(contentRef.current, { filename });
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      alert(`Failed to generate PDF: ${errorMessage}\n\nPlease try again or contact support if the issue persists.`);
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   useEffect(() => {
     // TODO: Fetch session details
@@ -22,11 +46,13 @@ const AdminSessionView: React.FC<AdminSessionViewProps> = ({ sessionId, userId: 
     setLoading(true);
     apiClient.get(`/sessions/full/${sessionId}`)
       .then(res => {
-        console.log('Fetched session details:', res.data);
         setSessionDetails(res.data);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch(err => {
+        console.error('Error fetching session details:', err);
+        setLoading(false);
+      });
   }, [sessionId]);
 
   if (loading) {
@@ -51,9 +77,28 @@ const AdminSessionView: React.FC<AdminSessionViewProps> = ({ sessionId, userId: 
   // Reuse the existing SessionDetails component from tester dashboard
   return (
     <div className="space-y-4">
-      <SessionDetails session={sessionDetails.session} />
-      <HeartRateChart points={sessionDetails.points} analysis={sessionDetails.analysis} />
-      <AnalysisSection analysis={sessionDetails.analysis} />
+      {/* Exportable Content */}
+      <div ref={contentRef} className="space-y-4 bg-white p-6 rounded-lg">
+        <SessionDetails 
+          session={sessionDetails.session}
+          actionButton={
+            <button
+              onClick={handleDownloadPDF}
+              disabled={downloading}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-900 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed transition-all duration-200 shadow-sm"
+            >
+              <Download size={16} />
+              <span>{downloading ? 'Exporting...' : 'Export PDF'}</span>
+            </button>
+          }
+        />
+        <HeartRateChart 
+          points={sessionDetails.points} 
+          analysis={sessionDetails.analysis}
+          metric={sessionDetails.session.metric || 'HR'}
+        />
+        <AnalysisSection analysis={sessionDetails.analysis} isAdmin={true} />
+      </div>
     </div>
   );
 };

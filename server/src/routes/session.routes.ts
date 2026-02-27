@@ -13,11 +13,14 @@ const router = Router();
 router.post('/create', requireRole(['admin','tester']),uploadDeviceFiles, createSession);
 
 // Get current user's sessions (from JWT)
+// Optional query param: ?metric=HR|SPO2|Sleep|Calories|Steps
 router.get('/all', requireRole(['admin','tester']),getAllSessions);
 router.get('/ids', requireRole(['admin','tester']),getSessionIdsByUserId);
+// Optional query param: ?metric=HR|SPO2|Sleep|Calories|Steps
 router.get('/by-user',requireRole(['admin','tester']), getSessionsByUserId);
 
 // Admin-only: Get any user's sessions by userId param
+// Optional query param: ?metric=HR|SPO2|Sleep|Calories|Steps
 router.get('/user/:userId/ids', requireRole('admin'), getSessionIdsByUserIdParam);
 
 // Get session by ID

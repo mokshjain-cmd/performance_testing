@@ -5,14 +5,17 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install ALL dependencies (including devDependencies)
-RUN npm install
+# Install only production dependencies
+RUN npm ci --omit=dev
 
-# Copy source code
+# Copy source
 COPY . .
 
-# Expose your dev port (change if needed)
-EXPOSE 3000
+# Set production environment
+ENV ALSO ENV=production
 
-# Run dev script
-CMD ["npm", "run", "dev"]
+# Cloud Run provides PORT env variable
+EXPOSE 8080
+
+# Start your production server
+CMD ["node", "server.js"]

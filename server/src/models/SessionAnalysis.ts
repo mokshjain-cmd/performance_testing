@@ -16,6 +16,16 @@ interface IDeviceStats {
   spo2?: IMetricStats;
 }
 
+interface IBlandAltman {
+  differences: number[];
+  averages: number[];
+  meanDifference: number;
+  stdDifference: number;
+  upperLimit: number;
+  lowerLimit: number;
+  percentageInLimits: number;
+}
+
 interface IPairwiseComparison {
   d1: string;
   d2: string;
@@ -26,12 +36,14 @@ interface IPairwiseComparison {
   pearsonR?: number;
   coverage?: number;
   meanBias?: number;
+  blandAltman?: IBlandAltman;
 }
 
 export interface ISessionAnalysis extends Document {
   sessionId: Types.ObjectId;
   userId: Types.ObjectId;
   activityType: string;
+  metric: 'HR' | 'SPO2' | 'Sleep' | 'Calories' | 'Steps';
   startTime: Date;
   endTime: Date;
   deviceStats: IDeviceStats[];
@@ -74,6 +86,15 @@ const PairwiseSchema = new Schema<IPairwiseComparison>(
     pearsonR: Number,
     coverage: Number,
     meanBias: Number,
+    blandAltman: {
+      differences: [Number],
+      averages: [Number],
+      meanDifference: Number,
+      stdDifference: Number,
+      upperLimit: Number,
+      lowerLimit: Number,
+      percentageInLimits: Number,
+    },
   },
   { _id: false }
 );
@@ -82,6 +103,12 @@ const SessionAnalysisSchema = new Schema<ISessionAnalysis>({
   sessionId: { type: Schema.Types.ObjectId, ref: "Session", index: true },
   userId: { type: Schema.Types.ObjectId, ref: "User", index: true },
   activityType: String,
+  metric: { 
+    type: String, 
+    enum: ['HR', 'SPO2', 'Sleep', 'Calories', 'Steps'],
+    required: true,
+    index: true 
+  },
   startTime: Date,
   endTime: Date,
   deviceStats: [DeviceStatsSchema],

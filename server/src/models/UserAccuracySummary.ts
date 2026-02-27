@@ -2,6 +2,7 @@ import { Schema, model, Document, Types } from "mongoose";
 
 export interface IUserAccuracySummary extends Document {
   userId: Types.ObjectId;
+  metric: 'HR' | 'SPO2' | 'Sleep' | 'Calories' | 'Steps';
   totalSessions: number;
   overallAccuracy?: {
     avgMAE?: number;
@@ -40,7 +41,13 @@ export interface IUserAccuracySummary extends Document {
 }
 
 const UserAccuracySummarySchema = new Schema<IUserAccuracySummary>({
-  userId: { type: Schema.Types.ObjectId, ref: "User", unique: true, index: true },
+  userId: { type: Schema.Types.ObjectId, ref: "User", index: true },
+  metric: { 
+    type: String, 
+    enum: ['HR', 'SPO2', 'Sleep', 'Calories', 'Steps'],
+    required: true,
+    index: true 
+  },
   totalSessions: Number,
   overallAccuracy: {
     avgMAE: Number,
@@ -83,6 +90,8 @@ const UserAccuracySummarySchema = new Schema<IUserAccuracySummary>({
   ],
   lastUpdated: { type: Date, default: Date.now },
 });
+
+UserAccuracySummarySchema.index({ userId: 1, metric: 1 }, { unique: true });
 
 export default model<IUserAccuracySummary>(
   "UserAccuracySummary",

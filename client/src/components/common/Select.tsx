@@ -8,6 +8,7 @@ interface SelectProps {
   options: { value: string; label: string }[];
   required?: boolean;
   placeholder?: string;
+  disabled?: boolean;
 }
 
 export default function Select({
@@ -18,6 +19,7 @@ export default function Select({
   options,
   required = false,
   placeholder = 'Select an option',
+  disabled = false,
 }: SelectProps) {
   return (
     <div className="flex flex-col gap-1">
@@ -31,7 +33,8 @@ export default function Select({
         value={value}
         onChange={onChange}
         required={required}
-        className="px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white/50 backdrop-blur-sm hover:border-gray-300 shadow-sm"
+        disabled={disabled}
+        className="px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white/50 backdrop-blur-sm hover:border-gray-300 shadow-sm disabled:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
       >
         <option value="">{placeholder}</option>
         {options.map((option) => (

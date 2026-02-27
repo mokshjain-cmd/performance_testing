@@ -26,6 +26,7 @@ const storage = multer.diskStorage({
   filename: (req: Request, file: Express.Multer.File, cb) => {
     const deviceType = file.fieldname; // The device type (e.g., 'luna', 'polar')
     const userId = req.body.userId || 'unknown';
+    const metric = req.body.metric || 'HR';
     
     // Format timestamps for filename (remove special characters)
     const startTime = req.body.startTime 
@@ -37,8 +38,8 @@ const storage = multer.diskStorage({
 
     const ext = path.extname(file.originalname);
 
-    // Format: <deviceType>_<userid>_<starttime>_<endtime>.<ext>
-    cb(null, `${deviceType}_${userId}_${startTime}_${endTime}${ext}`);
+    // Format: <deviceType>_<metric>_<userid>_<starttime>_<endtime>.<ext>
+    cb(null, `${deviceType}_${metric}_${userId}_${startTime}_${endTime}${ext}`);
   }
 });
 

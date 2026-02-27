@@ -20,10 +20,19 @@ const OverviewTab: React.FC<Props> = ({ userSummary, loading }) => {
     </div>
   );
 
-  // Prepare bar graph data
-  const activityData = userSummary.activityWiseAccuracy?.map(a => ({ name: a.activityType, accuracy: a.avgAccuracy })) || [];
-  const bandData = userSummary.bandPositionWiseAccuracy?.map(b => ({ name: b.bandPosition, accuracy: b.avgAccuracy })) || [];
-  const firmwareData = userSummary.firmwareWiseAccuracy?.map(f => ({ name: f.firmwareVersion, accuracy: f.avgAccuracy })) || [];
+  // Prepare bar graph data with null checks
+  const activityData = userSummary.activityWiseAccuracy?.map(a => ({ 
+    name: a.activityType || 'Unknown', 
+    accuracy: a.avgAccuracy ?? 0 
+  })) || [];
+  const bandData = userSummary.bandPositionWiseAccuracy?.map(b => ({ 
+    name: b.bandPosition || 'Unknown', 
+    accuracy: b.avgAccuracy ?? 0 
+  })) || [];
+  const firmwareData = userSummary.firmwareWiseAccuracy?.map(f => ({ 
+    name: f.firmwareVersion || 'Unknown', 
+    accuracy: f.avgAccuracy ?? 0 
+  })) || [];
 
 
   return (
@@ -35,12 +44,12 @@ const OverviewTab: React.FC<Props> = ({ userSummary, loading }) => {
       {activityData.length > 0 && (
         <TableWithBar
           title="Activity Wise Accuracy"
-          data={userSummary.activityWiseAccuracy}
+          data={userSummary.activityWiseAccuracy || []}
           columns={[
-            { key: 'activityType', label: 'Activity' },
-            { key: 'avgAccuracy', label: 'Avg Accuracy %', render: v => v.toFixed(2) },
-            { key: 'totalSessions', label: 'Sessions' },
-            { key: 'totalDurationSec', label: 'Total Duration (s)' },
+            { key: 'activityType', label: 'Activity', render: v => v || 'Unknown' },
+            { key: 'avgAccuracy', label: 'Avg Accuracy %', render: v => (v != null ? v.toFixed(2) : '--') },
+            { key: 'totalSessions', label: 'Sessions', render: v => v ?? 0 },
+            { key: 'totalDurationSec', label: 'Total Duration (s)', render: v => v ?? 0 },
           ]}
           barData={activityData}
           barColor="#3b82f6"
@@ -53,12 +62,12 @@ const OverviewTab: React.FC<Props> = ({ userSummary, loading }) => {
       {bandData.length > 0 && (
         <TableWithBar
           title="Band Position Wise Accuracy"
-          data={userSummary.bandPositionWiseAccuracy}
+          data={userSummary.bandPositionWiseAccuracy || []}
           columns={[
-            { key: 'bandPosition', label: 'Band Position' },
-            { key: 'avgAccuracy', label: 'Avg Accuracy %', render: v => v.toFixed(2) },
-            { key: 'totalSessions', label: 'Sessions' },
-            { key: 'totalDurationSec', label: 'Total Duration (s)' },
+            { key: 'bandPosition', label: 'Band Position', render: v => v || 'Unknown' },
+            { key: 'avgAccuracy', label: 'Avg Accuracy %', render: v => (v != null ? v.toFixed(2) : '--') },
+            { key: 'totalSessions', label: 'Sessions', render: v => v ?? 0 },
+            { key: 'totalDurationSec', label: 'Total Duration (s)', render: v => v ?? 0 },
           ]}
           barData={bandData}
           barColor="#f59e0b"
@@ -71,11 +80,11 @@ const OverviewTab: React.FC<Props> = ({ userSummary, loading }) => {
       {firmwareData.length > 0 && (
         <TableWithBar
           title="Firmware Wise Accuracy"
-          data={userSummary.firmwareWiseAccuracy}
+          data={userSummary.firmwareWiseAccuracy || []}
           columns={[
-            { key: 'firmwareVersion', label: 'Firmware Version' },
-            { key: 'avgAccuracy', label: 'Avg Accuracy %', render: v => v.toFixed(2) },
-            { key: 'totalSessions', label: 'Sessions' },
+            { key: 'firmwareVersion', label: 'Firmware Version', render: v => v || 'Unknown' },
+            { key: 'avgAccuracy', label: 'Avg Accuracy %', render: v => (v != null ? v.toFixed(2) : '--') },
+            { key: 'totalSessions', label: 'Sessions', render: v => v ?? 0 },
           ]}
           barData={firmwareData}
           barColor="#8b5cf6"

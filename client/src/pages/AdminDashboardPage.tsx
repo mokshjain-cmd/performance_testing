@@ -31,7 +31,6 @@ type ViewType = 'overview' | 'user' | 'session';
 
 const AdminDashboardPage: React.FC = () => {
   const [users, setUsers] = useState<UserWithSessions[]>([]);
-  const [userSessions, setUserSessions] = useState<Map<string, Array<{ _id: string }>>>(new Map());
   const [loading, setLoading] = useState(false);
   
   // View state
@@ -43,13 +42,25 @@ const AdminDashboardPage: React.FC = () => {
   const [selectedMetric, setSelectedMetric] = useState<Metric>('hr');
   const [selectedSubTab, setSelectedSubTab] = useState<SubTab>('overview');
 
+  // Reset to overview and clear sessions when metric changes
+  useEffect(() => {
+    // Clear all sessions
+    setUsers(prev => prev.map(user => ({ ...user, sessions: [] })));
+    // Reset view to overview
+    setSelectedView('overview');
+    setSelectedUserId(null);
+    setSelectedSessionId(null);
+  }, [selectedMetric]);
+
   // Fetch all users
   useEffect(() => {
     setLoading(true);
     apiClient.get('/users/')
       .then(res => {
         const usersData = res.data.data || [];
-        const usersWithSessions = usersData.map((user: User) => ({
+        // Filter to show only tester users
+        const testerUsers = usersData.filter((user: User) => user.role === 'tester');
+        const usersWithSessions = testerUsers.map((user: User) => ({
           _id: user._id,
           name: user.name,
           email: user.email,
@@ -66,14 +77,11 @@ const AdminDashboardPage: React.FC = () => {
 
   // Fetch sessions for a specific user
   const fetchUserSessions = async (userId: string) => {
-    if (userSessions.has(userId)) {
-      return; // Already fetched
-    }
-    
     try {
-      const res = await apiClient.get(`/sessions/user/${userId}/ids`);
+      // Convert metric to backend format (hr -> HR, spo2 -> SPO2)
+      const metricParam = selectedMetric.toUpperCase();
+      const res = await apiClient.get(`/sessions/user/${userId}/ids?metric=${metricParam}`);
       const sessions = res.data.data || [];
-      setUserSessions(prev => new Map(prev).set(userId, sessions));
       
       // Update the user's sessions in the users array
       setUsers(prev => prev.map(user => 
@@ -120,16 +128,6 @@ const AdminDashboardPage: React.FC = () => {
           : user
       ));
       
-      // Update userSessions map
-      setUserSessions(prev => {
-        const newMap = new Map(prev);
-        const sessions = newMap.get(userId);
-        if (sessions) {
-          newMap.set(userId, sessions.filter(s => s._id !== sessionId));
-        }
-        return newMap;
-      });
-      
       // If deleted session was selected, clear selection
       if (selectedSessionId === sessionId) {
         setSelectedView('user');
@@ -147,12 +145,13 @@ const AdminDashboardPage: React.FC = () => {
     <Layout fullWidth>
       <div className="flex gap-6 h-full">
         {/* Left Sidebar */}
-        <div className="w-80 flex-shrink-0">
+        <div className="w-80 flex-shrink-0 overflow-y-auto pr-2">
           <AdminSidebar
             users={users}
             activeView={selectedView}
             selectedUserId={selectedUserId}
             selectedSessionId={selectedSessionId}
+            selectedMetric={selectedMetric}
             onSelectOverview={handleSelectOverview}
             onSelectUser={handleSelectUser}
             onSelectSession={handleSelectSession}
@@ -190,6 +189,7 @@ const AdminDashboardPage: React.FC = () => {
             <SubTabBar
               activeTab={selectedSubTab}
               onSelectTab={setSelectedSubTab}
+              metric={selectedMetric}
             />
           )}
 

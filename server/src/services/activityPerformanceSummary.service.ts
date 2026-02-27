@@ -9,9 +9,10 @@ import ActivityPerformanceSummary from '../models/ActivityPerformanceSummay';
 export async function updateActivityPerformanceSummary(activityType: string) {
   console.log(`\n🔄 Updating ActivityPerformanceSummary for: ${activityType}`);
 
-  // Get all valid sessions for this activity type
+  // Get all valid HR sessions for this activity type (exclude SPO2/other metrics)
   const sessions = await Session.find({
     activityType,
+    metric: 'HR',
     isValid: true,
   });
 

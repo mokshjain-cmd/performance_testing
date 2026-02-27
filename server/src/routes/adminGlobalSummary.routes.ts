@@ -7,6 +7,7 @@ import { getAdminGlobalSummary } from '../controllers/adminGlobalSummary.control
 const router = Router();
 
 // GET global summary
+// Optional query param: ?metric=HR|SPO2|Sleep|Calories|Steps (defaults to HR)
 // Add verifyUserRole and requireAdmin middleware to restrict access:
 // router.get('/', verifyUserRole, requireAdmin, getAdminGlobalSummary);
 router.get('/', getAdminGlobalSummary);

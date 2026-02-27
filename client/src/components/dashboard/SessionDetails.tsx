@@ -4,15 +4,19 @@ import { splitDateTime } from '../../utils/dateTime';
 
 interface Props {
   session: Session;
+  actionButton?: React.ReactNode; // Optional action button to display inline with title
 }
 
-const SessionDetails: React.FC<Props> = ({ session }) => {
+const SessionDetails: React.FC<Props> = ({ session, actionButton }) => {
   return (
     <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.06)] border border-gray-100/50 p-4 transition-all duration-300 hover:shadow-[0_12px_48px_rgba(0,0,0,0.08)]">
       
-      <h2 className="mb-3 text-xl font-semibold text-gray-800">
-        Session Details
-      </h2>
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-xl font-semibold text-gray-800">
+          Session Details
+        </h2>
+        {actionButton && <div>{actionButton}</div>}
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2 text-sm">
 
@@ -37,6 +41,14 @@ const SessionDetails: React.FC<Props> = ({ session }) => {
           <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Activity</span>
           <span className="text-sm text-gray-800 bg-gray-50 px-2 py-1 rounded border border-gray-200 capitalize">
             {session.activityType}
+          </span>
+        </div>
+
+        {/* Metric */}
+        <div className="flex flex-col gap-0.5">
+          <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Metric</span>
+          <span className="text-sm text-gray-800 bg-gray-50 px-2 py-1 rounded border border-gray-200">
+            {session.metric}
           </span>
         </div>
 

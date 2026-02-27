@@ -10,6 +10,9 @@ export async function analyzeSession(sessionId: Types.ObjectId) {
   if (!session) throw new Error('Session not found');
   const readings = await NormalizedReading.find({ 'meta.sessionId': sessionId });
 
+  // Determine metric from session (HR, SPO2, etc.)
+  const metric = session.metric || 'HR';
+
   // Group readings by deviceType
   const deviceMap: Record<string, any[]> = {};
   readings.forEach(r => {
@@ -19,9 +22,9 @@ export async function analyzeSession(sessionId: Types.ObjectId) {
   });
 
   // Device stats
-  const deviceStats = Object.entries(deviceMap).map(([deviceType, arr]) =>
-    calcDeviceStats(deviceType, arr)
-  );
+  const deviceStats = Object.entries(deviceMap).map(([deviceType, arr]) => {
+    return calcDeviceStats(deviceType, arr, metric);
+  });
 
   // Pairwise stats - Only Luna vs other devices
   const deviceTypes = Object.keys(deviceMap);
@@ -32,7 +35,7 @@ export async function analyzeSession(sessionId: Types.ObjectId) {
     for (const deviceType of deviceTypes) {
       if (deviceType !== 'luna') {
         pairwiseComparisons.push(
-          ...calcPairwiseStats('luna', deviceMap['luna'], deviceType, deviceMap[deviceType])
+          ...calcPairwiseStats('luna', deviceMap['luna'], deviceType, deviceMap[deviceType], metric)
         );
       }
     }
@@ -43,6 +46,7 @@ export async function analyzeSession(sessionId: Types.ObjectId) {
     sessionId,
     userId: session.userId,
     activityType: session.activityType,
+    metric: session.metric,
     startTime: session.startTime,
     endTime: session.endTime,
     deviceStats,

@@ -1,7 +1,7 @@
 import React from 'react';
-import { Activity, Droplet, Wind, Thermometer, ChevronDown } from 'lucide-react';
+import { Activity, Droplet, ChevronDown } from 'lucide-react';
 
-type Metric = 'hr' | 'spo2' | 'rr' | 'temp';
+type Metric = 'hr' | 'spo2';
 
 interface MetricsSelectorProps {
   selectedMetric: Metric;
@@ -11,8 +11,6 @@ interface MetricsSelectorProps {
 const METRICS = [
   { value: 'hr' as Metric, label: 'Heart Rate', icon: Activity, color: 'text-red-500' },
   { value: 'spo2' as Metric, label: 'SpO₂', icon: Droplet, color: 'text-blue-500' },
-  { value: 'rr' as Metric, label: 'Respiratory Rate', icon: Wind, color: 'text-green-500' },
-  { value: 'temp' as Metric, label: 'Temperature', icon: Thermometer, color: 'text-orange-500' },
 ];
 
 const MetricsSelector: React.FC<MetricsSelectorProps> = ({

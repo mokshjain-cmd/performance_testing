@@ -15,6 +15,9 @@ export interface INormalizedReading extends Document {
     spo2?: number;
     stress?: number;
     skinTemp?: number;
+    sleep?: number;
+    calories?: number;
+    steps?: number;
   };
   isValid: boolean;
 }
@@ -32,9 +35,12 @@ const NormalizedReadingSchema = new Schema<INormalizedReading>(
     timestamp: { type: Date, required: true },
     metrics: {
       heartRate: { type: Number, default: null },
-      spo2: Number,
-      stress: Number,
-      skinTemp: Number,
+      spo2: { type: Number, default: null },
+      stress: { type: Number, default: null },
+      skinTemp: { type: Number, default: null },
+      sleep: { type: Number, default: null },
+      calories: { type: Number, default: null },
+      steps: { type: Number, default: null },
     },
     isValid: { type: Boolean, default: true },
   },

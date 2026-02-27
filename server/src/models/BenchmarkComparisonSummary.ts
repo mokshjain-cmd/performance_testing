@@ -2,6 +2,7 @@ import { Schema, model, Document } from "mongoose";
 
 export interface IBenchmarkComparisonSummary extends Document {
   benchmarkDeviceType: string;
+  metric: 'HR' | 'SPO2' | 'Sleep' | 'Calories' | 'Steps';
 
   totalSessions: number;
 
@@ -18,7 +19,13 @@ export interface IBenchmarkComparisonSummary extends Document {
 
 const BenchmarkComparisonSummarySchema =
   new Schema<IBenchmarkComparisonSummary>({
-    benchmarkDeviceType: { type: String, required: true, unique: true, index: true },
+    benchmarkDeviceType: { type: String, required: true, index: true },
+    metric: { 
+      type: String, 
+      enum: ['HR', 'SPO2', 'Sleep', 'Calories', 'Steps'],
+      required: true,
+      index: true 
+    },
 
     totalSessions: Number,
 
@@ -32,6 +39,8 @@ const BenchmarkComparisonSummarySchema =
 
     lastUpdated: { type: Date, default: Date.now },
   });
+
+BenchmarkComparisonSummarySchema.index({ benchmarkDeviceType: 1, metric: 1 }, { unique: true });
 
 export default model<IBenchmarkComparisonSummary>(
   "BenchmarkComparisonSummary",

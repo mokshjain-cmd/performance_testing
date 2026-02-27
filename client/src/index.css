@@ -2,3 +2,12 @@
 @tailwind components;
 @tailwind utilities; */
 @import "tailwindcss";
+
+/* PDF Safe Mode - Forces RGB colors to avoid oklab/oklch parsing errors in html2canvas */
+.pdf-export,
+.pdf-export * {
+  color: #000 !important;
+  background: #fff !important;
+  border-color: #000 !important;
+  box-shadow: none !important;
+}

@@ -1,6 +1,6 @@
 import { Schema, model, Document } from "mongoose";
 
-export type DeviceType = "luna" | "polar" | "apple" | "whoop" | "amazfit";
+export type DeviceType = "luna" | "polar" | "apple" | "whoop" | "amazfit" | "masimo" | "garmin" | "coros" | "fitbit" | "suunto";
 
 export interface IDevice extends Document {
   deviceType: DeviceType;
@@ -14,7 +14,7 @@ const DeviceSchema = new Schema<IDevice>(
   {
     deviceType: {
       type: String,
-      enum: ["luna", "polar", "apple", "whoop", "amazfit"],
+      enum: ["luna", "polar", "apple", "whoop", "amazfit", "masimo", "garmin", "coros", "fitbit", "suunto"],
       required: true,
     },
     hardwareVersion: String,

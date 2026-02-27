@@ -33,6 +33,7 @@ export interface Session {
   _id: string;
   userId: User;
   activityType: string;
+  metric: 'HR' | 'SPO2' | 'Sleep' | 'Calories' | 'Steps';
   startTime: string;
   endTime: string;
   durationSec: number;
@@ -52,7 +53,7 @@ export interface Session {
 export interface DeviceStats {
   deviceType: string;
   firmwareVersion: string;
-  hr: {
+  hr?: {
     min: number;
     max: number;
     avg: number;
@@ -60,6 +61,48 @@ export interface DeviceStats {
     stdDev: number;
     range: number;
   };
+  spo2?: {
+    min: number;
+    max: number;
+    avg: number;
+    median: number;
+    stdDev: number;
+    range: number;
+  };
+  sleep?: {
+    min: number;
+    max: number;
+    avg: number;
+    median: number;
+    stdDev: number;
+    range: number;
+  };
+  calories?: {
+    min: number;
+    max: number;
+    avg: number;
+    median: number;
+    stdDev: number;
+    range: number;
+  };
+  steps?: {
+    min: number;
+    max: number;
+    avg: number;
+    median: number;
+    stdDev: number;
+    range: number;
+  };
+}
+
+export interface BlandAltmanData {
+  differences: number[];
+  averages: number[];
+  meanDifference: number;
+  stdDifference: number;
+  upperLimit: number;
+  lowerLimit: number;
+  percentageInLimits: number;
 }
 
 export interface PairwiseComparison {
@@ -70,6 +113,7 @@ export interface PairwiseComparison {
   rmse: number;
   pearsonR: number;
   meanBias: number;
+  blandAltman?: BlandAltmanData;
 }
 
 export interface Analysis {
@@ -77,6 +121,7 @@ export interface Analysis {
   sessionId: string;
   userId: string;
   activityType: string;
+  metric?: 'HR' | 'SPO2' | 'Sleep' | 'Calories' | 'Steps';
   startTime: string;
   endTime: string;
   deviceStats: DeviceStats[];
@@ -91,7 +136,11 @@ export interface Analysis {
 export interface DevicePoint {
   timestamp: string;
   metrics: {
-    heartRate: number | null;
+    heartRate?: number | null;
+    spo2?: number | null;
+    sleep?: number | null;
+    calories?: number | null;
+    steps?: number | null;
   };
 }
 

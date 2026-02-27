@@ -47,7 +47,7 @@ interface AdminUserViewProps {
   metric: Metric;
 }
 
-const AdminUserView: React.FC<AdminUserViewProps> = ({ userId, metric: _metric }) => {
+const AdminUserView: React.FC<AdminUserViewProps> = ({ userId, metric }) => {
   const [userSummary, setUserSummary] = useState<UserSummary | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -55,14 +55,17 @@ const AdminUserView: React.FC<AdminUserViewProps> = ({ userId, metric: _metric }
     // TODO: Fetch user summary data
     // API: GET /api/users/summary/{userId}
     setLoading(true);
-    apiClient.get(`/users/summary/${userId}`)
+    const metricParam = metric === 'hr' ? 'HR' : 'SPO2';
+    apiClient.get(`/users/summary/${userId}?metric=${metricParam}`)
       .then(res => {
-        console.log('Fetched user summary:', res.data);
         setUserSummary(res.data.summary);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
-  }, [userId]);
+      .catch(err => {
+        console.error('Error fetching user summary:', err);
+        setLoading(false);
+      });
+  }, [userId, metric]);
 
   if (loading) {
     return (
@@ -93,7 +96,7 @@ const AdminUserView: React.FC<AdminUserViewProps> = ({ userId, metric: _metric }
           <div className="space-y-2">
             <p className="text-sm text-gray-500 uppercase tracking-wide">Total Sessions</p>
             <p className="text-3xl font-bold bg-gradient-to-r from-blue-500 to-blue-600 bg-clip-text text-transparent">
-              {userSummary.totalSessions}
+              {userSummary.totalSessions ?? 0}
             </p>
           </div>
         </Card>
@@ -102,7 +105,7 @@ const AdminUserView: React.FC<AdminUserViewProps> = ({ userId, metric: _metric }
           <div className="space-y-2">
             <p className="text-sm text-gray-500 uppercase tracking-wide">Avg MAPE</p>
             <p className="text-3xl font-bold bg-gradient-to-r from-green-500 to-green-600 bg-clip-text text-transparent">
-              {userSummary.overallAccuracy?.avgMAPE ? `${userSummary.overallAccuracy.avgMAPE.toFixed(2)}%` : '--'}
+              {userSummary.overallAccuracy?.avgMAPE != null ? `${userSummary.overallAccuracy.avgMAPE.toFixed(2)}%` : '--'}
             </p>
             <p className="text-xs text-gray-500">% Error | Lower is better | Target: &lt;10%</p>
           </div>
@@ -112,7 +115,7 @@ const AdminUserView: React.FC<AdminUserViewProps> = ({ userId, metric: _metric }
           <div className="space-y-2">
             <p className="text-sm text-gray-500 uppercase tracking-wide">Avg MAE</p>
             <p className="text-3xl font-bold bg-gradient-to-r from-purple-500 to-purple-600 bg-clip-text text-transparent">
-              {userSummary.overallAccuracy?.avgMAE ? `${userSummary.overallAccuracy.avgMAE.toFixed(2)} BPM` : '--'}
+              {userSummary.overallAccuracy?.avgMAE != null ? `${userSummary.overallAccuracy.avgMAE.toFixed(2)} BPM` : '--'}
             </p>
             <p className="text-xs text-gray-500">Mean Absolute Error | Lower is better | Target: &lt;5 BPM</p>
           </div>
@@ -122,7 +125,7 @@ const AdminUserView: React.FC<AdminUserViewProps> = ({ userId, metric: _metric }
           <div className="space-y-2">
             <p className="text-sm text-gray-500 uppercase tracking-wide">Avg Pearson R</p>
             <p className="text-3xl font-bold bg-gradient-to-r from-orange-500 to-orange-600 bg-clip-text text-transparent">
-              {userSummary.overallAccuracy?.avgPearson ? userSummary.overallAccuracy.avgPearson.toFixed(3) : '--'}
+              {userSummary.overallAccuracy?.avgPearson != null ? userSummary.overallAccuracy.avgPearson.toFixed(3) : '--'}
             </p>
             <p className="text-xs text-gray-500">Correlation | Higher is better | Target: &gt;0.9</p>
           </div>
@@ -132,23 +135,33 @@ const AdminUserView: React.FC<AdminUserViewProps> = ({ userId, metric: _metric }
       {/* Best & Worst Sessions */}
       <Card title="Best & Worst Sessions">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {userSummary.bestSession && (
+          {userSummary.bestSession ? (
             <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
               <div className="text-sm text-green-600 font-medium mb-2">Best Session</div>
-              <div className="text-xs text-gray-600 mb-1">Activity: {userSummary.bestSession.activityType}</div>
+              <div className="text-xs text-gray-600 mb-1">Activity: {userSummary.bestSession.activityType || 'Unknown'}</div>
               <div className="text-2xl font-bold text-green-700">
-                {userSummary.bestSession.accuracyPercent?.toFixed(1)}%
+                {userSummary.bestSession.accuracyPercent != null ? userSummary.bestSession.accuracyPercent.toFixed(1) : '--'}%
               </div>
+            </div>
+          ) : (
+            <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+              <div className="text-sm text-gray-500 font-medium mb-2">Best Session</div>
+              <div className="text-gray-400">No data available</div>
             </div>
           )}
           
-          {userSummary.worstSession && (
+          {userSummary.worstSession ? (
             <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
               <div className="text-sm text-red-600 font-medium mb-2">Worst Session</div>
-              <div className="text-xs text-gray-600 mb-1">Activity: {userSummary.worstSession.activityType}</div>
+              <div className="text-xs text-gray-600 mb-1">Activity: {userSummary.worstSession.activityType || 'Unknown'}</div>
               <div className="text-2xl font-bold text-red-700">
-                {userSummary.worstSession.accuracyPercent?.toFixed(1)}%
+                {userSummary.worstSession.accuracyPercent != null ? userSummary.worstSession.accuracyPercent.toFixed(1) : '--'}%
               </div>
+            </div>
+          ) : (
+            <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+              <div className="text-sm text-gray-500 font-medium mb-2">Worst Session</div>
+              <div className="text-gray-400">No data available</div>
             </div>
           )}
         </div>
@@ -159,8 +172,8 @@ const AdminUserView: React.FC<AdminUserViewProps> = ({ userId, metric: _metric }
         <Card title="Activity-wise Accuracy">
           <BarGraph
             data={userSummary.activityWiseAccuracy.map(a => ({
-              name: a.activityType,
-              accuracy: a.avgAccuracy
+              name: a.activityType || 'Unknown',
+              accuracy: a.avgAccuracy ?? 0
             }))}
             title=""
             color="#3b82f6"
@@ -170,13 +183,13 @@ const AdminUserView: React.FC<AdminUserViewProps> = ({ userId, metric: _metric }
             {userSummary.activityWiseAccuracy.map((activity, idx) => (
               <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div>
-                  <div className="font-medium text-gray-800 capitalize">{activity.activityType}</div>
+                  <div className="font-medium text-gray-800 capitalize">{activity.activityType || 'Unknown'}</div>
                   <div className="text-sm text-gray-500">
-                    {activity.totalSessions} sessions · {(activity.totalDurationSec / 60).toFixed(0)} min total
+                    {activity.totalSessions ?? 0} sessions · {((activity.totalDurationSec ?? 0) / 60).toFixed(0)} min total
                   </div>
                 </div>
                 <div className="text-xl font-bold text-blue-600">
-                  {activity.avgAccuracy?.toFixed(1)}%
+                  {activity.avgAccuracy != null ? activity.avgAccuracy.toFixed(1) : '--'}%
                 </div>
               </div>
             ))}
@@ -189,8 +202,8 @@ const AdminUserView: React.FC<AdminUserViewProps> = ({ userId, metric: _metric }
         <Card title="Firmware-wise Accuracy">
           <BarGraph
             data={userSummary.firmwareWiseAccuracy.map(f => ({
-              name: f.firmwareVersion,
-              accuracy: f.avgAccuracy
+              name: f.firmwareVersion || 'Unknown',
+              accuracy: f.avgAccuracy ?? 0
             }))}
             title=""
             color="#10b981"
@@ -200,11 +213,11 @@ const AdminUserView: React.FC<AdminUserViewProps> = ({ userId, metric: _metric }
             {userSummary.firmwareWiseAccuracy.map((firmware, idx) => (
               <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div>
-                  <div className="font-medium text-gray-800">v{firmware.firmwareVersion}</div>
-                  <div className="text-sm text-gray-500">{firmware.totalSessions} sessions</div>
+                  <div className="font-medium text-gray-800">v{firmware.firmwareVersion || 'Unknown'}</div>
+                  <div className="text-sm text-gray-500">{firmware.totalSessions ?? 0} sessions</div>
                 </div>
                 <div className="text-xl font-bold text-green-600">
-                  {firmware.avgAccuracy?.toFixed(1)}%
+                  {firmware.avgAccuracy != null ? firmware.avgAccuracy.toFixed(1) : '--'}%
                 </div>
               </div>
             ))}
@@ -217,8 +230,8 @@ const AdminUserView: React.FC<AdminUserViewProps> = ({ userId, metric: _metric }
         <Card title="Band Position-wise Accuracy">
           <BarGraph
             data={userSummary.bandPositionWiseAccuracy.map(b => ({
-              name: b.bandPosition,
-              accuracy: b.avgAccuracy
+              name: b.bandPosition || 'Unknown',
+              accuracy: b.avgAccuracy ?? 0
             }))}
             title=""
             color="#f59e0b"
@@ -228,13 +241,13 @@ const AdminUserView: React.FC<AdminUserViewProps> = ({ userId, metric: _metric }
             {userSummary.bandPositionWiseAccuracy.map((band, idx) => (
               <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div>
-                  <div className="font-medium text-gray-800 capitalize">{band.bandPosition}</div>
+                  <div className="font-medium text-gray-800 capitalize">{band.bandPosition || 'Unknown'}</div>
                   <div className="text-sm text-gray-500">
-                    {band.totalSessions} sessions · {(band.totalDurationSec / 60).toFixed(0)} min total
+                    {band.totalSessions ?? 0} sessions · {((band.totalDurationSec ?? 0) / 60).toFixed(0)} min total
                   </div>
                 </div>
                 <div className="text-xl font-bold text-amber-600">
-                  {band.avgAccuracy?.toFixed(1)}%
+                  {band.avgAccuracy != null ? band.avgAccuracy.toFixed(1) : '--'}%
                 </div>
               </div>
             ))}

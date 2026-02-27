@@ -12,6 +12,7 @@ export async function updateLunaFirmwarePerformanceForSession(sessionId: string)
   const lunaDevice = (session.devices || []).find((d: any) => d.deviceType?.toLowerCase() === 'luna');
   console.log('Luna device for session', sessionId, ':', lunaDevice);
   if (!lunaDevice?.firmwareVersion) return;
-  console.log('Updating firmware performance for Luna version:', lunaDevice.firmwareVersion);
-  await updateFirmwarePerformanceForLuna(lunaDevice.firmwareVersion);
+  const metric = session.metric || 'HR';
+  console.log('Updating firmware performance for Luna version:', lunaDevice.firmwareVersion, 'metric:', metric);
+  await updateFirmwarePerformanceForLuna(lunaDevice.firmwareVersion, metric);
 }

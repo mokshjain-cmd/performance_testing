@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Card } from '../common';
 import apiClient from '../../services/api';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import type { Metric } from './MetricsSelector';
 
 interface ActivityPerformance {
   _id: string;
@@ -15,18 +16,22 @@ interface ActivityPerformance {
 
 type ActivityMetric = 'avgMAE' | 'avgRMSE' | 'avgPearson';
 
-const ActivityAnalysisTab: React.FC = () => {
+interface ActivityAnalysisTabProps {
+  metric: Metric;
+}
+
+const ActivityAnalysisTab: React.FC<ActivityAnalysisTabProps> = ({ metric }) => {
   const [activityPerformances, setActivityPerformances] = useState<ActivityPerformance[]>([]);
   const [selectedActivityMetric, setSelectedActivityMetric] = useState<ActivityMetric>('avgMAE');
 
   useEffect(() => {
-    apiClient.get('/activity-performance')
+    const metricParam = metric === 'hr' ? 'HR' : 'SPO2';
+    apiClient.get(`/activity-performance?metric=${metricParam}`)
       .then(res => {
         setActivityPerformances(res.data.data || []);
-        console.log('Fetched activity performance:', res.data.data);
       })
       .catch(err => console.error('Error fetching activity performance:', err));
-  }, []);
+  }, [metric]);
 
   const getActivityMetricLabel = (metric: ActivityMetric) => {
     switch (metric) {
@@ -132,16 +137,16 @@ const ActivityAnalysisTab: React.FC = () => {
                           </div>
                         </td>
                         <td className="py-3 px-4 text-center text-gray-700 font-medium">
-                          {activity.totalSessions}
+                          {activity.totalSessions ?? 0}
                         </td>
                         <td className={`py-3 px-4 text-center font-semibold ${bestMAE ? 'bg-green-50 text-green-700' : 'text-gray-700'}`}>
-                          {activity.avgMAE.toFixed(2)}
+                          {activity.avgMAE != null ? activity.avgMAE.toFixed(2) : '--'}
                         </td>
                         <td className={`py-3 px-4 text-center font-semibold ${bestRMSE ? 'bg-green-50 text-green-700' : 'text-gray-700'}`}>
-                          {activity.avgRMSE.toFixed(2)}
+                          {activity.avgRMSE != null ? activity.avgRMSE.toFixed(2) : '--'}
                         </td>
                         <td className={`py-3 px-4 text-center font-semibold ${bestPearson ? 'bg-green-50 text-green-700' : 'text-gray-700'}`}>
-                          {activity.avgPearson.toFixed(3)}
+                          {activity.avgPearson != null ? activity.avgPearson.toFixed(3) : '--'}
                         </td>
                       </tr>
                     );

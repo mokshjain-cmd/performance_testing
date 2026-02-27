@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Card } from '../common';
 import apiClient from '../../services/api';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import type { Metric } from './MetricsSelector';
 
 interface BenchmarkComparison {
   _id: string;
@@ -19,18 +20,22 @@ interface BenchmarkComparison {
 
 type BenchmarkMetric = 'avgMAE' | 'avgRMSE' | 'avgMAPE' | 'avgPearson' | 'avgBias';
 
-const BenchmarkComparisonTab: React.FC = () => {
+interface BenchmarkComparisonTabProps {
+  metric: Metric;
+}
+
+const BenchmarkComparisonTab: React.FC<BenchmarkComparisonTabProps> = ({ metric }) => {
   const [benchmarkComparisons, setBenchmarkComparisons] = useState<BenchmarkComparison[]>([]);
   const [selectedBenchmarkMetric, setSelectedBenchmarkMetric] = useState<BenchmarkMetric>('avgMAE');
 
   useEffect(() => {
-    apiClient.get('/benchmark-comparisons')
+    const metricParam = metric === 'hr' ? 'HR' : 'SPO2';
+    apiClient.get(`/benchmark-comparisons?metric=${metricParam}`)
       .then(res => {
         setBenchmarkComparisons(res.data.data || []);
-        console.log('Fetched benchmark comparisons:', res.data.data);
       })
       .catch(err => console.error('Error fetching benchmark comparisons:', err));
-  }, []);
+  }, [metric]);
 
   const getBenchmarkMetricLabel = (metric: BenchmarkMetric) => {
     switch (metric) {

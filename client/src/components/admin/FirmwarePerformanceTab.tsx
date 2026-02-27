@@ -3,6 +3,7 @@ import { Card } from '../common';
 import apiClient from '../../services/api';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from 'recharts';
 import { ChevronDown, ChevronUp } from 'lucide-react';
+import type { Metric } from './MetricsSelector';
 
 interface FirmwarePerformance {
   _id: string;
@@ -28,7 +29,11 @@ type FirmwareMetric = 'avgMAE' | 'avgRMSE' | 'avgMAPE' | 'avgPearson';
 type SortKey = 'firmwareVersion' | 'totalSessions' | 'avgMAE' | 'avgRMSE' | 'avgMAPE' | 'avgPearson';
 type SortOrder = 'asc' | 'desc';
 
-const FirmwarePerformanceTab: React.FC = () => {
+interface FirmwarePerformanceTabProps {
+  metric: Metric;
+}
+
+const FirmwarePerformanceTab: React.FC<FirmwarePerformanceTabProps> = ({ metric }) => {
   const [firmwareData, setFirmwareData] = useState<FirmwarePerformance[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedMetric, setSelectedMetric] = useState<FirmwareMetric>('avgMAE');
@@ -46,14 +51,14 @@ const FirmwarePerformanceTab: React.FC = () => {
 
   useEffect(() => {
     setLoading(true);
-    apiClient.get('/firmware-performance')
+    const metricParam = metric === 'hr' ? 'HR' : 'SPO2';
+    apiClient.get(`/firmware-performance?metric=${metricParam}`)
       .then(res => {
         setFirmwareData(res.data.data || []);
-        console.log('Fetched firmware performance:', res.data.data);
       })
       .catch(err => console.error('Error fetching firmware performance:', err))
       .finally(() => setLoading(false));
-  }, []);
+  }, [metric]);
 
   const getMetricLabel = (metric: FirmwareMetric) => {
     switch (metric) {
@@ -281,19 +286,19 @@ const FirmwarePerformanceTab: React.FC = () => {
                       {firmware.firmwareVersion}
                     </td>
                     <td className="py-3 px-4 text-center text-gray-700">
-                      {firmware.totalSessions}
+                      {firmware.totalSessions ?? 0}
                     </td>
                     <td className={`py-3 px-4 text-center font-semibold ${bestMAE ? 'bg-green-50 text-green-700' : 'text-gray-700'}`}>
-                      {firmware.overallAccuracy.avgMAE.toFixed(2)}
+                      {firmware.overallAccuracy?.avgMAE != null ? firmware.overallAccuracy.avgMAE.toFixed(2) : '--'}
                     </td>
                     <td className={`py-3 px-4 text-center font-semibold ${bestRMSE ? 'bg-green-50 text-green-700' : 'text-gray-700'}`}>
-                      {firmware.overallAccuracy.avgRMSE.toFixed(2)}
+                      {firmware.overallAccuracy?.avgRMSE != null ? firmware.overallAccuracy.avgRMSE.toFixed(2) : '--'}
                     </td>
                     <td className={`py-3 px-4 text-center font-semibold ${bestMAPE ? 'bg-green-50 text-green-700' : 'text-gray-700'}`}>
-                      {firmware.overallAccuracy.avgMAPE.toFixed(2)}%
+                      {firmware.overallAccuracy?.avgMAPE != null ? firmware.overallAccuracy.avgMAPE.toFixed(2) : '--'}%
                     </td>
                     <td className={`py-3 px-4 text-center font-semibold ${bestPearson ? 'bg-green-50 text-green-700' : 'text-gray-700'}`}>
-                      {firmware.overallAccuracy.avgPearson.toFixed(3)}
+                      {firmware.overallAccuracy?.avgPearson != null ? firmware.overallAccuracy.avgPearson.toFixed(3) : '--'}
                     </td>
                   </tr>
                 );
@@ -492,22 +497,30 @@ const FirmwarePerformanceTab: React.FC = () => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg border border-blue-200">
                 <div className="text-sm text-blue-600 font-medium mb-1">MAE</div>
-                <div className="text-2xl font-bold text-blue-900">{selectedFirmware.overallAccuracy.avgMAE.toFixed(2)} <span className="text-base text-blue-700">BPM</span></div>
+                <div className="text-2xl font-bold text-blue-900">
+                  {selectedFirmware.overallAccuracy?.avgMAE != null ? selectedFirmware.overallAccuracy.avgMAE.toFixed(2) : '--'} <span className="text-base text-blue-700">BPM</span>
+                </div>
                 <div className="text-xs text-blue-600 mt-1">Lower is better | Target: &lt;5 BPM</div>
               </div>
               <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg border border-purple-200">
                 <div className="text-sm text-purple-600 font-medium mb-1">RMSE</div>
-                <div className="text-2xl font-bold text-purple-900">{selectedFirmware.overallAccuracy.avgRMSE.toFixed(2)} <span className="text-base text-purple-700">BPM</span></div>
+                <div className="text-2xl font-bold text-purple-900">
+                  {selectedFirmware.overallAccuracy?.avgRMSE != null ? selectedFirmware.overallAccuracy.avgRMSE.toFixed(2) : '--'} <span className="text-base text-purple-700">BPM</span>
+                </div>
                 <div className="text-xs text-purple-600 mt-1">Lower is better | Target: &lt;7 BPM</div>
               </div>
               <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-4 rounded-lg border border-orange-200">
                 <div className="text-sm text-orange-600 font-medium mb-1">MAPE</div>
-                <div className="text-2xl font-bold text-orange-900">{selectedFirmware.overallAccuracy.avgMAPE.toFixed(2)}%</div>
+                <div className="text-2xl font-bold text-orange-900">
+                  {selectedFirmware.overallAccuracy?.avgMAPE != null ? selectedFirmware.overallAccuracy.avgMAPE.toFixed(2) : '--'}%
+                </div>
                 <div className="text-xs text-orange-600 mt-1">Lower is better | Target: &lt;10%</div>
               </div>
               <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg border border-green-200">
                 <div className="text-sm text-green-600 font-medium mb-1">Pearson</div>
-                <div className="text-2xl font-bold text-green-900">{selectedFirmware.overallAccuracy.avgPearson.toFixed(3)}</div>
+                <div className="text-2xl font-bold text-green-900">
+                  {selectedFirmware.overallAccuracy?.avgPearson != null ? selectedFirmware.overallAccuracy.avgPearson.toFixed(3) : '--'}
+                </div>
                 <div className="text-xs text-green-600 mt-1">Higher is better | Target: &gt;0.9</div>
               </div>
             </div>
@@ -529,7 +542,7 @@ const FirmwarePerformanceTab: React.FC = () => {
             </div>
 
             {/* Activity-wise Performance Table */}
-            {selectedFirmware.activityWise.length > 0 && (
+            {selectedFirmware.activityWise.length > 0 && metric === 'hr' && (
               <div>
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Activity-wise Performance</h3>
                 <div className="overflow-x-auto">
@@ -543,16 +556,17 @@ const FirmwarePerformanceTab: React.FC = () => {
                     </thead>
                     <tbody>
                       {selectedFirmware.activityWise
-                        .sort((a, b) => b.avgAccuracy - a.avgAccuracy)
+                        .sort((a, b) => (b.avgAccuracy ?? 0) - (a.avgAccuracy ?? 0))
                         .map((activity) => (
                           <tr key={activity._id} className="border-b border-gray-100 hover:bg-gray-50">
                             <td className="py-3 px-4 font-medium text-gray-800 capitalize">
-                              {activity.activityType}
+                              {activity.activityType || 'Unknown'}
                             </td>
                             <td className="py-3 px-4 text-center font-semibold text-gray-700">
-                              {activity.avgAccuracy.toFixed(2)}%
+                              {activity.avgAccuracy != null ? activity.avgAccuracy.toFixed(2) : '--'}%
                             </td>
                             <td className="py-3 px-4 text-center text-gray-700">
+                              {activity.totalSessions ?? 0}
                               {activity.totalSessions}
                             </td>
                           </tr>
@@ -654,8 +668,10 @@ const FirmwarePerformanceTab: React.FC = () => {
                         <td key={fw._id} className="py-3 px-4 text-center">
                           {cellData ? (
                             <div>
-                              <div className="font-semibold text-gray-800">{cellData.accuracy.toFixed(2)}%</div>
-                              <div className="text-xs text-gray-500">({cellData.sessions} sessions)</div>
+                              <div className="font-semibold text-gray-800">
+                                {cellData.accuracy != null ? cellData.accuracy.toFixed(2) : '--'}%
+                              </div>
+                              <div className="text-xs text-gray-500">({cellData.sessions ?? 0} sessions)</div>
                             </div>
                           ) : (
                             <span className="text-gray-400">—</span>

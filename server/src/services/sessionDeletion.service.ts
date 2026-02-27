@@ -22,6 +22,7 @@ export async function deleteSession(sessionId: Types.ObjectId | string) {
 
   const userId = session.userId;
   const activityType = session.activityType;
+  const metric = session.metric || 'HR';
   const startTime = session.startTime;
   
   // Find Luna firmware version used in this session (only one version per session)
@@ -62,37 +63,37 @@ export async function deleteSession(sessionId: Types.ObjectId | string) {
 
   // 4. Recalculate user accuracy summary
   if (userId) {
-    await updateUserAccuracySummary(userId as Types.ObjectId);
-    console.log(`✅ Recalculated user accuracy summary for user ${userId}`);
+    await updateUserAccuracySummary(userId as Types.ObjectId, metric);
+    console.log(`✅ Recalculated user accuracy summary for user ${userId} metric ${metric}`);
   }
 
   // 5. Recalculate firmware performance for affected Luna firmware version
   if (firmwareVersion) {
-    await updateFirmwarePerformanceForLuna(firmwareVersion);
-    console.log(`✅ Recalculated firmware performance for version ${firmwareVersion}`);
+    await updateFirmwarePerformanceForLuna(firmwareVersion, metric);
+    console.log(`✅ Recalculated firmware performance for version ${firmwareVersion} metric ${metric}`);
   }
 
-  // 6. Recalculate activity performance summary
-  if (activityType) {
+  // 6. Recalculate activity performance summary (only for HR sessions)
+  if (activityType && metric === 'HR') {
     await updateActivityPerformanceSummary(activityType);
     console.log(`✅ Recalculated activity performance for ${activityType}`);
   }
 
   // 7. Recalculate admin daily trend for session date
   if (startTime) {
-    await updateAdminDailyTrend(startTime);
-    console.log(`✅ Recalculated admin daily trend for session date`);
+    await updateAdminDailyTrend(startTime, metric);
+    console.log(`✅ Recalculated admin daily trend for session date metric ${metric}`);
   }
 
   // 8. Recalculate benchmark comparison summaries for devices used in this session
   for (const deviceType of benchmarkDevices) {
-    await updateBenchmarkComparisonSummary(deviceType);
-    console.log(`✅ Recalculated benchmark comparison for ${deviceType}`);
+    await updateBenchmarkComparisonSummary(deviceType, metric);
+    console.log(`✅ Recalculated benchmark comparison for ${deviceType} metric ${metric}`);
   }
 
   // 9. Recalculate admin global summary
-  await updateAdminGlobalSummary();
-  console.log(`✅ Recalculated admin global summary`);
+  await updateAdminGlobalSummary(metric);
+  console.log(`✅ Recalculated admin global summary for metric ${metric}`);
 
   return {
     success: true,

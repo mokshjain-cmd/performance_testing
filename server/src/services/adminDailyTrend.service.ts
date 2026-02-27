@@ -6,8 +6,9 @@ import AdminDailyTrend from '../models/AdminDailyTrend';
  * Update admin daily trend for a specific date
  * Aggregates Luna performance stats for all sessions on that date
  * @param date - The date to update (will be normalized to midnight UTC)
+ * @param metric - The metric to calculate trend for (HR, SPO2, etc.)
  */
-export async function updateAdminDailyTrend(date: Date) {
+export async function updateAdminDailyTrend(date: Date, metric: 'HR' | 'SPO2' | 'Sleep' | 'Calories' | 'Steps' = 'HR') {
   // Normalize to midnight UTC
   const dateOnly = new Date(Date.UTC(
     date.getUTCFullYear(),
@@ -19,19 +20,25 @@ export async function updateAdminDailyTrend(date: Date) {
   const nextDay = new Date(dateOnly);
   nextDay.setUTCDate(nextDay.getUTCDate() + 1);
 
-  console.log(`\n🔄 Updating AdminDailyTrend for date: ${dateOnly.toISOString().split('T')[0]}`);
+  console.log(`\n🔄 Updating AdminDailyTrend for date: ${dateOnly.toISOString().split('T')[0]}, metric: ${metric}`);
 
-  // Get all sessions that started on this date
+  // Get all sessions that started on this date with this metric
   const sessions = await Session.find({
     startTime: {
       $gte: dateOnly,
       $lt: nextDay,
     },
     isValid: true,
+    metric,
   });
 
   if (sessions.length === 0) {
-    console.log(`⚠️ No sessions found for date: ${dateOnly.toISOString().split('T')[0]}`);
+    console.log(`⚠️ No sessions found for date: ${dateOnly.toISOString().split('T')[0]}, metric: ${metric}`);
+    // Delete the AdminDailyTrend entry if it exists (no sessions remaining for this date/metric)
+    const deleted = await AdminDailyTrend.deleteOne({ date: dateOnly, metric });
+    if (deleted.deletedCount > 0) {
+      console.log(`✅ Deleted AdminDailyTrend entry for ${dateOnly.toISOString().split('T')[0]}, metric: ${metric} (no sessions remaining)`);
+    }
     return null;
   }
 
@@ -48,6 +55,9 @@ export async function updateAdminDailyTrend(date: Date) {
 
   // Helper: get session by id
   const sessionMap = new Map(sessions.map(s => [String(s._id), s]));
+
+  // Convert metric to lowercase for comparison (stored as 'hr', 'spo2' in DB)
+  const metricLower = metric.toLowerCase();
 
   // Aggregate Luna stats from pairwise comparisons (Luna vs benchmark device)
   let totalMAE = 0;
@@ -66,7 +76,7 @@ export async function updateAdminDailyTrend(date: Date) {
 
     // Find Luna vs benchmark device comparison
     const comparison = analysis.pairwiseComparisons.find(
-      (p: any) => p.d1 === 'luna' && p.d2 === session.benchmarkDeviceType && p.metric === 'hr'
+      (p: any) => p.d1 === 'luna' && p.d2 === session.benchmarkDeviceType && p.metric === metricLower
     );
 
     if (comparison) {
@@ -91,6 +101,7 @@ export async function updateAdminDailyTrend(date: Date) {
 
   const trend = {
     date: dateOnly,
+    metric,
     totalSessions: sessions.length,
     totalUsers: uniqueUserIds.size,
     lunaStats: {
@@ -104,7 +115,7 @@ export async function updateAdminDailyTrend(date: Date) {
 
   // Upsert the daily trend
   const result = await AdminDailyTrend.findOneAndUpdate(
-    { date: dateOnly },
+    { date: dateOnly, metric },
     trend,
     { upsert: true, new: true }
   );

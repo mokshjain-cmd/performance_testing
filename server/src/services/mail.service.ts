@@ -15,20 +15,16 @@ class MailService {
 
   constructor() {
     console.log('📧 Initializing Mail Service...');
-    console.log(`📧 Mail Host: ${process.env.GMAIL_HOST || 'smtp.gmail.com'}`);
-    console.log(`📧 Mail Port: ${process.env.GMAIL_PORT || '587'}`);
-    console.log(`📧 Mail User: ${process.env.GMAIL_USER ? '***' + process.env.GMAIL_USER.slice(-4) : 'NOT SET'}`);
     
     // Remove spaces from Gmail app password
     const gmailPassword = (process.env.GMAIL_PASS || '').replace(/\s+/g, '');
-    console.log(`📧 Gmail password configured: ${gmailPassword ? '✓' : '✗'}`);
     if(process.env.ENV==='development'){
         this.transporter = nodemailer.createTransport({
-        host: process.env.EMAIL_HOST || 'smtp.mailtrap.io',
-        port: parseInt(process.env.EMAIL_PORT || '2525'),
+        host: process.env.MAIL_HOST || 'smtp.mailtrap.io',
+        port: parseInt(process.env.MAIL_PORT || '2525'),
         auth: {
-          user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASS,
+          user: process.env.MAIL_USER,
+          pass: process.env.MAIL_PASS,
         },
       });
     }else{
@@ -46,9 +42,7 @@ class MailService {
     });
     }
     
-    
-    
-    console.log('✅ Mail Service initialized with Gmail SMTP');
+    console.log('✅ Mail Service initialized');
   }
 
   /**
@@ -56,12 +50,6 @@ class MailService {
    */
   async sendMail(options: MailOptions): Promise<boolean> {
     try {
-      console.log('📤 Preparing to send email...');
-      console.log(`   📧 To: ${options.to}`);
-      console.log(`   📝 Subject: ${options.subject}`);
-      console.log(`   📏 Text length: ${options.text?.length || 0} chars`);
-      console.log(`   🎨 HTML length: ${options.html?.length || 0} chars`);
-      
       const mailOptions = {
         from: `"${process.env.MAIL_FROM_NAME}" <${process.env.GMAIL_USER}>`,
         to: options.to,
@@ -71,11 +59,8 @@ class MailService {
         replyTo: options.replyTo || process.env.MAIL_REPLY_TO || undefined
       };
 
-      console.log(`   🚀 Sending email from ${mailOptions.from}...`);
       const info = await this.transporter.sendMail(mailOptions);
-      console.log(`✅ Email sent successfully to ${options.to}`);
-      console.log(`   📨 Message ID: ${info.messageId}`);
-      console.log(`   📮 Response: ${info.response}`);
+      console.log(`✅ Email sent to ${options.to}`);
       return true;
     } catch (error) {
       console.error(`❌ Failed to send email to ${options.to}`);
@@ -92,11 +77,7 @@ class MailService {
    * Send session reminder email to a tester
    */
   async sendSessionReminder(userEmail: string, userName: string, sessionsCreated: number): Promise<boolean> {
-    console.log('📧 Composing session reminder email...');
-    console.log(`   👤 User: ${userName}`);
-    console.log(`   📧 Email: ${userEmail}`);
-    console.log(`   📊 Sessions created: ${sessionsCreated}/2`);
-    
+
     const subject = 'Daily Session Reminder - Performance Testing Platform';
     
     const html = `
@@ -139,6 +120,96 @@ Keep up the great work!
 
 ---
 This is an automated reminder from the Performance Testing Platform.
+If you have any questions, please contact your administrator.
+    `;
+
+    return this.sendMail({
+      from: `${process.env.MAIL_FROM_NAME || 'Performance Testing Platform'}`,
+      to: userEmail,
+      subject,
+      text,
+      html,
+      replyTo: process.env.MAIL_REPLY_TO || 'noreply@perftesting.com'
+    });
+  }
+
+  /**
+   * Send session analysis completion/failure notification
+   */
+  async sendSessionAnalysisNotification(
+    userEmail: string, 
+    userName: string, 
+    sessionId: string,
+    sessionName: string, 
+    status: 'success' | 'failed',
+    metric: string = 'HR',
+    errorMessage?: string
+  ): Promise<boolean> {
+    const subject = status === 'success' 
+      ? `Session Analysis Complete - ${sessionName}`
+      : `Session Analysis Failed - ${sessionName}`;
+    
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: ${status === 'success' ? '#10b981' : '#ef4444'};">
+          ${status === 'success' ? '✅ Session Analysis Complete' : '❌ Session Analysis Failed'}
+        </h2>
+        <p>Hi ${userName},</p>
+        <p>
+          Your session analysis for <strong>${metric}</strong> metric 
+          ${status === 'success' ? 'has been completed successfully' : 'has failed'}.
+        </p>
+        <div style="background-color: #f3f4f6; border-radius: 8px; padding: 16px; margin: 20px 0;">
+          <p style="margin: 8px 0;"><strong>Session:</strong> <code>${sessionName}</code></p>
+          <p style="margin: 8px 0;"><strong>Metric:</strong> ${metric}</p>
+          <p style="margin: 8px 0;"><strong>Status:</strong> ${status === 'success' ? '✅ Success' : '❌ Failed'}</p>
+        </div>
+        ${status === 'success' ? `
+          <div style="background-color: #d1fae5; border-left: 4px solid #10b981; padding: 16px; margin: 20px 0;">
+            <p style="margin: 0; color: #065f46;">
+              <strong>Your results are ready!</strong> Log in to the platform to view your session analysis, charts, and performance metrics.
+            </p>
+          </div>
+          <p style="text-align: center; margin: 30px 0;">
+            <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}" 
+               style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+              View Results
+            </a>
+          </p>
+        ` : `
+          <div style="background-color: #fee2e2; border-left: 4px solid #ef4444; padding: 16px; margin: 20px 0;">
+            <p style="margin: 0 0 12px 0; color: #991b1b;">
+              <strong>Analysis failed:</strong> ${errorMessage || 'An error occurred during session analysis. Please contact support if this persists.'}
+            </p>
+            <p style="margin: 0; color: #991b1b;">
+              <strong>Action Required:</strong> Please contact your administrator to delete this session (ID: ${sessionId}) from the system.
+            </p>
+          </div>
+        `}
+        <hr style="margin: 30px 0; border: none; border-top: 1px solid #e5e7eb;">
+        <p style="font-size: 12px; color: #6b7280;">
+          This is an automated notification from the Performance Testing Platform.<br>
+          If you have any questions, please contact your administrator.
+        </p>
+      </div>
+    `;
+
+    const text = `
+Hi ${userName},
+
+Your session analysis for ${metric} metric ${status === 'success' ? 'has been completed successfully' : 'has failed'}.
+
+Session Details:
+- Session: ${sessionName}
+- Metric: ${metric}
+- Status: ${status === 'success' ? 'Success' : 'Failed'}
+
+${status === 'success' 
+  ? 'Your results are ready! Log in to the platform to view your session analysis, charts, and performance metrics.\n\nVisit: ' + (process.env.FRONTEND_URL || 'http://localhost:5173')
+  : 'Analysis failed: ' + (errorMessage || 'An error occurred during session analysis. Please contact support if this persists.') + '\n\nAction Required: Please contact your administrator to delete this session (ID: ' + sessionId + ') from the system.'}
+
+---
+This is an automated notification from the Performance Testing Platform.
 If you have any questions, please contact your administrator.
     `;
 

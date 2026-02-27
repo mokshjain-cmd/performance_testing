@@ -4,6 +4,7 @@ import Session from '../models/Session';
 import Device from '../models/Devices';
 import mongoose from "mongoose";
 import { ingestSessionFiles } from '../services/sessionIngestion.service';
+import { ingestSPO2SessionFiles } from '../services/ingestSPO2Session.service';
 import { deleteSession as deleteSessionService } from '../services/sessionDeletion.service';
 import storageService from '../services/storage.service';
 
@@ -47,6 +48,7 @@ export const createSession = async (
     const {
       sessionName,
       activityType,
+      metric,
       startTime,
       endTime,
       benchmarkDeviceType,
@@ -54,10 +56,20 @@ export const createSession = async (
       firmwareVersion
     } = req.body;
 
-    if (!userId || !activityType || !startTime || !endTime) {
+    if (!userId || !activityType || !metric || !startTime || !endTime) {
       res.status(400).json({
         success: false,
-        message: "Missing required fields: userId, activityType, startTime, endTime"
+        message: "Missing required fields: userId, activityType, metric, startTime, endTime"
+      });
+      return;
+    }
+
+    // Validate metric value
+    const validMetrics = ['HR', 'SPO2', 'Sleep', 'Calories', 'Steps'];
+    if (!validMetrics.includes(metric)) {
+      res.status(400).json({
+        success: false,
+        message: `Invalid metric. Must be one of: ${validMetrics.join(', ')}`
       });
       return;
     }
@@ -127,6 +139,7 @@ export const createSession = async (
       userId,
       name: sessionName,
       activityType,
+      metric,
       startTime: start,
       endTime: end,
       durationSec,
@@ -165,8 +178,9 @@ export const createSession = async (
     }
     
 
-    
-    ingestSessionFiles({
+    // Call appropriate ingestion service based on metric
+    if (metric === 'SPO2') {
+      ingestSPO2SessionFiles({
         sessionId: session._id,
         userId,
         activityType,
@@ -174,7 +188,19 @@ export const createSession = async (
         startTime: start,
         endTime: end,
         files,
-    });
+      });
+    } else {
+      // Default to HR ingestion for HR and other metrics
+      ingestSessionFiles({
+        sessionId: session._id,
+        userId,
+        activityType,
+        bandPosition,
+        startTime: start,
+        endTime: end,
+        files,
+      });
+    }
 
     
     res.status(201).json({
@@ -242,7 +268,15 @@ export const getSessionsByUserId = async (
       res.status(400).json({ success: false, message: 'userId required' });
       return;
     }
-    const sessions = await Session.find({ userId })
+    
+    // Get optional metric filter from query
+    const metric = req.query.metric as string;
+    const query: any = { userId };
+    if (metric) {
+      query.metric = metric;
+    }
+    
+    const sessions = await Session.find(query)
       .populate('userId', 'email name')
       .populate('devices.deviceId')
       .sort({ createdAt: -1 })
@@ -274,7 +308,14 @@ export const getAllSessions = async (
       return;
     }
 
-    const sessions = await Session.find({ userId })
+    // Get optional metric filter from query
+    const metric = req.query.metric as string;
+    const query: any = { userId };
+    if (metric) {
+      query.metric = metric;
+    }
+
+    const sessions = await Session.find(query)
       .populate("userId", "email name")
       .sort({ createdAt: -1 })
       .exec();
@@ -371,12 +412,17 @@ export const getSessionIdsByUserIdParam = async (
 ): Promise<void> => {
   try {
     const { userId } = req.params;
-    console.log('Admin fetching session IDs for userId:', userId);
+    const { metric } = req.query;
+    console.log('Admin fetching session IDs for userId:', userId, 'metric:', metric);
     if (!userId) {
       res.status(400).json({ success: false, message: 'userId required' });
       return;
     }
-    const sessions = await Session.find({ userId }, '_id name activityType startTime').exec();
+    const query: any = { userId };
+    if (metric) {
+      query.metric = metric;
+    }
+    const sessions = await Session.find(query, '_id name activityType startTime metric').exec();
     res.status(200).json({ success: true, count: sessions.length, data: sessions });
   } catch (error) {
     console.error('Error fetching session IDs:', error);

@@ -47,9 +47,12 @@ const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({ metric, subTab }) =
   const [selectedChartMetric, setSelectedChartMetric] = useState<ChartMetric>('avgMAE');
 
   useEffect(() => {
+    // Convert metric to backend format (HR, SPO2)
+    const metricParam = metric === 'hr' ? 'HR' : 'SPO2';
+    
     // Fetch global summary
     setLoading(true);
-    apiClient.get('/admin/global-summary')
+    apiClient.get(`/admin/global-summary?metric=${metricParam}`)
       .then(res => {
         setGlobalSummary(res.data.data);
       })
@@ -62,13 +65,12 @@ const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({ metric, subTab }) =
     tenDaysAgo.setDate(today.getDate() - 10);
     const startDate = tenDaysAgo.toISOString().split('T')[0];
 
-    apiClient.get(`/admin/daily-trends?startDate=${startDate}`)
+    apiClient.get(`/admin/daily-trends?startDate=${startDate}&metric=${metricParam}`)
       .then(res => {
         setDailyTrends(res.data.data || []);
-        console.log('Fetched daily trends:', res.data.data);
       })
       .catch(err => console.error('Error fetching daily trends:', err));
-  }, []);
+  }, [metric]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -78,9 +80,9 @@ const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({ metric, subTab }) =
   const getChartData = () => {
     return dailyTrends.map(trend => ({
       date: formatDate(trend.date),
-      value: trend.lunaStats[selectedChartMetric] || 0,
-      totalSessions: trend.totalSessions,
-      totalUsers: trend.totalUsers,
+      value: trend.lunaStats?.[selectedChartMetric] ?? 0,
+      totalSessions: trend.totalSessions ?? 0,
+      totalUsers: trend.totalUsers ?? 0,
     }));
   };
 
@@ -95,8 +97,6 @@ const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({ metric, subTab }) =
   const formatLastUpdated = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
-    console.log('Last updated date:', date.toISOString());
-    console.log('Current date:', now.toISOString());
     const diffMs = now.getTime() - date.getTime();
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMs / 3600000);
@@ -167,14 +167,14 @@ const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({ metric, subTab }) =
           </div>
 
           {/* Additional Stats */}
-          {globalSummary && (
+          {globalSummary && globalSummary.lunaStats && (
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               <Card>
                 <div className="space-y-1">
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600 font-medium">MAE</span>
                     <span className="text-lg font-semibold text-gray-800">
-                      {globalSummary.lunaStats.avgMAE.toFixed(2)} <span className="text-sm text-gray-500">BPM</span>
+                      {globalSummary.lunaStats.avgMAE != null ? globalSummary.lunaStats.avgMAE.toFixed(2) : '--'} <span className="text-sm text-gray-500">BPM</span>
                     </span>
                   </div>
                   <p className="text-xs text-gray-500">Mean Absolute Error. Lower is better. Ideal: &lt;5 BPM</p>
@@ -185,7 +185,7 @@ const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({ metric, subTab }) =
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600 font-medium">RMSE</span>
                     <span className="text-lg font-semibold text-gray-800">
-                      {globalSummary.lunaStats.avgRMSE.toFixed(2)} <span className="text-sm text-gray-500">BPM</span>
+                      {globalSummary.lunaStats.avgRMSE != null ? globalSummary.lunaStats.avgRMSE.toFixed(2) : '--'} <span className="text-sm text-gray-500">BPM</span>
                     </span>
                   </div>
                   <p className="text-xs text-gray-500">Penalizes large spikes. Lower is better. Ideal: &lt;7 BPM</p>
@@ -196,7 +196,7 @@ const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({ metric, subTab }) =
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600 font-medium">Pearson R</span>
                     <span className="text-lg font-semibold text-gray-800">
-                      {globalSummary.lunaStats.avgPearson.toFixed(3)}
+                      {globalSummary.lunaStats.avgPearson != null ? globalSummary.lunaStats.avgPearson.toFixed(3) : '--'}
                     </span>
                   </div>
                   <p className="text-xs text-gray-500">Correlation strength. Higher is better. Ideal: &gt;0.9</p>
@@ -207,7 +207,7 @@ const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({ metric, subTab }) =
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600 font-medium">MAPE</span>
                     <span className="text-lg font-semibold text-gray-800">
-                      {globalSummary.lunaStats.avgMAPE.toFixed(2)}%
+                      {globalSummary.lunaStats.avgMAPE != null ? globalSummary.lunaStats.avgMAPE.toFixed(2) : '--'}%
                     </span>
                   </div>
                   <p className="text-xs text-gray-500">% Error. Lower is better. Ideal: &lt;10%</p>
@@ -218,7 +218,7 @@ const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({ metric, subTab }) =
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600 font-medium">Mean Bias</span>
                     <span className="text-lg font-semibold text-gray-800">
-                      {globalSummary.lunaStats.avgBias.toFixed(2)} <span className="text-sm text-gray-500">BPM</span>
+                      {globalSummary.lunaStats.avgBias != null ? globalSummary.lunaStats.avgBias.toFixed(2) : '--'} <span className="text-sm text-gray-500">BPM</span>
                     </span>
                   </div>
                   <p className="text-xs text-gray-500">Systematic error. Closer to 0 is better. Ideal: ±2 BPM</p>
@@ -331,11 +331,11 @@ const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({ metric, subTab }) =
         </Card>
       )}
 
-      {subTab === 'activity' && <ActivityAnalysisTab />}
+      {subTab === 'activity' && <ActivityAnalysisTab metric={metric} />}
 
-      {subTab === 'benchmark' && <BenchmarkComparisonTab />}
+      {subTab === 'benchmark' && <BenchmarkComparisonTab metric={metric} />}
 
-      {subTab === 'firmware' && <FirmwarePerformanceTab />}
+      {subTab === 'firmware' && <FirmwarePerformanceTab metric={metric} />}
     </div>
   );
 };

@@ -7,12 +7,13 @@ import AdminGlobalSummary from '../models/AdminGlobalSummary';
  * Update admin global summary
  * Aggregates overall Luna performance across all users and sessions
  * This should be called after each session ingestion/analysis
+ * @param metric - The metric to calculate summary for (HR, SPO2, etc.)
  */
-export async function updateAdminGlobalSummary() {
-  console.log('\n🔄 Updating AdminGlobalSummary...');
+export async function updateAdminGlobalSummary(metric: 'HR' | 'SPO2' | 'Sleep' | 'Calories' | 'Steps' = 'HR') {
+  console.log(`\n🔄 Updating AdminGlobalSummary for metric: ${metric}...`);
 
-  // Get all valid sessions
-  const sessions = await Session.find({ isValid: true });
+  // Get all valid sessions for this metric
+  const sessions = await Session.find({ isValid: true, metric });
 
   if (sessions.length === 0) {
     console.log('⚠️ No valid sessions found');
@@ -50,6 +51,9 @@ export async function updateAdminGlobalSummary() {
   let countCoverage = 0;
   let countBias = 0;
 
+  // Convert metric to lowercase for comparison (stored as 'hr', 'spo2' in DB)
+  const metricLower = metric.toLowerCase();
+
   analyses.forEach((analysis) => {
     // Get session to access benchmarkDeviceType
     const session = sessionMap.get(String(analysis.sessionId));
@@ -57,7 +61,7 @@ export async function updateAdminGlobalSummary() {
 
     // Find Luna vs benchmark device comparison
     const comparison = analysis.pairwiseComparisons.find(
-      (p: any) => p.d1 === 'luna' && p.d2 === session.benchmarkDeviceType && p.metric === 'hr'
+      (p: any) => p.d1 === 'luna' && p.d2 === session.benchmarkDeviceType && p.metric === metricLower
     );
 
     if (comparison) {
@@ -89,6 +93,7 @@ export async function updateAdminGlobalSummary() {
   });
 
   const summary = {
+    metric,
     totalUsers: uniqueUserIds.size,
     totalSessions: sessions.length,
     totalReadings,
@@ -103,8 +108,8 @@ export async function updateAdminGlobalSummary() {
     computedAt: new Date(),
   };
 
-  // Delete existing and create new (since there's only one global summary)
-  await AdminGlobalSummary.deleteMany({});
+  // Delete existing for this metric and create new
+  await AdminGlobalSummary.deleteOne({ metric });
   const result = await AdminGlobalSummary.create(summary);
 
   console.log('✅ AdminGlobalSummary updated:', {

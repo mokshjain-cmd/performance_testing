@@ -32,9 +32,6 @@ const DeviceManagement: React.FC<Props> = ({ isOpen, onClose }) => {
       setLoading(true);
       setError(null);
       const response = await deviceService.getAllDevices();
-      console.log('Fetched devices response:', response);
-      console.log('Devices data:', response.data);
-      console.log('Devices array:', response.data);
       setDevices(response.data || []);
     } catch (err: any) {
       console.error('Error fetching devices:', err);

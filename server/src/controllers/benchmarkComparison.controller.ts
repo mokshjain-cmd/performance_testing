@@ -3,13 +3,16 @@ import BenchmarkComparisonSummary from '../models/BenchmarkComparisonSummary';
 
 /**
  * Get all benchmark comparison summaries
+ * Query params: metric (optional, defaults to 'HR')
  */
 export const getAllBenchmarkComparisons = async (
   req: Request,
   res: Response
 ): Promise<void> => {
   try {
-    const summaries = await BenchmarkComparisonSummary.find()
+    const metric = (req.query.metric as string) || 'HR';
+    
+    const summaries = await BenchmarkComparisonSummary.find({ metric })
       .sort({ totalSessions: -1 })
       .exec();
 
@@ -30,6 +33,7 @@ export const getAllBenchmarkComparisons = async (
 
 /**
  * Get benchmark comparison summary for a specific device
+ * Query params: metric (optional, defaults to 'HR')
  */
 export const getBenchmarkComparison = async (
   req: Request,
@@ -37,9 +41,11 @@ export const getBenchmarkComparison = async (
 ): Promise<void> => {
   try {
     const { deviceType } = req.params;
+    const metric = (req.query.metric as string) || 'HR';
 
     const summary = await BenchmarkComparisonSummary.findOne({
       benchmarkDeviceType: deviceType,
+      metric,
     });
 
     if (!summary) {
