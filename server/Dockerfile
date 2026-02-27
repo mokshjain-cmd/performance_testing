@@ -12,7 +12,7 @@ RUN npm ci --omit=dev
 COPY . .
 
 # Set production environment
-ENV ALSO ENV=production
+ENV ENV=production
 
 # Cloud Run provides PORT env variable
 EXPOSE 8080

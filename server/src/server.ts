@@ -8,7 +8,7 @@ import { createApp } from './app';
 import { connectDatabase } from './config/database';
 import { startSessionReminderCron } from './crons/sessionReminder.cron';
 
-const PORT = process.env.PORT || 3000;
+const PORT = Number(process.env.PORT) || 8080;
 
 const startServer = async (): Promise<void> => {
   try {
@@ -29,7 +29,7 @@ const startServer = async (): Promise<void> => {
 
     // Start server
     console.log('🌐 Step 4: Starting HTTP server...');
-    app.listen(PORT, () => {
+    app.listen(PORT, '0.0.0.0' , () => {
       console.log('✅ HTTP server started\n');
       console.log('='.repeat(60));
       console.log(`🚀 Server is running on http://localhost:${PORT}`);
