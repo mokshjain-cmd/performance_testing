@@ -1,21 +1,26 @@
+# ---------- Build Stage ----------
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci
+
+COPY . .
+RUN npm run build   # should compile TS → dist/
+
+# ---------- Production Stage ----------
 FROM node:20-alpine
 
 WORKDIR /app
 
-# Copy package files
 COPY package*.json ./
-
-# Install only production dependencies
 RUN npm ci --omit=dev
 
-# Copy source
-COPY . .
+COPY --from=builder /app/dist ./dist
 
-# Set production environment
-ENV ENV=production
+ENV NODE_ENV=production
 
-# Cloud Run provides PORT env variable
 EXPOSE 8080
 
-# Start your production server
-CMD ["node", "server.js"]
+CMD ["node", "dist/server.js"]
