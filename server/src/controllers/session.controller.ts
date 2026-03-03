@@ -5,8 +5,14 @@ import Device from '../models/Devices';
 import mongoose from "mongoose";
 import { ingestSessionFiles } from '../services/sessionIngestion.service';
 import { ingestSPO2SessionFiles } from '../services/ingestSPO2Session.service';
+import { IngestSleepService } from '../services/sleep/IngestSleepService';
+import { SleepAnalysisService } from '../services/sleep/SleepAnalysisService';
 import { deleteSession as deleteSessionService } from '../services/sessionDeletion.service';
 import storageService from '../services/storage.service';
+import { updateAdminGlobalSummary } from '../services/adminGlobalSummary.service';
+import { updateFirmwarePerformanceForLuna } from '../services/firmwarePerformance.service';
+import { updateBenchmarkComparisonSummariesForSession } from '../services/benchmarkComparisonSummary.service';
+import { updateAdminDailyTrend } from '../services/adminDailyTrend.service';
 
 /**
  * Create a new session with device files
@@ -51,15 +57,17 @@ export const createSession = async (
       metric,
       startTime,
       endTime,
+      sleepDate, // For sleep sessions: user provides just the date, we calculate the range
       benchmarkDeviceType,
       bandPosition,
-      firmwareVersion
+      firmwareVersion,
+      mobileType // For Sleep with Luna: Android or iOS
     } = req.body;
 
-    if (!userId || !activityType || !metric || !startTime || !endTime) {
+    if (!userId || !activityType || !metric) {
       res.status(400).json({
         success: false,
-        message: "Missing required fields: userId, activityType, metric, startTime, endTime"
+        message: "Missing required fields: userId, activityType, metric"
       });
       return;
     }
@@ -72,6 +80,48 @@ export const createSession = async (
         message: `Invalid metric. Must be one of: ${validMetrics.join(', ')}`
       });
       return;
+    }
+
+    // For Sleep sessions, handle date differently
+    let start: Date;
+    let end: Date;
+    
+    if (metric === 'Sleep') {
+      if (!sleepDate) {
+        res.status(400).json({
+          success: false,
+          message: "sleepDate is required for Sleep sessions (format: YYYY-MM-DD)"
+        });
+        return;
+      }
+
+      // Parse the sleep date (e.g., "2026-03-03")
+      const [year, month, day] = sleepDate.split("-").map(Number);
+      
+      // Start time: Previous day at 21:00 (9 PM)
+      start = new Date(Date.UTC(year, month - 1, day - 1, 21, 0, 0));
+      
+      // End time: Given date at 09:00 (9 AM)
+      end = new Date(Date.UTC(year, month - 1, day, 9, 0, 0));
+      
+      console.log('Sleep session date range:');
+      console.log('  Input date:', sleepDate);
+      console.log('  Start time (previous night 21:00 UTC):', start.toISOString());
+      console.log('  End time (morning 09:00 UTC):', end.toISOString());
+    } else {
+      // For other metrics, require explicit startTime and endTime
+      if (!startTime || !endTime) {
+        res.status(400).json({
+          success: false,
+          message: "Missing required fields: startTime, endTime"
+        });
+        return;
+      }
+      
+      start = parseISTString(startTime);
+      end = parseISTString(endTime);
+      console.log('Parsed start time (UTC):', start.toISOString());
+      console.log('Parsed end time (UTC):', end.toISOString());
     }
 
     // Validate firmwareVersion is provided (required for Luna)
@@ -93,10 +143,6 @@ export const createSession = async (
       return;
     }
 
-    const start = parseISTString(startTime);
-    const end = parseISTString(endTime);  
-    console.log('Parsed start time (UTC):', start.toISOString());
-    console.log('Parsed end time (UTC):', end.toISOString());
     const durationSec = Math.floor(
       (end.getTime() - start.getTime()) / 1000
     );
@@ -189,7 +235,7 @@ export const createSession = async (
         endTime: end,
         files,
       });
-    } else {
+    } else if (metric === 'HR') {
       // Default to HR ingestion for HR and other metrics
       ingestSessionFiles({
         sessionId: session._id,
@@ -199,6 +245,42 @@ export const createSession = async (
         startTime: start,
         endTime: end,
         files,
+      });
+    } else if (metric === 'Sleep') {
+      // Call sleep ingestion service
+      // This runs asynchronously - parse files, store epochs, then analyze, then update summaries
+      IngestSleepService.ingestSleepSession(session._id, userId, files, benchmarkDeviceType, mobileType).then(() => {
+        console.log(`✅ Sleep ingestion completed for session ${session._id}`);
+        // After ingestion, run analysis
+        return SleepAnalysisService.analyzeSession(session._id);
+      }).then(async () => {
+        console.log(`✅ Sleep analysis completed for session ${session._id}`);
+        
+        // Get Luna firmware version from session
+        const sessionWithDevices = await Session.findById(session._id).populate('devices.deviceId');
+        const lunaDevice = sessionWithDevices?.devices.find((d: any) => d.deviceType === 'luna');
+        const lunaFirmware = lunaDevice?.firmwareVersion;
+        
+        // Update all summary collections
+        console.log(`🔄 Updating summary collections for Sleep session ${session._id}...`);
+        
+        // 1. Update AdminGlobalSummary
+        await updateAdminGlobalSummary('Sleep');
+        
+        // 2. Update FirmwarePerformance (if Luna firmware available)
+        if (lunaFirmware) {
+          await updateFirmwarePerformanceForLuna(lunaFirmware, 'Sleep');
+        }
+        
+        // 3. Update BenchmarkComparisonSummary (if benchmark device available)
+        await updateBenchmarkComparisonSummariesForSession(session._id);
+        
+        // 4. Update AdminDailyTrend
+        await updateAdminDailyTrend(session.startTime, 'Sleep');
+        
+        console.log(`✅ All summary collections updated for Sleep session ${session._id}`);
+      }).catch((error) => {
+        console.error(`❌ Error in sleep ingestion/analysis/summary update for session ${session._id}:`, error);
       });
     }
 

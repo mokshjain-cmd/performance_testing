@@ -131,6 +131,16 @@ This is an automated email from the Performance Testing Platform.
 Please do not reply to this email.
       `;
 
+      const devSkipMail = process.env.ENV === 'development' && process.env.SKIP_OTP === 'true';
+
+      if (devSkipMail) {
+        console.log(`DEV MODE: Skipping sending OTP email to ${email}. Generated OTP: ${otpCode}`);
+        return {
+          success: true,
+          message: `OTP generated (dev). Check server logs.`,
+        };
+      }
+
       const emailSent = await mailService.sendMail({
         from: `"${process.env.MAIL_FROM_NAME}" <${process.env.GMAIL_USER}>`,
         to: email,

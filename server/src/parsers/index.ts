@@ -28,3 +28,9 @@ export { parseLunaCsv } from './lunaParser';
 export { parsePolarCsv } from './polarParser';
 export { parseMasimoSpo2Csv } from './masimoSpo2Parser';
 export { parseLunaSpo2Csv } from './lunaSpo2Parser';
+
+// Export sleep parsers
+export { LunaSleepParser } from './sleep/LunaSleepParser';
+export { LunaSleepParserIOS } from './sleep/LunaSleepParserIOS';
+export { AppleSleepParser } from './sleep/AppleSleepParser';
+export { AppleHealthSleepParser } from './sleep/AppleHealthSleepParser';

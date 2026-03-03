@@ -10,6 +10,15 @@ export interface IUserAccuracySummary extends Document {
     avgPearson?: number;
     avgMAPE?: number;
   };
+  sleepOverview?: {
+    avgTotalSleepSec?: number;
+    avgDeepSec?: number;
+    avgRemSec?: number;
+    avgLightSec?: number;
+    avgAwakeSec?: number;
+    avgSleepEfficiency?: number;
+    avgAgreementPercent?: number;
+  };
   bestSession?: {
     sessionId: Types.ObjectId;
     activityType: string;
@@ -54,6 +63,15 @@ const UserAccuracySummarySchema = new Schema<IUserAccuracySummary>({
     avgRMSE: Number,
     avgPearson: Number,
     avgMAPE: Number,
+  },
+  sleepOverview: {
+    avgTotalSleepSec: Number,
+    avgDeepSec: Number,
+    avgRemSec: Number,
+    avgLightSec: Number,
+    avgAwakeSec: Number,
+    avgSleepEfficiency: Number,
+    avgAgreementPercent: Number,
   },
   bestSession: {
     sessionId: { type: Schema.Types.ObjectId, ref: "Session" },

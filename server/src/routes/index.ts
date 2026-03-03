@@ -2,6 +2,7 @@
 import { Router } from 'express';
 import healthRoutes from './health.routes';
 import sessionRoutes from './session.routes';
+import sleepRoutes from './sleep.routes';
 import deviceRoutes from './device.routes';
 import userRoutes from './user.routes';
 import activityPerformanceRoutes from './activityPerformance.routes';
@@ -22,6 +23,7 @@ router.use('/health', healthRoutes);
 
 // Protected routes (authentication required)
 router.use('/sessions', authenticateJWT, sessionRoutes);
+router.use('/sleep', authenticateJWT, sleepRoutes);
 router.use('/devices', authenticateJWT, deviceRoutes);
 router.use('/users', authenticateJWT, userRoutes);
 router.use('/activity-performance', authenticateJWT, requireRole('admin'),activityPerformanceRoutes);

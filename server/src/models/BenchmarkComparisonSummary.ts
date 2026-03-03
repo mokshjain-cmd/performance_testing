@@ -6,12 +6,20 @@ export interface IBenchmarkComparisonSummary extends Document {
 
   totalSessions: number;
 
-  hrStats: {
+  hrStats?: {
     avgMAE?: number;
     avgRMSE?: number;
     avgMAPE?: number;
     avgPearson?: number;
     avgBias?: number;
+  };
+
+  sleepStats?: {
+    avgAccuracyPercent?: number;
+    avgKappa?: number;
+    avgTotalSleepBiasSec?: number;
+    avgDeepBiasSec?: number;
+    avgRemBiasSec?: number;
   };
 
   lastUpdated: Date;
@@ -35,6 +43,14 @@ const BenchmarkComparisonSummarySchema =
       avgMAPE: Number,
       avgPearson: Number,
       avgBias: Number,
+    },
+
+    sleepStats: {
+      avgAccuracyPercent: Number,
+      avgKappa: Number,
+      avgTotalSleepBiasSec: Number,
+      avgDeepBiasSec: Number,
+      avgRemBiasSec: Number,
     },
 
     lastUpdated: { type: Date, default: Date.now },

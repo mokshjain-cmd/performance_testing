@@ -47,6 +47,64 @@ export async function updateAdminDailyTrend(date: Date, metric: 'HR' | 'SPO2' | 
 
   // Get session analyses for these sessions
   const sessionIds = sessions.map(s => s._id);
+
+  // Handle Sleep metric differently
+  if (metric === 'Sleep') {
+    const analyses = await SessionAnalysis.find({
+      sessionId: { $in: sessionIds },
+      isValid: true,
+      'sleepStats': { $exists: true },
+    });
+
+    if (analyses.length === 0) {
+      console.log('⚠️ No sleep analysis data available for this date');
+      return null;
+    }
+
+    let totalAccuracy = 0, totalKappa = 0, totalSleepBias = 0;
+    let countComparison = 0;
+
+    analyses.forEach((analysis) => {
+      const sleepStats = analysis.sleepStats;
+      if (!sleepStats) return;
+
+      if (sleepStats.epochAccuracyPercent !== undefined) {
+        totalAccuracy += sleepStats.epochAccuracyPercent;
+        totalKappa += sleepStats.kappaScore || 0;
+        totalSleepBias += sleepStats.totalSleepDiffSec || 0;
+        countComparison++;
+      }
+    });
+
+    const trend = {
+      date: dateOnly,
+      metric,
+      totalSessions: sessions.length,
+      totalUsers: uniqueUserIds.size,
+      sleepStats: countComparison > 0 ? {
+        avgAccuracyPercent: totalAccuracy / countComparison,
+        avgKappa: totalKappa / countComparison,
+        avgTotalSleepBiasSec: totalSleepBias / countComparison,
+      } : undefined,
+      computedAt: new Date(),
+    };
+
+    const result = await AdminDailyTrend.findOneAndUpdate(
+      { date: dateOnly, metric },
+      trend,
+      { upsert: true, new: true }
+    );
+
+    console.log(`✅ AdminDailyTrend (Sleep) updated for ${dateOnly.toISOString().split('T')[0]}:`, {
+      totalSessions: trend.totalSessions,
+      totalUsers: trend.totalUsers,
+      avgAccuracyPercent: trend.sleepStats?.avgAccuracyPercent?.toFixed(2),
+    });
+
+    return result;
+  }
+
+  // For HR/SPO2 metrics
   const analyses = await SessionAnalysis.find({
     sessionId: { $in: sessionIds },
     isValid: true,

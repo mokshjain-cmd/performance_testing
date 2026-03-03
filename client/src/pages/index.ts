@@ -3,3 +3,7 @@ export { default as DashboardPage } from './DashboardPage';
 export { default as AdminDashboardPage } from './AdminDashboardPage';
 export { default as LoginPage } from './LoginPage';
 export { default as SessionFormPage } from './SessionFormPage';
+export { SleepOverviewPage } from './SleepOverviewPage';
+export { SleepSessionPage } from './SleepSessionPage';
+export { AdminSleepDashboardPage } from './AdminSleepDashboardPage';
+export { AdminSleepSessionPage } from './AdminSleepSessionPage';

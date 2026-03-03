@@ -7,11 +7,17 @@ export interface IAdminDailyTrend extends Document {
   totalSessions: number;
   totalUsers: number;
 
-  lunaStats: {
+  lunaStats?: {
     avgMAE?: number;
     avgRMSE?: number;
     avgPearson?: number;
     avgCoveragePercent?: number;
+  };
+
+  sleepStats?: {
+    avgAccuracyPercent?: number;
+    avgKappa?: number;
+    avgTotalSleepBiasSec?: number;
   };
 
 //   invalidStats: {
@@ -39,6 +45,12 @@ const AdminDailyTrendSchema = new Schema<IAdminDailyTrend>({
     avgRMSE: Number,
     avgPearson: Number,
     avgCoveragePercent: Number,
+  },
+
+  sleepStats: {
+    avgAccuracyPercent: Number,
+    avgKappa: Number,
+    avgTotalSleepBiasSec: Number,
   },
 
 //   invalidStats: {

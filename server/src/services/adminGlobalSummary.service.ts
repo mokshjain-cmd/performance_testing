@@ -28,7 +28,90 @@ export async function updateAdminGlobalSummary(metric: 'HR' | 'SPO2' | 'Sleep' |
     'meta.deviceType': 'luna',
   });
 
-  // Get all session analyses with Luna comparisons
+  // Handle Sleep metric differently (uses sleepStats instead of pairwiseComparisons)
+  if (metric === 'Sleep') {
+    const sessionIds = sessions.map(s => s._id);
+    const analyses = await SessionAnalysis.find({
+      sessionId: { $in: sessionIds },
+      isValid: true,
+      'sleepStats': { $exists: true },
+    });
+
+    if (analyses.length === 0) {
+      console.log('⚠️ No sleep analysis data available');
+      return null;
+    }
+
+    let totalAccuracy = 0;
+    let totalKappa = 0;
+    let totalSleepBias = 0;
+    let totalDeepBias = 0;
+    let totalRemBias = 0;
+    let totalSleep = 0;
+    let deepSum = 0;
+    let remSum = 0;
+    let lightSum = 0;
+    let countComparison = 0;
+
+    analyses.forEach((analysis) => {
+      const sleepStats = analysis.sleepStats;
+      if (!sleepStats) return;
+
+      // Total sleep time
+      if (sleepStats.totalSleepLunaSec !== undefined) {
+        totalSleep += sleepStats.totalSleepLunaSec;
+        deepSum += sleepStats.deepLunaSec || 0;
+        remSum += sleepStats.remLunaSec || 0;
+        lightSum += sleepStats.lightLunaSec || 0;
+      }
+
+      // Comparison metrics (if benchmark available)
+      if (sleepStats.epochAccuracyPercent !== undefined) {
+        countComparison++;
+        totalAccuracy += sleepStats.epochAccuracyPercent;
+        totalKappa += sleepStats.kappaScore || 0;
+        totalSleepBias += sleepStats.totalSleepDiffSec || 0;
+        totalDeepBias += sleepStats.deepDiffSec || 0;
+        totalRemBias += sleepStats.remDiffSec || 0;
+      }
+    });
+
+    const count = analyses.length;
+    const avgTotalSleep = totalSleep / count;
+
+    const summary = {
+      metric,
+      totalUsers: uniqueUserIds.size,
+      totalSessions: sessions.length,
+      totalReadings,
+      sleepStats: {
+        avgAccuracyPercent: countComparison > 0 ? totalAccuracy / countComparison : undefined,
+        avgKappa: countComparison > 0 ? totalKappa / countComparison : undefined,
+        avgTotalSleepBiasSec: countComparison > 0 ? totalSleepBias / countComparison : undefined,
+        avgDeepBiasSec: countComparison > 0 ? totalDeepBias / countComparison : undefined,
+        avgRemBiasSec: countComparison > 0 ? totalRemBias / countComparison : undefined,
+        avgTotalSleepSec: avgTotalSleep,
+        avgDeepPercent: avgTotalSleep > 0 ? (deepSum / count / avgTotalSleep) * 100 : undefined,
+        avgRemPercent: avgTotalSleep > 0 ? (remSum / count / avgTotalSleep) * 100 : undefined,
+      },
+      computedAt: new Date(),
+    };
+
+    await AdminGlobalSummary.deleteOne({ metric });
+    const result = await AdminGlobalSummary.create(summary);
+
+    console.log('✅ AdminGlobalSummary (Sleep) updated:', {
+      totalUsers: summary.totalUsers,
+      totalSessions: summary.totalSessions,
+      avgAccuracyPercent: summary.sleepStats.avgAccuracyPercent?.toFixed(2),
+      avgKappa: summary.sleepStats.avgKappa?.toFixed(3),
+      avgTotalSleepSec: summary.sleepStats.avgTotalSleepSec?.toFixed(0),
+    });
+
+    return result;
+  }
+
+  // For HR/SPO2 metrics - use pairwiseComparisons
   const analyses = await SessionAnalysis.find({
     isValid: true,
     'pairwiseComparisons.0': { $exists: true },

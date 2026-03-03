@@ -1,6 +1,7 @@
 import Session from '../models/Session';
 import SessionAnalysis from '../models/SessionAnalysis';
 import NormalizedReading from '../models/NormalizedReadings';
+import SleepStageEpoch from '../models/SleepStageEpoch';
 import { Types } from 'mongoose';
 import { updateUserAccuracySummary } from './userAccuracySummary.service';
 import { updateFirmwarePerformanceForLuna } from './firmwarePerformance.service';
@@ -49,8 +50,11 @@ export async function deleteSession(sessionId: Types.ObjectId | string) {
 
   // 3. Delete all related data
   await Promise.all([
-    // Delete normalized readings
+    // Delete normalized readings (for HR/SPO2/etc.)
     NormalizedReading.deleteMany({ 'meta.sessionId': sessionId }),
+    
+    // Delete sleep stage epochs (for Sleep sessions)
+    SleepStageEpoch.deleteMany({ 'meta.sessionId': sessionId }),
     
     // Delete session analysis
     SessionAnalysis.deleteOne({ sessionId }),

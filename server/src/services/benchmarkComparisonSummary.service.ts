@@ -1,3 +1,4 @@
+import Session from '../models/Session';
 import SessionAnalysis from '../models/SessionAnalysis';
 import BenchmarkComparisonSummary from '../models/BenchmarkComparisonSummary';
 
@@ -10,6 +11,80 @@ import BenchmarkComparisonSummary from '../models/BenchmarkComparisonSummary';
 export async function updateBenchmarkComparisonSummary(benchmarkDeviceType: string, metric: 'HR' | 'SPO2' | 'Sleep' | 'Calories' | 'Steps' = 'HR') {
   console.log(`\n🔄 Updating BenchmarkComparisonSummary for: ${benchmarkDeviceType}, metric: ${metric}`);
 
+  // Handle Sleep metric differently (uses sleepStats instead of pairwiseComparisons)
+  if (metric === 'Sleep') {
+    const analyses = await SessionAnalysis.find({
+      isValid: true,
+      metric: 'Sleep',
+      'sleepStats': { $exists: true },
+    }).populate('sessionId');
+
+    if (analyses.length === 0) {
+      console.log(`⚠️ No sleep sessions found for ${benchmarkDeviceType}`);
+      return null;
+    }
+
+    // Filter for sessions with this benchmark device
+    const filteredAnalyses = [];
+    for (const analysis of analyses) {
+      const session: any = analysis.sessionId;
+      if (session && session.benchmarkDeviceType === benchmarkDeviceType) {
+        filteredAnalyses.push(analysis);
+      }
+    }
+
+    if (filteredAnalyses.length === 0) {
+      console.log(`⚠️ No sleep sessions found with benchmark device: ${benchmarkDeviceType}`);
+      return null;
+    }
+
+    let totalAccuracy = 0, totalKappa = 0, totalSleepBias = 0, totalDeepBias = 0, totalRemBias = 0;
+    let countComparison = 0;
+
+    filteredAnalyses.forEach((analysis) => {
+      const sleepStats = analysis.sleepStats;
+      if (!sleepStats) return;
+
+      if (sleepStats.epochAccuracyPercent !== undefined) {
+        totalAccuracy += sleepStats.epochAccuracyPercent;
+        totalKappa += sleepStats.kappaScore || 0;
+        totalSleepBias += sleepStats.totalSleepDiffSec || 0;
+        totalDeepBias += sleepStats.deepDiffSec || 0;
+        totalRemBias += sleepStats.remDiffSec || 0;
+        countComparison++;
+      }
+    });
+
+    const summary = {
+      benchmarkDeviceType,
+      metric,
+      totalSessions: filteredAnalyses.length,
+      sleepStats: countComparison > 0 ? {
+        avgAccuracyPercent: totalAccuracy / countComparison,
+        avgKappa: totalKappa / countComparison,
+        avgTotalSleepBiasSec: totalSleepBias / countComparison,
+        avgDeepBiasSec: totalDeepBias / countComparison,
+        avgRemBiasSec: totalRemBias / countComparison,
+      } : undefined,
+      lastUpdated: new Date(),
+    };
+
+    const result = await BenchmarkComparisonSummary.findOneAndUpdate(
+      { benchmarkDeviceType, metric },
+      summary,
+      { upsert: true, new: true }
+    );
+
+    console.log(`✅ BenchmarkComparisonSummary (Sleep) updated for ${benchmarkDeviceType}:`, {
+      totalSessions: summary.totalSessions,
+      avgAccuracyPercent: summary.sleepStats?.avgAccuracyPercent?.toFixed(2),
+      avgKappa: summary.sleepStats?.avgKappa?.toFixed(3),
+    });
+
+    return result;
+  }
+
+  // For HR/SPO2 metrics - use pairwiseComparisons
   // Convert metric to lowercase for comparison (stored as 'hr', 'spo2' in DB)
   const metricLower = metric.toLowerCase();
 
@@ -116,14 +191,27 @@ export async function updateBenchmarkComparisonSummariesForSession(sessionId: an
   console.log(`\n🔄 Updating BenchmarkComparisonSummaries for session: ${sessionId}`);
 
   // Get the session analysis
-  const analysis = await SessionAnalysis.findOne({ sessionId });
+  const analysis = await SessionAnalysis.findOne({ sessionId }).populate('sessionId');
 
-  if (!analysis || !analysis.pairwiseComparisons || analysis.pairwiseComparisons.length === 0) {
-    console.log('⚠️ No pairwise comparisons found for this session');
+  if (!analysis) {
+    console.log('⚠️ No analysis found for this session');
     return [];
   }
 
   const metric = analysis.metric || 'HR';
+  const session: any = analysis.sessionId;
+
+  // Handle Sleep metric
+  if (metric === 'Sleep' && session && session.benchmarkDeviceType) {
+    const result = await updateBenchmarkComparisonSummary(session.benchmarkDeviceType, metric);
+    return result ? [result] : [];
+  }
+
+  // For HR/SPO2 - use pairwiseComparisons
+  if (!analysis.pairwiseComparisons || analysis.pairwiseComparisons.length === 0) {
+    console.log('⚠️ No pairwise comparisons found for this session');
+    return [];
+  }
 
   // Extract unique benchmark device types (d2) from Luna comparisons
   const benchmarkDevices = new Set<string>();

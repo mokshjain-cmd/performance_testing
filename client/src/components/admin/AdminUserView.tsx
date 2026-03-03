@@ -67,6 +67,30 @@ const AdminUserView: React.FC<AdminUserViewProps> = ({ userId, metric }) => {
       });
   }, [userId, metric]);
 
+  const getMetricColor = (
+  value: number | null | undefined,
+  type: 'mape' | 'mae' | 'pearson' | 'accuracy'
+) => {
+  if (value == null) return 'text-gray-400';
+
+  switch (type) {
+    case 'mape':
+      return value < 10 ? 'text-green-600' : 'text-red-600';
+
+    case 'mae':
+      return value < 5 ? 'text-green-600' : 'text-red-600';
+
+    case 'pearson':
+      return value > 0.9 ? 'text-green-600' : 'text-red-600';
+
+    case 'accuracy':
+      return value >= 90 ? 'text-green-600' : 'text-red-600';
+
+    default:
+      return 'text-gray-800';
+  }
+};
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -104,8 +128,10 @@ const AdminUserView: React.FC<AdminUserViewProps> = ({ userId, metric }) => {
         <Card>
           <div className="space-y-2">
             <p className="text-sm text-gray-500 uppercase tracking-wide">Avg MAPE</p>
-            <p className="text-3xl font-bold bg-gradient-to-r from-green-500 to-green-600 bg-clip-text text-transparent">
-              {userSummary.overallAccuracy?.avgMAPE != null ? `${userSummary.overallAccuracy.avgMAPE.toFixed(2)}%` : '--'}
+            <p className={`text-3xl font-bold ${getMetricColor(userSummary.overallAccuracy?.avgMAPE, 'mape')}`}>
+              {userSummary.overallAccuracy?.avgMAPE != null
+                ? `${userSummary.overallAccuracy.avgMAPE.toFixed(2)}%`
+                : '--'}
             </p>
             <p className="text-xs text-gray-500">% Error | Lower is better | Target: &lt;10%</p>
           </div>
@@ -114,8 +140,10 @@ const AdminUserView: React.FC<AdminUserViewProps> = ({ userId, metric }) => {
         <Card>
           <div className="space-y-2">
             <p className="text-sm text-gray-500 uppercase tracking-wide">Avg MAE</p>
-            <p className="text-3xl font-bold bg-gradient-to-r from-purple-500 to-purple-600 bg-clip-text text-transparent">
-              {userSummary.overallAccuracy?.avgMAE != null ? `${userSummary.overallAccuracy.avgMAE.toFixed(2)} BPM` : '--'}
+            <p className={`text-3xl font-bold ${getMetricColor(userSummary.overallAccuracy?.avgMAE, 'mae')}`}>
+              {userSummary.overallAccuracy?.avgMAE != null
+                ? `${userSummary.overallAccuracy.avgMAE.toFixed(2)} BPM`
+                : '--'}
             </p>
             <p className="text-xs text-gray-500">Mean Absolute Error | Lower is better | Target: &lt;5 BPM</p>
           </div>
@@ -124,8 +152,10 @@ const AdminUserView: React.FC<AdminUserViewProps> = ({ userId, metric }) => {
         <Card>
           <div className="space-y-2">
             <p className="text-sm text-gray-500 uppercase tracking-wide">Avg Pearson R</p>
-            <p className="text-3xl font-bold bg-gradient-to-r from-orange-500 to-orange-600 bg-clip-text text-transparent">
-              {userSummary.overallAccuracy?.avgPearson != null ? userSummary.overallAccuracy.avgPearson.toFixed(3) : '--'}
+           <p className={`text-3xl font-bold ${getMetricColor(userSummary.overallAccuracy?.avgPearson, 'pearson')}`}>
+              {userSummary.overallAccuracy?.avgPearson != null
+                ? userSummary.overallAccuracy.avgPearson.toFixed(3)
+                : '--'}
             </p>
             <p className="text-xs text-gray-500">Correlation | Higher is better | Target: &gt;0.9</p>
           </div>
@@ -139,8 +169,10 @@ const AdminUserView: React.FC<AdminUserViewProps> = ({ userId, metric }) => {
             <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
               <div className="text-sm text-green-600 font-medium mb-2">Best Session</div>
               <div className="text-xs text-gray-600 mb-1">Activity: {userSummary.bestSession.activityType || 'Unknown'}</div>
-              <div className="text-2xl font-bold text-green-700">
-                {userSummary.bestSession.accuracyPercent != null ? userSummary.bestSession.accuracyPercent.toFixed(1) : '--'}%
+              <div className={`text-2xl font-bold ${getMetricColor(userSummary.bestSession.accuracyPercent, 'accuracy')}`}>
+                {userSummary.bestSession.accuracyPercent != null
+                  ? userSummary.bestSession.accuracyPercent.toFixed(1)
+                  : '--'}%
               </div>
             </div>
           ) : (
@@ -154,8 +186,10 @@ const AdminUserView: React.FC<AdminUserViewProps> = ({ userId, metric }) => {
             <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
               <div className="text-sm text-red-600 font-medium mb-2">Worst Session</div>
               <div className="text-xs text-gray-600 mb-1">Activity: {userSummary.worstSession.activityType || 'Unknown'}</div>
-              <div className="text-2xl font-bold text-red-700">
-                {userSummary.worstSession.accuracyPercent != null ? userSummary.worstSession.accuracyPercent.toFixed(1) : '--'}%
+              <div className={`text-2xl font-bold ${getMetricColor(userSummary.worstSession.accuracyPercent, 'accuracy')}`}>
+                {userSummary.worstSession.accuracyPercent != null
+                  ? userSummary.worstSession.accuracyPercent.toFixed(1)
+                  : '--'}%
               </div>
             </div>
           ) : (
@@ -188,7 +222,7 @@ const AdminUserView: React.FC<AdminUserViewProps> = ({ userId, metric }) => {
                     {activity.totalSessions ?? 0} sessions · {((activity.totalDurationSec ?? 0) / 60).toFixed(0)} min total
                   </div>
                 </div>
-                <div className="text-xl font-bold text-blue-600">
+                <div className={`text-xl font-bold ${getMetricColor(activity.avgAccuracy, 'accuracy')}`}>
                   {activity.avgAccuracy != null ? activity.avgAccuracy.toFixed(1) : '--'}%
                 </div>
               </div>
@@ -216,7 +250,7 @@ const AdminUserView: React.FC<AdminUserViewProps> = ({ userId, metric }) => {
                   <div className="font-medium text-gray-800">v{firmware.firmwareVersion || 'Unknown'}</div>
                   <div className="text-sm text-gray-500">{firmware.totalSessions ?? 0} sessions</div>
                 </div>
-                <div className="text-xl font-bold text-green-600">
+                <div className={`text-xl font-bold ${getMetricColor(firmware.avgAccuracy, 'accuracy')}`}>
                   {firmware.avgAccuracy != null ? firmware.avgAccuracy.toFixed(1) : '--'}%
                 </div>
               </div>
@@ -246,7 +280,7 @@ const AdminUserView: React.FC<AdminUserViewProps> = ({ userId, metric }) => {
                     {band.totalSessions ?? 0} sessions · {((band.totalDurationSec ?? 0) / 60).toFixed(0)} min total
                   </div>
                 </div>
-                <div className="text-xl font-bold text-amber-600">
+                <div className={`text-xl font-bold ${getMetricColor(band.avgAccuracy, 'accuracy')}`}>
                   {band.avgAccuracy != null ? band.avgAccuracy.toFixed(1) : '--'}%
                 </div>
               </div>

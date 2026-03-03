@@ -20,6 +20,61 @@ export async function updateFirmwarePerformanceForLuna(firmwareVersion: string, 
   // Helper: get session by id
   const sessionMap = new Map(sessions.map(s => [String(s._id), s]));
 
+  // Handle Sleep metric differently (uses sleepStats)
+  if (metric === 'Sleep') {
+    let totalAccuracy = 0, totalKappa = 0, totalSleepBias = 0, totalDeepBias = 0, totalRemBias = 0;
+    let countComparison = 0;
+    const userSet = new Set<string>();
+
+    for (const analysis of analyses) {
+      if (!analysis.sleepStats) continue;
+      
+      const sleepStats = analysis.sleepStats;
+      
+      // Count sessions with comparison data
+      if (sleepStats.epochAccuracyPercent !== undefined) {
+        totalAccuracy += sleepStats.epochAccuracyPercent;
+        totalKappa += sleepStats.kappaScore || 0;
+        totalSleepBias += sleepStats.totalSleepDiffSec || 0;
+        totalDeepBias += sleepStats.deepDiffSec || 0;
+        totalRemBias += sleepStats.remDiffSec || 0;
+        countComparison++;
+      }
+      
+      if (analysis.userId) userSet.add(String(analysis.userId));
+    }
+
+    const doc: Partial<IFirmwarePerformance> = {
+      firmwareVersion,
+      metric,
+      totalSessions: analyses.length,
+      totalUsers: userSet.size,
+      sleepStats: countComparison > 0 ? {
+        avgAccuracyPercent: totalAccuracy / countComparison,
+        avgKappa: totalKappa / countComparison,
+        avgTotalSleepBiasSec: totalSleepBias / countComparison,
+        avgDeepBiasSec: totalDeepBias / countComparison,
+        avgRemBiasSec: totalRemBias / countComparison,
+      } : undefined,
+      computedAt: new Date(),
+    };
+
+    try {
+      await FirmwarePerformance.findOneAndUpdate(
+        { firmwareVersion, metric },
+        doc,
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+      console.log('Firmware performance (Sleep) updated for Luna version:', firmwareVersion);
+    } catch (err) {
+      console.error('Error updating firmware performance for Luna version:', firmwareVersion, err);
+      return;
+    }
+    
+    return;
+  }
+
+  // For HR/SPO2 metrics - use pairwiseComparisons
   // Convert metric to lowercase for comparison (stored as 'hr', 'spo2' in DB)
   const metricLower = metric.toLowerCase();
 

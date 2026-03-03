@@ -6,7 +6,7 @@ export interface IAdminGlobalSummary extends Document {
   totalSessions: number;
   totalReadings: number;
 
-  lunaStats: {
+  lunaStats?: {
     avgMAE?: number;
     avgRMSE?: number;
     avgMAPE?: number;
@@ -15,11 +15,18 @@ export interface IAdminGlobalSummary extends Document {
     avgBias?: number;
   };
 
-//   invalidStats: {
-//     invalidSessions: number;
-//     invalidReadings: number;
-//     invalidReadingPercent: number;
-//   };
+  sleepStats?: {
+    avgAccuracyPercent?: number;
+    avgKappa?: number;
+    avgTotalSleepBiasSec?: number;
+    avgDeepBiasSec?: number;
+    avgRemBiasSec?: number;
+    avgTotalSleepSec?: number;
+    avgDeepPercent?: number;
+    avgRemPercent?: number;
+  };
+
+
 
 
 
@@ -45,6 +52,17 @@ const AdminGlobalSummarySchema = new Schema<IAdminGlobalSummary>({
     avgPearson: Number,
     avgCoveragePercent: Number,
     avgBias: Number,
+  },
+
+  sleepStats: {
+    avgAccuracyPercent: Number,
+    avgKappa: Number,
+    avgTotalSleepBiasSec: Number,
+    avgDeepBiasSec: Number,
+    avgRemBiasSec: Number,
+    avgTotalSleepSec: Number,
+    avgDeepPercent: Number,
+    avgRemPercent: Number,
   },
 
 //   invalidStats: {

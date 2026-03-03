@@ -132,22 +132,10 @@ export async function ingestSessionFiles({
         
       } catch (err) {
         console.error('❌ Session analysis failed:', err);
+        // Swallow here — we'll mark session invalid and notify in catch below
       }
     }
-    
-    // Delete temp files after all processing is complete
-    console.log(`🗑️ Deleting ${files.length} temp files after processing`);
-    await Promise.allSettled(
-      files.map(async (file: any) => {
-        try {
-          await unlinkAsync(file.path);
-          console.log(`✅ Deleted temp file: ${file.filename}`);
-        } catch (deleteError) {
-          console.warn(`⚠️ Could not delete temp file ${file.filename}:`, deleteError);
-        }
-      })
-    );
-    
+
     // Send success email notification
     if (userEmail && userName && sessionId && sessionName) {
       console.log('📧 Sending session completion email...');
@@ -160,13 +148,20 @@ export async function ingestSessionFiles({
         metric
       );
     }
-    
-    }
-    // After all device files processed, run analysis if any readings were inserted
-    
-  catch (err) {
+
+  } catch (err) {
     console.error("❌ HR session ingestion failed:", err);
-    
+
+    // Mark session as invalid so UI/consumers know this session had ingestion issues
+    try {
+      if (sessionId) {
+        await Session.findByIdAndUpdate(sessionId, { isValid: false });
+        console.log(`⚠️ Session ${sessionId} marked as invalid due to ingestion failure`);
+      }
+    } catch (updateErr) {
+      console.error('❌ Failed to mark session as invalid:', updateErr);
+    }
+
     // Send failure email notification
     if (userEmail && userName && sessionId && sessionName) {
       console.log('📧 Sending session failure email...');
@@ -180,7 +175,26 @@ export async function ingestSessionFiles({
         err instanceof Error ? err.message : 'Unknown error occurred'
       );
     }
+
     
-    throw err;
+  } finally {
+    // Ensure temp files are deleted whether processing succeeded or failed
+    try {
+      if (files && files.length > 0) {
+        console.log(`🗑️ Deleting ${files.length} temp files after processing`);
+        await Promise.allSettled(
+          files.map(async (file: any) => {
+            try {
+              if (file && file.path) await unlinkAsync(file.path);
+              console.log(`✅ Deleted temp file: ${file.filename}`);
+            } catch (deleteError) {
+              console.warn(`⚠️ Could not delete temp file ${file?.filename}:`, deleteError);
+            }
+          })
+        );
+      }
+    } catch (finalErr) {
+      console.warn('⚠️ Error during final temp file cleanup:', finalErr);
+    }
   }
 }

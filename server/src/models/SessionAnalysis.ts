@@ -49,6 +49,37 @@ export interface ISessionAnalysis extends Document {
   deviceStats: IDeviceStats[];
   pairwiseComparisons: IPairwiseComparison[];
   lunaAccuracyPercent?: number;
+  sleepStats?: {
+    sleepScore?:number;
+    sleepEfficiency?:number;
+    totalSleepLunaSec?: number;
+    totalSleepBenchmarkSec?: number;
+    totalSleepDiffSec?: number;
+    deepLunaSec?: number;
+    deepBenchmarkSec?: number;
+    deepDiffSec?: number;
+    remLunaSec?: number;
+    remBenchmarkSec?: number;
+    remDiffSec?: number;
+    lightLunaSec?: number;
+    lightBenchmarkSec?: number;
+    lightDiffSec?: number;
+    awakeLunaSec?: number;
+    awakeBenchmarkSec?: number;
+    awakeDiffSec?: number;
+    lunaSleepOnsetTime?: Date;
+    lunaFinalWakeTime?: Date;
+    benchmarkSleepOnsetTime?: Date;
+    benchmarkFinalWakeTime?: Date;
+    epochAccuracyPercent?: number;
+    kappaScore?: number;
+    confusionMatrix?: {
+      AWAKE: { AWAKE: number; LIGHT: number; DEEP: number; REM: number };
+      LIGHT: { AWAKE: number; LIGHT: number; DEEP: number; REM: number };
+      DEEP: { AWAKE: number; LIGHT: number; DEEP: number; REM: number };
+      REM: { AWAKE: number; LIGHT: number; DEEP: number; REM: number };
+    };
+  };
   isValid: boolean;
   computedAt: Date;
 }
@@ -99,6 +130,41 @@ const PairwiseSchema = new Schema<IPairwiseComparison>(
   { _id: false }
 );
 
+const SleepStatsSchema = new Schema(
+  {
+    sleepScore: Number,
+    sleepEfficiency: Number,
+    totalSleepLunaSec: Number,
+    totalSleepBenchmarkSec: Number,
+    totalSleepDiffSec: Number,
+    deepLunaSec: Number,
+    deepBenchmarkSec: Number,
+    deepDiffSec: Number,
+    remLunaSec: Number,
+    remBenchmarkSec: Number,
+    remDiffSec: Number,
+    lightLunaSec: Number,
+    lightBenchmarkSec: Number,
+    lightDiffSec: Number,
+    awakeLunaSec: Number,
+    awakeBenchmarkSec: Number,
+    awakeDiffSec: Number,
+    lunaSleepOnsetTime: Date,
+    lunaFinalWakeTime: Date,
+    benchmarkSleepOnsetTime: Date,
+    benchmarkFinalWakeTime: Date,
+    epochAccuracyPercent: Number,
+    kappaScore: Number,
+    confusionMatrix: {
+      AWAKE: { AWAKE: Number, LIGHT: Number, DEEP: Number, REM: Number },
+      LIGHT: { AWAKE: Number, LIGHT: Number, DEEP: Number, REM: Number },
+      DEEP: { AWAKE: Number, LIGHT: Number, DEEP: Number, REM: Number },
+      REM: { AWAKE: Number, LIGHT: Number, DEEP: Number, REM: Number },
+    },
+  },
+  { _id: false }
+);
+
 const SessionAnalysisSchema = new Schema<ISessionAnalysis>({
   sessionId: { type: Schema.Types.ObjectId, ref: "Session", index: true },
   userId: { type: Schema.Types.ObjectId, ref: "User", index: true },
@@ -114,6 +180,7 @@ const SessionAnalysisSchema = new Schema<ISessionAnalysis>({
   deviceStats: [DeviceStatsSchema],
   pairwiseComparisons: [PairwiseSchema],
   lunaAccuracyPercent: Number,
+  sleepStats: SleepStatsSchema,
   isValid: { type: Boolean, default: true },
   computedAt: { type: Date, default: Date.now },
 });

@@ -50,10 +50,41 @@ export const verifyLoginOTP = async (req: Request, res: Response): Promise<void>
 
     const { email, otp } = req.body;
 
-    if (!email || !otp) {
+    const devSkipOtp = process.env.ENV === 'development' && process.env.SKIP_OTP === 'true';
+    if (!email || (!otp && !devSkipOtp)) {
       res.status(400).json({
         success: false,
         message: 'Email and OTP are required'
+      });
+      return;
+    }
+
+    // Dev bypass: allow skipping OTP in development when SKIP_OTP=true
+    if (devSkipOtp) {
+      const user = await User.findOne({ email: email.toLowerCase() });
+      if (!user) {
+        res.status(404).json({ success: false, message: 'User not found' });
+        return;
+      }
+
+      const token = authService.generateToken(
+        user._id.toString(),
+        user.email,
+        user.role
+      );
+
+      console.log(`✅ Login successful (dev bypass) for ${email}`);
+
+      res.status(200).json({
+        success: true,
+        message: 'Login successful (dev bypass)',
+        token,
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role
+        }
       });
       return;
     }

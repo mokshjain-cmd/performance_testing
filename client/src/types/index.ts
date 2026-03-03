@@ -190,3 +190,8 @@ export interface UserSummary {
   }[];
   lastUpdated: string;
 }
+
+// ========================
+// SLEEP TYPES
+// ========================
+export * from './sleep.types';
