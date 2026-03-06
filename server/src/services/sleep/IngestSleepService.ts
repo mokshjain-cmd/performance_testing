@@ -7,7 +7,9 @@ import User from "../../models/Users";
 import Device from "../../models/Devices";
 import { mailService } from "../mail.service";
 import fs from 'fs';
+import path from 'path';
 import { promisify } from 'util';
+import { extractAppleHealthZip, deleteDirectory, deleteFile } from '../../tools/zipExtractor';
 
 const unlinkAsync = promisify(fs.unlink);
 
@@ -33,6 +35,7 @@ export class IngestSleepService {
     let userName: string | undefined;
     let sessionName: string | undefined;
     const metric = 'Sleep';
+    const extractedFolders: string[] = []; // Track extracted folders for cleanup
     
     try {
       console.log(`[IngestSleepService] Starting sleep ingestion for session: ${sessionId}`);
@@ -78,13 +81,17 @@ export class IngestSleepService {
           if (epochsInserted > 0) anyInserted = true;
         } else if (benchmarkDeviceType && deviceType === benchmarkDeviceType) {
           // Process benchmark sleep data (Apple, Garmin, etc.)
-          const epochsInserted = await this.processBenchmarkSleepData(
+          const result = await this.processBenchmarkSleepData(
             sessionId,
             userId,
             filePath,
             benchmarkDeviceType
           );
-          if (epochsInserted > 0) anyInserted = true;
+          if (result.epochsInserted > 0) anyInserted = true;
+          // Track extracted folder if ZIP was extracted
+          if (result.extractedFolder) {
+            extractedFolders.push(result.extractedFolder);
+          }
         } else {
           console.warn(`[IngestSleepService] Unknown device type: ${deviceType}`);
         }
@@ -155,6 +162,25 @@ export class IngestSleepService {
         }
       } catch (finalErr) {
         console.warn('⚠️ Error during final temp file cleanup:', finalErr);
+      }
+
+      // Clean up extracted folders (from ZIP files)
+      try {
+        if (extractedFolders.length > 0) {
+          console.log(`🗑️ Deleting ${extractedFolders.length} extracted folders after sleep ingestion`);
+          await Promise.allSettled(
+            extractedFolders.map(async (folderPath: string) => {
+              try {
+                await deleteDirectory(folderPath);
+                console.log(`✅ Deleted extracted folder: ${folderPath}`);
+              } catch (deleteError) {
+                console.warn(`⚠️ Could not delete extracted folder ${folderPath}:`, deleteError);
+              }
+            })
+          );
+        }
+      } catch (finalErr) {
+        console.warn('⚠️ Error during extracted folder cleanup:', finalErr);
       }
     }
   }
@@ -231,25 +257,45 @@ export class IngestSleepService {
   /**
    * Process benchmark sleep data (Apple, Garmin, Polar, etc.)
    * Parse the file and store epochs in SleepStageEpoch collection
-   * @returns Number of epochs inserted
+   * @returns Object with number of epochs inserted and extracted folder path (if ZIP was extracted)
    */
   private static async processBenchmarkSleepData(
     sessionId: Types.ObjectId | string,
     userId: Types.ObjectId | string,
     filePath: string,
     benchmarkDeviceType: string
-  ): Promise<number> {
+  ): Promise<{ epochsInserted: number; extractedFolder?: string }> {
+    let extractedFolder: string | undefined;
+
     try {
       console.log(`[IngestSleepService] Processing ${benchmarkDeviceType} sleep data from: ${filePath}`);
+
+      let fileToProcess = filePath;
+
+      // Check if the file is a ZIP (for Apple Health export)
+      const fileExtension = path.extname(filePath).toLowerCase();
+      if (benchmarkDeviceType === 'apple' && fileExtension === '.zip') {
+        console.log(`[IngestSleepService] Detected Apple Health ZIP file, extracting...`);
+        
+        try {
+          const { exportXmlPath, extractedFolder: extracted } = await extractAppleHealthZip(filePath);
+          fileToProcess = exportXmlPath;
+          extractedFolder = extracted;
+          console.log(`[IngestSleepService] Using export.xml from: ${exportXmlPath}`);
+        } catch (zipError) {
+          console.error(`[IngestSleepService] Error extracting Apple Health ZIP:`, zipError);
+          throw new Error(`Failed to extract Apple Health ZIP: ${zipError instanceof Error ? zipError.message : 'Unknown error'}`);
+        }
+      }
 
       // Call the appropriate benchmark parser
       let parseResult;
       if (benchmarkDeviceType === 'apple') {
         const { AppleHealthSleepParser } = await import('../../parsers/sleep/AppleHealthSleepParser');
-        parseResult = await AppleHealthSleepParser.parse(filePath, sessionId.toString(), userId.toString());
+        parseResult = await AppleHealthSleepParser.parse(fileToProcess, sessionId.toString(), userId.toString());
       } else {
         // For other benchmarks, use AppleSleepParser as fallback
-        parseResult = await AppleSleepParser.parse(filePath, sessionId.toString(), userId.toString());
+        parseResult = await AppleSleepParser.parse(fileToProcess, sessionId.toString(), userId.toString());
       }
 
       // Get firmware version from session devices (if applicable)
@@ -280,10 +326,16 @@ export class IngestSleepService {
           // TODO: Store this in SessionAnalysis
         }
         
-        return epochDocs.length;
+        return {
+          epochsInserted: epochDocs.length,
+          extractedFolder
+        };
       } else {
         console.warn(`[IngestSleepService] No ${benchmarkDeviceType} epochs parsed from file`);
-        return 0;
+        return {
+          epochsInserted: 0,
+          extractedFolder
+        };
       }
 
     } catch (error) {

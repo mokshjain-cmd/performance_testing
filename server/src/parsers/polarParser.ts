@@ -90,9 +90,25 @@ export async function parsePolarCsv(
     }
 
     if (dateStr && startTimeStr) {
-      // dateStr format: 13-02-2026
-      // startTime format: 15:10:09
-      const [dd, mm, yyyy] = dateStr.split("-").map((x) => parseInt(x));
+      let dd: number, mm: number, yyyy: number;
+
+      // Normalize separator
+      const normalizedDate = dateStr.replace(/\//g, "-");
+
+      const parts = normalizedDate.split("-").map((x) => parseInt(x));
+
+      if (parts.length !== 3) {
+        throw new Error(`Invalid date format: ${dateStr}`);
+      }
+
+      // Detect format
+      if (parts[0] > 1900) {
+        // YYYY-MM-DD
+        [yyyy, mm, dd] = parts;
+      } else {
+        // DD-MM-YYYY
+        [dd, mm, yyyy] = parts;
+      }
 
       const [hh, min, sec] = startTimeStr.split(":").map((x) => parseInt(x));
 
@@ -104,13 +120,10 @@ export async function parsePolarCsv(
         !isNaN(min) &&
         !isNaN(sec)
       ) {
-        // In production (Cloud Run), server runs in UTC, so use UTC directly
-        // In local development, server runs in IST, so add IST offset
-        if (process.env.ENV === 'production') {
+        if (process.env.ENV === "production") {
           baseDatetime = new Date(Date.UTC(yyyy, mm - 1, dd, hh, min, sec));
-        console.log("📌 Extracted base datetime from metadata:", baseDatetime.toISOString());
         } else {
-          baseDatetime = new Date(yyyy, mm - 1, dd, hh+5, min+30, sec);
+          baseDatetime = new Date(yyyy, mm - 1, dd, hh + 5, min + 30, sec);
         }
       }
     }

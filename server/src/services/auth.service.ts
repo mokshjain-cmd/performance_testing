@@ -91,6 +91,17 @@ class AuthService {
         expiresAt
       });
 
+      // Development mode bypass
+      if (process.env.ENV === 'development') {
+        console.log(`🧪 DEV MODE OTP for ${email}: ${otpCode}`);
+
+        return {
+          success: true,
+          message: `DEV MODE: OTP generated successfully`,
+          otp: otpCode // optional, useful for frontend testing
+        } as any;
+      }
+
       // Send OTP via email
       const emailSubject = purpose === 'login' 
         ? 'Your Login OTP - Performance Testing Platform'
