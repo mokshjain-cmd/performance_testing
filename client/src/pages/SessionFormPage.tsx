@@ -321,8 +321,15 @@ export default function SessionFormPage() {
     form.append('sessionName', sessionName);
     form.append('activityType', formData.activity);
     form.append('metric', formData.metric);
-    form.append('startTime', startTime);
-    form.append('endTime', endTime);
+    
+    // For Sleep sessions, send sleepDate instead of startTime/endTime
+    if (formData.metric === 'Sleep' && formData.sleepDate) {
+      form.append('sleepDate', formData.sleepDate);
+    } else {
+      form.append('startTime', startTime);
+      form.append('endTime', endTime);
+    }
+    
     form.append('benchmarkDeviceType', formData.benchmarkDeviceType);
     form.append('bandPosition', formData.bandPosition);
     form.append('firmwareVersion', formData.firmwareVersion);
@@ -447,6 +454,17 @@ export default function SessionFormPage() {
               ℹ️ {DEVICE_OPTIONS.find(d => d.value === formData.benchmarkDeviceType)?.label} will be automatically selected as a device below
             </p>
           )}
+          {formData.metric === 'Sleep' && formData.benchmarkDeviceType === 'apple' && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 -mt-2">
+              <p className="text-sm text-blue-800 font-medium mb-1">📦 Apple Health Sleep Data</p>
+              <p className="text-xs text-blue-700">
+                You can upload the exported ZIP file from Apple Health (export.xml will be automatically extracted) or upload a CSV file directly.
+              </p>
+              <p className="text-xs text-blue-600 mt-2">
+                To export from iPhone: Health app → Profile → Export All Health Data
+              </p>
+            </div>
+          )}
           <Select
             label="Band Position"
             name="bandPosition"
@@ -519,25 +537,35 @@ export default function SessionFormPage() {
           </div>
 
           {/* Per-device file upload */}
-          {formData.devices.map((device) => (
-            <div key={device} className="flex flex-col gap-3">
-              <label className="text-sm font-medium text-gray-700">
-                Upload {DEVICE_OPTIONS.find((d) => d.value === device)?.label} File
-                <span className="text-red-500 ml-1">*</span>
-              </label>
-              <input
-                key={`${device}-${fileInputKey}`}
-                type="file"
-                accept=".csv,.CSV,.txt,.TXT"
-                onChange={(e) => handleFileChange(device, e.target.files?.[0] || null)}
-                required
-                className="block w-full text-sm text-gray-600 file:mr-4 file:py-2.5 file:px-5 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-gradient-to-r file:from-blue-500 file:to-blue-600 file:text-white hover:file:from-blue-600 hover:file:to-blue-700 file:cursor-pointer file:shadow-sm file:transition-all cursor-pointer border border-gray-200 rounded-xl p-3 bg-white/50 backdrop-blur-sm hover:border-gray-300 transition-all"
-              />
-              {deviceFiles[device] && (
-                <span className="text-xs text-gray-500 ml-1">Selected: {deviceFiles[device]?.name}</span>
-              )}
-            </div>
-          ))}
+          {formData.devices.map((device) => {
+            // For Apple Health sleep data, accept ZIP files. Otherwise, accept CSV/TXT
+            const acceptedFormats = (device === 'apple' && formData.metric === 'Sleep')
+              ? ".csv,.CSV,.txt,.TXT,.zip,.ZIP"
+              : ".csv,.CSV,.txt,.TXT";
+            
+            return (
+              <div key={device} className="flex flex-col gap-3">
+                <label className="text-sm font-medium text-gray-700">
+                  Upload {DEVICE_OPTIONS.find((d) => d.value === device)?.label} File
+                  <span className="text-red-500 ml-1">*</span>
+                  {device === 'apple' && formData.metric === 'Sleep' && (
+                    <span className="text-xs text-gray-500 ml-2">(ZIP or CSV)</span>
+                  )}
+                </label>
+                <input
+                  key={`${device}-${fileInputKey}`}
+                  type="file"
+                  accept={acceptedFormats}
+                  onChange={(e) => handleFileChange(device, e.target.files?.[0] || null)}
+                  required
+                  className="block w-full text-sm text-gray-600 file:mr-4 file:py-2.5 file:px-5 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-gradient-to-r file:from-blue-500 file:to-blue-600 file:text-white hover:file:from-blue-600 hover:file:to-blue-700 file:cursor-pointer file:shadow-sm file:transition-all cursor-pointer border border-gray-200 rounded-xl p-3 bg-white/50 backdrop-blur-sm hover:border-gray-300 transition-all"
+                />
+                {deviceFiles[device] && (
+                  <span className="text-xs text-gray-500 ml-1">Selected: {deviceFiles[device]?.name}</span>
+                )}
+              </div>
+            );
+          })}
 
           <Button type="submit" variant="primary" size="lg" className="w-full" disabled={isSubmitting}>
             {isSubmitting ? 'Submitting...' : 'Submit'}

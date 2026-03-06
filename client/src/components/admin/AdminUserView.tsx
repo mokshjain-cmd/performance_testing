@@ -3,6 +3,7 @@ import { Card } from '../common';
 import BarGraph from '../dashboard/BarGraph';
 import type { Metric } from './MetricsSelector';
 import apiClient from '../../services/api';
+import AdminSleepUserView from './AdminSleepUserView';
 
 interface UserSummary {
   totalSessions: number;
@@ -48,6 +49,11 @@ interface AdminUserViewProps {
 }
 
 const AdminUserView: React.FC<AdminUserViewProps> = ({ userId, metric }) => {
+  // Handle sleep metric separately
+  if (metric === 'sleep') {
+    return <AdminSleepUserView userId={userId} />;
+  }
+
   const [userSummary, setUserSummary] = useState<UserSummary | null>(null);
   const [loading, setLoading] = useState(false);
 

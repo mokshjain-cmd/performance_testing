@@ -4,11 +4,9 @@ import { SleepMetricCard } from '../components/dashboard/sleep/SleepMetricCard';
 import { SleepTrendChart } from '../components/dashboard/sleep/SleepTrendChart';
 import { SleepArchitectureChart } from '../components/dashboard/sleep/SleepArchitectureChart';
 import { sleepService } from '../services/sleep.service';
-import { useAuth } from '../hooks/useAuth';
 import type { UserSleepOverview, SleepTrendData } from '../types/sleep.types';
 
 export const SleepOverviewPage: React.FC = () => {
-  const { userId } = useAuth();
   const [overview, setOverview] = useState<UserSleepOverview | null>(null);
   const [durationTrend, setDurationTrend] = useState<SleepTrendData[]>([]);
   const [stageTrend, setStageTrend] = useState<SleepTrendData[]>([]);
@@ -18,18 +16,12 @@ export const SleepOverviewPage: React.FC = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!userId) {
-        setError('User not authenticated');
-        setLoading(false);
-        return;
-      }
-
       try {
         setLoading(true);
         const [overviewData, trendData] =
           await Promise.all([
-            sleepService.getUserSleepOverview({ userId }),
-            sleepService.getUserSleepTrend(userId),
+            sleepService.getUserSleepOverview(),
+            sleepService.getUserSleepTrend(),
           ]);
 
         setOverview(overviewData);
@@ -44,7 +36,7 @@ export const SleepOverviewPage: React.FC = () => {
     };
 
     fetchData();
-  }, [userId]);
+  }, []);
 
   if (loading) {
     return (
@@ -68,6 +60,11 @@ export const SleepOverviewPage: React.FC = () => {
     return `${hours}h ${minutes}m`;
   };
 
+  const getAccuracyColor = (accuracy: number): string => {
+    if (accuracy >= 85) return 'text-green-600 bg-green-50';
+    if (accuracy >= 75) return 'text-yellow-600 bg-yellow-50';
+    return 'text-red-600 bg-red-50';
+  };
 
   return (
     <div className="space-y-6 p-6">
@@ -93,31 +90,31 @@ export const SleepOverviewPage: React.FC = () => {
           />
           <SleepMetricCard
             title="Avg Sleep Efficiency"
-            value={overview.avgSleepEfficiencyPercent.toFixed(1)}
+            value={overview.avgSleepEfficiency.toFixed(1)}
             unit="%"
             icon={<Zap className="w-6 h-6" />}
           />
           <SleepMetricCard
             title="Avg Deep Sleep"
             value={formatTime(overview.avgDeepSleepSec)}
-            subtitle={`${overview.deepSleepPercent.toFixed(1)}% of sleep`}
+            subtitle={`${overview.avgDeepPercent.toFixed(1)}% of sleep`}
             icon={<TrendingUp className="w-6 h-6" />}
           />
           <SleepMetricCard
             title="Avg REM Sleep"
             value={formatTime(overview.avgRemSleepSec)}
-            subtitle={`${overview.remPercent.toFixed(1)}% of sleep`}
+            subtitle={`${overview.avgRemPercent.toFixed(1)}% of sleep`}
             icon={<TrendingUp className="w-6 h-6" />}
           />
           <SleepMetricCard
             title="Avg Light Sleep"
             value={formatTime(overview.avgLightSleepSec)}
-            subtitle={`${((overview.avgLightSleepSec / overview.avgTotalSleepTimeSec) * 100).toFixed(1)}% of sleep`}
+            subtitle={`${overview.avgLightPercent.toFixed(1)}% of sleep`}
           />
           <SleepMetricCard
             title="Avg Awake Time"
             value={formatTime(overview.avgAwakeSec)}
-            subtitle={`${((overview.avgAwakeSec / overview.avgTotalSleepTimeSec) * 100).toFixed(1)}% of sleep`}
+            subtitle={`${overview.avgTimeInBedSec > 0 ? ((overview.avgAwakeSec / overview.avgTimeInBedSec) * 100).toFixed(1) : '0.0'}% of time in bed`}
           />
           <SleepMetricCard
             title="Avg Sleep Start"
@@ -138,13 +135,13 @@ export const SleepOverviewPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <SleepMetricCard
             title="Deep Sleep Consistency"
-            value={overview.deepSleepPercent.toFixed(1)}
+            value={overview.avgDeepPercent.toFixed(1)}
             unit="%"
             subtitle={`Target: 15-20%`}
           />
           <SleepMetricCard
             title="REM Sleep Consistency"
-            value={overview.remPercent.toFixed(1)}
+            value={overview.avgRemPercent.toFixed(1)}
             unit="%"
             subtitle={`Target: 20-25%`}
           />
@@ -155,12 +152,47 @@ export const SleepOverviewPage: React.FC = () => {
           />
           <SleepMetricCard
             title="Sleep Consistency Score"
-            value={overview.sleepConsistencyScore.toFixed(1)}
-            unit="/100"
+            value={overview.sleepConsistencyScore?.toFixed(1) || 'N/A'}
+            unit={overview.sleepConsistencyScore ? '/100' : ''}
             subtitle="Higher is better"
           />
         </div>
       </div>
+
+      {/* Validation Metrics - Only show if comparison data available */}
+      {overview.comparison && (
+        <div>
+          <h2 className="text-xl font-semibold mb-4">Tracking Accuracy</h2>
+          <p className="text-sm text-gray-600 mb-4">
+            Luna's accuracy compared to benchmark sleep tracking devices
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className={`p-4 rounded-lg border-2 ${getAccuracyColor(overview.comparison.avgAccuracyPercent)}`}>
+              <h3 className="text-sm font-medium mb-2">Average Accuracy</h3>
+              <p className="text-3xl font-bold">{overview.comparison.avgAccuracyPercent.toFixed(1)}%</p>
+              <p className="text-sm mt-2">
+                {overview.comparison.avgAccuracyPercent >= 85 ? 'Excellent' : 
+                 overview.comparison.avgAccuracyPercent >= 75 ? 'Good' : 'Needs Review'}
+              </p>
+            </div>
+            <SleepMetricCard
+              title="Avg Total Sleep Bias"
+              value={formatTime(Math.abs(overview.comparison.avgTotalSleepDiffSec))}
+              subtitle={overview.comparison.avgTotalSleepDiffSec >= 0 ? 'Overestimation' : 'Underestimation'}
+            />
+            <SleepMetricCard
+              title="Avg Deep Sleep Bias"
+              value={formatTime(Math.abs(overview.comparison.avgDeepDiffSec))}
+              subtitle={overview.comparison.avgDeepDiffSec >= 0 ? 'Overestimation' : 'Underestimation'}
+            />
+            <SleepMetricCard
+              title="Avg REM Sleep Bias"
+              value={formatTime(Math.abs(overview.comparison.avgRemDiffSec))}
+              subtitle={overview.comparison.avgRemDiffSec >= 0 ? 'Overestimation' : 'Underestimation'}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Sleep Duration Trend */}
       <div className="bg-white p-6 rounded-lg shadow">

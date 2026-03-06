@@ -8,6 +8,34 @@ interface Props {
 }
 
 const SessionDetails: React.FC<Props> = ({ session, actionButton }) => {
+  /**
+   * Downloads a file programmatically to mask the GCS URL
+   * @param url - The GCS signed URL
+   * @param filename - The desired filename for download
+   */
+  const handleDownload = async (url: string, filename: string) => {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Download failed');
+      
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      
+      // Cleanup
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error('Download error:', error);
+      alert('Failed to download file. Please try again.');
+    }
+  };
+
   return (
     <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.06)] border border-gray-100/50 p-4 transition-all duration-300 hover:shadow-[0_12px_48px_rgba(0,0,0,0.08)]">
       
@@ -95,18 +123,18 @@ const SessionDetails: React.FC<Props> = ({ session, actionButton }) => {
                 <span>{d.deviceType}</span>
                 {/* Download Raw File Icon */}
                 {session.rawFiles && session.rawFiles[d.deviceType] && (
-                  <a
-                    href={session.rawFiles[d.deviceType]}
-                    download
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:text-blue-800 transition-colors duration-200"
+                  <button
+                    onClick={() => handleDownload(
+                      session.rawFiles![d.deviceType],
+                      `${session._id}_${d.deviceType}_raw.csv`
+                    )}
+                    className="text-blue-600 hover:text-blue-800 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-50 rounded"
                     title="Download raw file"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                     </svg>
-                  </a>
+                  </button>
                 )}
               </div>
             ))}

@@ -7,6 +7,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 import ActivityAnalysisTab from './ActivityAnalysisTab';
 import BenchmarkComparisonTab from './BenchmarkComparisonTab';
 import FirmwarePerformanceTab from './FirmwarePerformanceTab';
+import AdminSleepOverviewTab from './AdminSleepOverviewTab';
 
 interface GlobalSummary {
   totalUsers: number;
@@ -41,10 +42,16 @@ interface AdminOverviewTabProps {
 }
 
 const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({ metric, subTab }) => {
+  // Handle sleep metric separately with dedicated component
+  if (metric === 'sleep') {
+    return <AdminSleepOverviewTab subTab={subTab} />;
+  }
+
   const [globalSummary, setGlobalSummary] = useState<GlobalSummary | null>(null);
   const [dailyTrends, setDailyTrends] = useState<DailyTrend[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedChartMetric, setSelectedChartMetric] = useState<ChartMetric>('avgMAE');
+  const [selectedTimeRange, setSelectedTimeRange] = useState<10 | 30>(10);
 
   useEffect(() => {
     // Convert metric to backend format (HR, SPO2)
@@ -59,18 +66,18 @@ const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({ metric, subTab }) =
       .catch(err => console.error('Error fetching global summary:', err))
       .finally(() => setLoading(false));
 
-    // Fetch daily trends for last 10 days
+    // Fetch daily trends based on selected time range
     const today = new Date();
-    const tenDaysAgo = new Date(today);
-    tenDaysAgo.setDate(today.getDate() - 10);
-    const startDate = tenDaysAgo.toISOString().split('T')[0];
+    const daysAgo = new Date(today);
+    daysAgo.setDate(today.getDate() - selectedTimeRange);
+    const startDate = daysAgo.toISOString().split('T')[0];
 
     apiClient.get(`/admin/daily-trends?startDate=${startDate}&metric=${metricParam}`)
       .then(res => {
         setDailyTrends(res.data.data || []);
       })
       .catch(err => console.error('Error fetching daily trends:', err));
-  }, [metric]);
+  }, [metric, selectedTimeRange]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -231,10 +238,36 @@ const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({ metric, subTab }) =
 
       {/* Content based on sub-tab */}
       {subTab === 'overview' && (
-        <Card title={`Global ${metric.toUpperCase()} Performance Trends (Last 10 Days)`}>
+        <Card title={`Global ${metric.toUpperCase()} Performance Trends (Last ${selectedTimeRange} Days)`}>
           <div className="space-y-4">
-            {/* Metric Selector */}
-            <div className="flex gap-3 justify-center">
+            {/* Time Range and Metric Selectors */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-between items-center">
+              {/* Time Range Selector */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setSelectedTimeRange(10)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                    selectedTimeRange === 10
+                      ? 'bg-blue-500 text-white shadow-md'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  10 Days
+                </button>
+                <button
+                  onClick={() => setSelectedTimeRange(30)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                    selectedTimeRange === 30
+                      ? 'bg-blue-500 text-white shadow-md'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  30 Days
+                </button>
+              </div>
+
+              {/* Metric Selector */}
+              <div className="flex gap-3">
               <button
                 onClick={() => setSelectedChartMetric('avgMAE')}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
@@ -265,6 +298,7 @@ const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({ metric, subTab }) =
               >
                 Pearson
               </button>
+              </div>
             </div>
 
             {/* Chart */}

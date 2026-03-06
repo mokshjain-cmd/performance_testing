@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronDown, ChevronRight, Users as UsersIcon, Activity, User, BarChart3, Trash2 } from 'lucide-react';
+import type { Metric } from './MetricsSelector';
 
 interface Session {
   _id: string;
@@ -21,7 +22,7 @@ interface AdminSidebarProps {
   activeView: 'overview' | 'user' | 'session';
   selectedUserId: string | null;
   selectedSessionId: string | null;
-  selectedMetric: 'hr' | 'spo2';
+  selectedMetric: Metric;
   onSelectOverview: () => void;
   onSelectUser: (userId: string) => void;
   onSelectSession: (sessionId: string, userId: string) => void;

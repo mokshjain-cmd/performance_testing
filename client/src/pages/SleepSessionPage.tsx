@@ -60,14 +60,34 @@ export const SleepSessionPage: React.FC = () => {
     return `${hours}h ${minutes}m`;
   };
 
-  const formatDateTime = (timestamp: number) => {
-    return new Date(timestamp * 1000).toLocaleString('en-US', {
+  const formatDateTime = (dateString: string | undefined) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleString('en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
     });
+  };
+
+  const getAccuracyColor = (accuracy: number): string => {
+    if (accuracy >= 85) return 'text-green-600 bg-green-50';
+    if (accuracy >= 75) return 'text-yellow-600 bg-yellow-50';
+    return 'text-red-600 bg-red-50';
+  };
+
+  const getKappaColor = (kappa: number): string => {
+    if (kappa >= 0.8) return 'text-green-600 bg-green-50';
+    if (kappa >= 0.6) return 'text-yellow-600 bg-yellow-50';
+    return 'text-red-600 bg-red-50';
+  };
+
+  const formatTimeFromISO = (isoString: string | undefined) => {
+    if (!isoString) return 'N/A';
+    // Extract time between T and Z from ISO string
+    const match = isoString.match(/T(\d{2}:\d{2})/);
+    return match ? match[1] : 'N/A';
   };
 
   const { luna, benchmark } = sessionData;
@@ -84,7 +104,7 @@ export const SleepSessionPage: React.FC = () => {
           <div>
             <h1 className="text-3xl font-bold">Sleep Session</h1>
             <p className="text-gray-600 mt-1">
-              {formatDateTime(new Date(luna.sleepOnsetTime).getTime() / 1000)} - {formatDateTime(new Date(luna.finalWakeTime).getTime() / 1000)}
+              {formatDateTime(luna.sleepOnsetTime)} - {formatDateTime(luna.finalWakeTime)}
             </p>
             {hasBenchmark && (
               <p className="text-sm text-green-600 mt-1">
@@ -93,6 +113,77 @@ export const SleepSessionPage: React.FC = () => {
             )}
           </div>
           <Moon className="w-12 h-12 text-blue-500" />
+        </div>
+      </div>
+
+      {/* Sleep Timing */}
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h2 className="text-xl font-semibold mb-4">Sleep Timing</h2>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Event
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Luna
+                </th>
+                {hasBenchmark && benchmark && (
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {benchmark.deviceType}
+                  </th>
+                )}
+                {hasBenchmark && benchmark && (
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Difference
+                  </th>
+                )}
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              <tr>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                  Sleep Onset
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                  {formatTimeFromISO(luna.sleepOnsetTime)}
+                </td>
+                {hasBenchmark && benchmark && (
+                  <>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                      {formatTimeFromISO(benchmark.sleepOnsetTime)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {luna.sleepOnsetTime && benchmark.sleepOnsetTime
+                        ? `${Math.round((new Date(luna.sleepOnsetTime).getTime() - new Date(benchmark.sleepOnsetTime).getTime()) / 60000)} min`
+                        : 'N/A'}
+                    </td>
+                  </>
+                )}
+              </tr>
+              <tr>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                  Final Wake
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                  {formatTimeFromISO(luna.finalWakeTime)}
+                </td>
+                {hasBenchmark && benchmark && (
+                  <>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                      {formatTimeFromISO(benchmark.finalWakeTime)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {luna.finalWakeTime && benchmark.finalWakeTime
+                        ? `${Math.round((new Date(luna.finalWakeTime).getTime() - new Date(benchmark.finalWakeTime).getTime()) / 60000)} min`
+                        : 'N/A'}
+                    </td>
+                  </>
+                )}
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
@@ -149,47 +240,63 @@ export const SleepSessionPage: React.FC = () => {
       {hasBenchmark && benchmark && sessionData.comparison && (
         <div>
           <h2 className="text-xl font-semibold mb-4">
-            Comparison with Benchmark Device
+            Comparison with Benchmark Device ({benchmark.deviceType})
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <SleepMetricCard
-              title="Agreement"
-              value={sessionData.comparison.agreementPercent.toFixed(1)}
-              unit="%"
-              subtitle="Epoch-by-epoch match"
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className={`p-4 rounded-lg border-2 ${getAccuracyColor(sessionData.comparison.agreementPercent)}`}>
+              <h3 className="text-sm font-medium mb-2">Agreement</h3>
+              <p className="text-3xl font-bold">{sessionData.comparison.agreementPercent.toFixed(1)}%</p>
+              <p className="text-sm mt-2">Epoch-by-epoch match</p>
+            </div>
+            <div className={`p-4 rounded-lg border-2 ${getKappaColor(sessionData.comparison.kappaScore)}`}>
+              <h3 className="text-sm font-medium mb-2">Kappa Score</h3>
+              <p className="text-3xl font-bold">{sessionData.comparison.kappaScore.toFixed(2)}</p>
+              <p className="text-sm mt-2">
+                {sessionData.comparison.kappaScore >= 0.8 ? 'Excellent' : 
+                 sessionData.comparison.kappaScore >= 0.6 ? 'Good' : 'Fair'}
+              </p>
+            </div>
             <SleepMetricCard
               title="Total Sleep Diff"
-              value={formatTime(Math.abs(luna.totalSleepTimeSec - benchmark.totalSleepTimeSec))}
+              value={formatTime(Math.abs(sessionData.comparison.totalSleepDifferenceSec))}
               subtitle={
-                luna.totalSleepTimeSec > benchmark.totalSleepTimeSec
-                  ? 'Luna longer'
-                  : 'Luna shorter'
+                sessionData.comparison.totalSleepDifferenceSec >= 0
+                  ? 'Luna overestimated'
+                  : 'Luna underestimated'
               }
             />
             <SleepMetricCard
               title="Deep Sleep Diff"
-              value={formatTime(Math.abs(luna.deepSec - benchmark.deepSec))}
-              subtitle={luna.deepSec > benchmark.deepSec ? 'Luna more' : 'Luna less'}
+              value={formatTime(Math.abs(sessionData.comparison.deepDifferenceSec))}
+              subtitle={sessionData.comparison.deepDifferenceSec >= 0 ? 'Luna overestimated' : 'Luna underestimated'}
             />
             <SleepMetricCard
               title="REM Sleep Diff"
-              value={formatTime(Math.abs(luna.remSec - benchmark.remSec))}
-              subtitle={luna.remSec > benchmark.remSec ? 'Luna more' : 'Luna less'}
+              value={formatTime(Math.abs(sessionData.comparison.remDifferenceSec))}
+              subtitle={sessionData.comparison.remDifferenceSec >= 0 ? 'Luna overestimated' : 'Luna underestimated'}
             />
           </div>
         </div>
       )}
 
       {/* Hypnogram */}
-      <div className="bg-white p-6 rounded-lg shadow">
-        <h2 className="text-xl font-semibold mb-4">Sleep Hypnogram</h2>
-        <HypnogramChart
-          lunaEpochs={sessionData.epochs.luna}
-benchmarkEpochs={hasBenchmark ? sessionData.epochs.benchmark : undefined}
-          showComparison={hasBenchmark}
-        />
-      </div>
+      {sessionData.epochs && (
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h2 className="text-xl font-semibold mb-4">Sleep Hypnogram</h2>
+          <HypnogramChart
+            lunaEpochs={sessionData.epochs.luna}
+            benchmarkEpochs={hasBenchmark ? sessionData.epochs.benchmark : undefined}
+            showComparison={hasBenchmark}
+          />
+        </div>
+      )}
+
+      {/* Show message if epochs not available */}
+      {!sessionData.epochs && (
+        <div className="bg-yellow-50 p-6 rounded-lg border border-yellow-200">
+          <p className="text-yellow-800">Hypnogram data is not available for this session.</p>
+        </div>
+      )}
 
       {/* Stage Duration Comparison */}
       <div className="bg-white p-6 rounded-lg shadow">

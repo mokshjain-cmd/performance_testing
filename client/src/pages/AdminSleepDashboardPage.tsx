@@ -18,7 +18,7 @@ export const AdminSleepDashboardPage: React.FC = () => {
         setLoading(true);
         const [summaryData, trendData] = await Promise.all([
           sleepService.getAdminGlobalSummary(),
-          sleepService.getAdminGlobalTrend(),
+          sleepService.getAdminAccuracyTrend(),
         ]);
 
         setSummary(summaryData);

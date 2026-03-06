@@ -8,7 +8,6 @@ import type {
   BenchmarkComparison,
   AdminSessionSummary,
   SleepTrendData,
-  GetUserSleepOverviewParams,
   GetUserSessionViewParams,
   GetAdminGlobalSummaryParams,
   GetFirmwareComparisonParams,
@@ -24,28 +23,26 @@ export const sleepService = {
 
   /**
    * Get user sleep overview (across all sessions)
+   * Note: userId is extracted from JWT token by backend
    */
-  getUserSleepOverview: async (
-    params: GetUserSleepOverviewParams
-  ): Promise<UserSleepOverview> => {
+  getUserSleepOverview: async (): Promise<UserSleepOverview> => {
     const response = await apiClient.get<ApiResponse<UserSleepOverview>>(
-      '/sleep/user/overview',
-      { params }
+      '/sleep/overview'
     );
     return response.data.data!;
   },
 
   /**
    * Get user sleep trend data
+   * Note: userId is extracted from JWT token by backend
    */
   getUserSleepTrend: async (
-    userId: string,
     startDate?: string,
     endDate?: string
   ): Promise<SleepTrendData[]> => {
     const response = await apiClient.get<ApiResponse<SleepTrendData[]>>(
-      '/sleep/user/trend',
-      { params: { userId, startDate, endDate } }
+      '/sleep/trend',
+      { params: { startDate, endDate } }
     );
     return response.data.data || [];
   },
@@ -57,7 +54,7 @@ export const sleepService = {
     params: GetUserSessionViewParams
   ): Promise<UserSingleSessionView> => {
     const response = await apiClient.get<ApiResponse<UserSingleSessionView>>(
-      `/sleep/user/session/${params.sessionId}`,
+      `/sleep/session/${params.sessionId}`,
       { params: { includeEpochs: params.includeEpochs ?? true } }
     );
     return response.data.data!;
@@ -81,14 +78,14 @@ export const sleepService = {
   },
 
   /**
-   * Get admin global trend (accuracy, kappa over time)
+   * Get admin accuracy trend (accuracy, kappa over time)
    */
-  getAdminGlobalTrend: async (
+  getAdminAccuracyTrend: async (
     startDate?: string,
     endDate?: string
   ): Promise<SleepTrendData[]> => {
     const response = await apiClient.get<ApiResponse<SleepTrendData[]>>(
-      '/sleep/admin/global-trend',
+      '/sleep/admin/accuracy-trend',
       { params: { startDate, endDate } }
     );
     return response.data.data || [];
@@ -127,25 +124,10 @@ export const sleepService = {
     params: GetAdminUserSummaryParams
   ): Promise<UserSleepOverview> => {
     const response = await apiClient.get<ApiResponse<UserSleepOverview>>(
-      `/sleep/admin/user/${params.userId}/summary`,
+      `/sleep/admin/user/${params.userId}`,
       { params: { startDate: params.startDate, endDate: params.endDate } }
     );
     return response.data.data!;
-  },
-
-  /**
-   * Get admin user trend
-   */
-  getAdminUserTrend: async (
-    userId: string,
-    startDate?: string,
-    endDate?: string
-  ): Promise<SleepTrendData[]> => {
-    const response = await apiClient.get<ApiResponse<SleepTrendData[]>>(
-      `/sleep/admin/user/${userId}/trend`,
-      { params: { startDate, endDate } }
-    );
-    return response.data.data || [];
   },
 
   /**
@@ -159,29 +141,5 @@ export const sleepService = {
       { params: { includeEpochs: params.includeEpochs ?? true } }
     );
     return response.data.data!;
-  },
-
-  // ========================
-  // UTILITY APIs
-  // ========================
-
-  /**
-   * Get available firmware versions for sleep
-   */
-  getAvailableFirmwareVersions: async (): Promise<string[]> => {
-    const response = await apiClient.get<ApiResponse<string[]>>(
-      '/sleep/firmware-versions'
-    );
-    return response.data.data || [];
-  },
-
-  /**
-   * Get available benchmark devices
-   */
-  getAvailableBenchmarkDevices: async (): Promise<string[]> => {
-    const response = await apiClient.get<ApiResponse<string[]>>(
-      '/sleep/benchmark-devices'
-    );
-    return response.data.data || [];
   },
 };

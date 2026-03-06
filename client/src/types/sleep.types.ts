@@ -71,23 +71,29 @@ export interface UserSleepOverview {
   // Core sleep metrics (averages)
   avgTotalSleepTimeSec: number;
   avgTimeInBedSec: number;
-  avgSleepEfficiencyPercent: number;
+  avgSleepEfficiency: number;
   avgDeepSleepSec: number;
   avgRemSleepSec: number;
   avgLightSleepSec: number;
   avgAwakeSec: number;
+  avgSleepScore?: number;
   
-  // Stability metrics
-  deepSleepPercent: number;
-  remPercent: number;
+  // Percentages
+  avgDeepPercent: number;
+  avgRemPercent: number;
+  avgLightPercent: number;
+  
+  // Variability metrics
   sleepDurationStdDev: number;
-  sleepConsistencyScore: number;
+  sleepConsistencyScore?: number;
   
-  // Comparison metrics (if benchmark available)
-  avgTotalSleepDifferenceSec?: number;
-  avgDeepDifferenceSec?: number;
-  avgRemDifferenceSec?: number;
-  avgAgreementPercent?: number;
+  // Optional Comparison Metrics (If Benchmark Available)
+  comparison?: {
+    avgTotalSleepDiffSec: number;
+    avgDeepDiffSec: number;
+    avgRemDiffSec: number;
+    avgAccuracyPercent: number;
+  };
 }
 
 // ========================
@@ -118,10 +124,15 @@ export interface UserSingleSessionView {
   benchmark?: {
     deviceType: string;
     totalSleepTimeSec: number;
+    timeInBedSec: number;
+    sleepEfficiencyPercent: number;
     deepSec: number;
     remSec: number;
     lightSec: number;
     awakeSec: number;
+    sleepOnsetTime?: string;
+    finalWakeTime?: string;
+    sleepScore?: number;
   };
   
   comparison?: {
@@ -132,7 +143,7 @@ export interface UserSingleSessionView {
     remDifferenceSec: number;
   };
   
-  epochs: {
+  epochs?: {
     luna: SleepEpoch[];
     benchmark?: SleepEpoch[];
   };

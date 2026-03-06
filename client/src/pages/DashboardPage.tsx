@@ -4,6 +4,8 @@ import DashboardLayout from '../components/dashboard/DashboardLayout';
 import Sidebar from '../components/dashboard/Sidebar';
 import OverviewTab from '../components/dashboard/OverviewTab';
 import SessionsTab from '../components/dashboard/SessionsTab';
+import SleepOverviewTab from '../components/dashboard/SleepOverviewTab';
+import SleepSessionsTab from '../components/dashboard/SleepSessionsTab';
 import type { Session, SessionFullDetails, UserSummary } from '../types';
 
 const DashboardPage: React.FC = () => {
@@ -107,16 +109,26 @@ const DashboardPage: React.FC = () => {
         </div>
       }
     >
-      {activeTab === 'overview' ? (
-        <OverviewTab
-          userSummary={userSummary}
-          loading={summaryLoading}
-        />
+      {selectedMetric === 'Sleep' ? (
+        // Sleep-specific tabs
+        activeTab === 'overview' ? (
+          <SleepOverviewTab />
+        ) : (
+          <SleepSessionsTab sessionId={selectedSessionId} />
+        )
       ) : (
-        <SessionsTab
-          loading={loading}
-          sessionDetails={sessionDetails}
-        />
+        // Standard tabs for HR/SPO2/etc
+        activeTab === 'overview' ? (
+          <OverviewTab
+            userSummary={userSummary}
+            loading={summaryLoading}
+          />
+        ) : (
+          <SessionsTab
+            loading={loading}
+            sessionDetails={sessionDetails}
+          />
+        )
       )}
     </DashboardLayout>
   );
