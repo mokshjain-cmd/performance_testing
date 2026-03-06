@@ -141,32 +141,7 @@ const FirmwarePerformanceTab: React.FC<FirmwarePerformanceTabProps> = ({ metric 
       value: fw.overallAccuracy[selectedMetric],
     }));
   };
-  const getValueColor = (
-  value: number | null | undefined,
-  type: 'mae' | 'rmse' | 'pearson' | 'mape' | 'bias'
-) => {
-  if (value == null) return 'text-gray-400';
 
-  switch (type) {
-    case 'mae':
-      return value < 5 ? 'text-green-600' : 'text-red-600';
-
-    case 'rmse':
-      return value < 7 ? 'text-green-600' : 'text-red-600';
-
-    case 'pearson':
-      return value > 0.9 ? 'text-green-600' : 'text-red-600';
-
-    case 'mape':
-      return value < 10 ? 'text-green-600' : 'text-red-600';
-
-    case 'bias':
-      return Math.abs(value) < 2 ? 'text-green-600' : 'text-red-600';
-
-    default:
-      return 'text-gray-800';
-  }
-};
   const getActivityMatrix = () => {
     // Get all unique activities
     const activities = new Set<string>();

@@ -125,18 +125,6 @@ const AdminSleepSessionView: React.FC<AdminSleepSessionViewProps> = ({ sessionId
     return `${hours}h ${minutes}m`;
   };
 
-  const getAccuracyColor = (value: number) => {
-    if (value >= 85) return 'text-green-600';
-    if (value >= 75) return 'text-yellow-600';
-    return 'text-red-600';
-  };
-
-  const getKappaColor = (value: number) => {
-    if (value >= 0.8) return 'text-green-600';
-    if (value >= 0.6) return 'text-yellow-600';
-    return 'text-red-600';
-  };
-
   const getSensitivityColor = (value: number) => {
     if (value >= 0.8) return 'bg-green-100 text-green-800';
     if (value >= 0.6) return 'bg-yellow-100 text-yellow-800';
