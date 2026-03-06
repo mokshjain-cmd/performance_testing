@@ -18,7 +18,8 @@ interface IAdminGlobalSummary {
   totalUsers: number;
   
   // Population metrics
-  avgTotalSleepSec: number;
+  totalSleepTimeSec: number;  // Total sleep time across all sessions
+  avgTotalSleepTimeSec: number;
   avgDeepPercent: number;
   avgRemPercent: number;
   
@@ -30,10 +31,14 @@ interface IAdminGlobalSummary {
   avgTotalSleepBiasSec: number;
   
   // Stage sensitivity
-  awakeSensitivity: number;
-  lightSensitivity: number;
-  deepSensitivity: number;
-  remSensitivity: number;
+  stageSensitivity: {
+    AWAKE: number;
+    LIGHT: number;
+    DEEP: number;
+    REM: number;
+  };
+  
+  latestFirmwareVersion: string;
 }
 
 interface IFirmwareComparison {
@@ -44,6 +49,12 @@ interface IFirmwareComparison {
   avgDeepBiasSec: number;
   avgRemBiasSec: number;
   totalSessions: number;
+  stageSensitivity: {
+    AWAKE: number;
+    LIGHT: number;
+    DEEP: number;
+    REM: number;
+  };
 }
 
 interface IBenchmarkComparison {
@@ -53,6 +64,12 @@ interface IBenchmarkComparison {
   avgDeepBiasSec: number;
   avgRemBiasSec: number;
   totalSessions: number;
+  stageSensitivity: {
+    AWAKE: number;
+    LIGHT: number;
+    DEEP: number;
+    REM: number;
+  };
 }
 
 interface IAdminSessionSummary {
@@ -61,6 +78,36 @@ interface IAdminSessionSummary {
   userName?: string;
   date: Date;
   firmwareVersion?: string;
+  benchmarkDeviceType?: string;
+  
+  // Session timing
+  sessionStartTime: Date;
+  sessionEndTime: Date;
+  
+  // Luna Sleep Metrics
+  luna: {
+    totalSleepTimeSec: number;
+    timeInBedSec: number;
+    deepSec: number;
+    lightSec: number;
+    remSec: number;
+    awakeSec: number;
+    sleepEfficiencyPercent: number;
+    sleepOnsetTime?: Date;
+    finalWakeTime?: Date;
+  };
+  
+  // Benchmark Sleep Metrics (if available)
+  benchmark?: {
+    totalSleepTimeSec: number;
+    timeInBedSec: number;
+    deepSec: number;
+    lightSec: number;
+    remSec: number;
+    awakeSec: number;
+    sleepOnsetTime?: Date;
+    finalWakeTime?: Date;
+  };
   
   // Validation metrics
   accuracyPercent: number;
@@ -84,6 +131,39 @@ interface IAdminSessionSummary {
   };
   
   confusionMatrix: IConfusionMatrix;
+}
+
+interface IAdminUserSummary {
+  userId: string;
+  totalSessions: number;
+  avgTotalSleepTimeSec: number;
+  avgTimeInBedSec: number;
+  avgDeepSec: number;
+  avgLightSec: number;
+  avgRemSec: number;
+  avgAwakeSec: number;
+  avgDeepPercent: number;
+  avgLightPercent: number;
+  avgRemPercent: number;
+  avgAwakePercent: number;
+  avgSleepEfficiencyPercent: number;
+  avgEpochAccuracyPercent: number;
+  avgKappaScore: number;
+  avgDeepBiasSec: number;
+  avgRemBiasSec: number;
+  avgTotalSleepBiasSec: number;
+  bestSession?: {
+    sessionId: string;
+    sessionName: string;
+    accuracyPercent: number;
+    date: Date;
+  };
+  worstSession?: {
+    sessionId: string;
+    sessionName: string;
+    accuracyPercent: number;
+    date: Date;
+  };
 }
 
 interface IAccuracyTrend {
@@ -193,27 +273,25 @@ export class AdminSleepSummaryService {
       const count = analyses.length;
 
       // Calculate stage sensitivities from aggregated matrix
-      const awakeSensitivity = SleepAnalysisService.calculateStageSensitivity(
-        aggregatedMatrix,
-        "AWAKE"
-      );
-      const lightSensitivity = SleepAnalysisService.calculateStageSensitivity(
-        aggregatedMatrix,
-        "LIGHT"
-      );
-      const deepSensitivity = SleepAnalysisService.calculateStageSensitivity(
-        aggregatedMatrix,
-        "DEEP"
-      );
-      const remSensitivity = SleepAnalysisService.calculateStageSensitivity(
-        aggregatedMatrix,
-        "REM"
-      );
+      const stageSensitivity = {
+        AWAKE: SleepAnalysisService.calculateStageSensitivity(aggregatedMatrix, "AWAKE"),
+        LIGHT: SleepAnalysisService.calculateStageSensitivity(aggregatedMatrix, "LIGHT"),
+        DEEP: SleepAnalysisService.calculateStageSensitivity(aggregatedMatrix, "DEEP"),
+        REM: SleepAnalysisService.calculateStageSensitivity(aggregatedMatrix, "REM"),
+      };
+
+      // Get latest firmware version
+      const latestFirmware = sessions
+        .map(s => s.devices.find((d: any) => d.deviceType === "luna")?.firmwareVersion)
+        .filter(Boolean)
+        .sort()
+        .pop() || "unknown";
 
       return {
         totalSessions: count,
         totalUsers: uniqueUsers.size,
-        avgTotalSleepSec: totalSleepSum / count,
+        totalSleepTimeSec: totalSleepSum,
+        avgTotalSleepTimeSec: totalSleepSum / count,
         avgDeepPercent: (deepSum / totalSleepSum) * 100,
         avgRemPercent: (remSum / totalSleepSum) * 100,
         avgEpochAccuracyPercent: validationCount > 0 ? accuracySum / validationCount : 0,
@@ -221,10 +299,8 @@ export class AdminSleepSummaryService {
         avgDeepBiasSec: validationCount > 0 ? deepBiasSum / validationCount : 0,
         avgRemBiasSec: validationCount > 0 ? remBiasSum / validationCount : 0,
         avgTotalSleepBiasSec: validationCount > 0 ? totalSleepBiasSum / validationCount : 0,
-        awakeSensitivity,
-        lightSensitivity,
-        deepSensitivity,
-        remSensitivity,
+        stageSensitivity,
+        latestFirmwareVersion: latestFirmware,
       };
     } catch (error) {
       console.error("[AdminSleepSummaryService] Error getting global summary:", error);
@@ -274,6 +350,14 @@ export class AdminSleepSummaryService {
         let remBiasSum = 0;
         let validationCount = 0;
 
+        // Aggregate confusion matrix for stage-wise sensitivity
+        const aggregatedCM: IConfusionMatrix = {
+          AWAKE: { AWAKE: 0, LIGHT: 0, DEEP: 0, REM: 0 },
+          LIGHT: { AWAKE: 0, LIGHT: 0, DEEP: 0, REM: 0 },
+          DEEP: { AWAKE: 0, LIGHT: 0, DEEP: 0, REM: 0 },
+          REM: { AWAKE: 0, LIGHT: 0, DEEP: 0, REM: 0 },
+        };
+
         analyses.forEach((analysis) => {
           const sleepStats = analysis.sleepStats;
           if (!sleepStats) return;
@@ -285,10 +369,28 @@ export class AdminSleepSummaryService {
             totalSleepBiasSum += sleepStats.totalSleepDiffSec || 0;
             deepBiasSum += sleepStats.deepDiffSec || 0;
             remBiasSum += sleepStats.remDiffSec || 0;
+
+            // Aggregate confusion matrix
+            if (sleepStats.confusionMatrix) {
+              const cm = sleepStats.confusionMatrix;
+              (Object.keys(aggregatedCM) as SleepStage[]).forEach((trueStage) => {
+                (Object.keys(aggregatedCM[trueStage]) as SleepStage[]).forEach((predStage) => {
+                  aggregatedCM[trueStage][predStage] += cm[trueStage]?.[predStage] || 0;
+                });
+              });
+            }
           }
         });
 
         if (validationCount > 0) {
+          // Calculate stage-wise sensitivity from aggregated confusion matrix
+          const stageSensitivity = {
+            AWAKE: SleepAnalysisService.calculateStageSensitivity(aggregatedCM, "AWAKE"),
+            LIGHT: SleepAnalysisService.calculateStageSensitivity(aggregatedCM, "LIGHT"),
+            DEEP: SleepAnalysisService.calculateStageSensitivity(aggregatedCM, "DEEP"),
+            REM: SleepAnalysisService.calculateStageSensitivity(aggregatedCM, "REM"),
+          };
+
           results.push({
             firmwareVersion: firmware,
             avgAccuracyPercent: accuracySum / validationCount,
@@ -297,6 +399,7 @@ export class AdminSleepSummaryService {
             avgDeepBiasSec: deepBiasSum / validationCount,
             avgRemBiasSec: remBiasSum / validationCount,
             totalSessions: validationCount,
+            stageSensitivity,
           });
         }
       }
@@ -350,6 +453,14 @@ export class AdminSleepSummaryService {
         let remBiasSum = 0;
         let validationCount = 0;
 
+        // Aggregate confusion matrix for stage-wise sensitivity
+        const aggregatedCM: IConfusionMatrix = {
+          AWAKE: { AWAKE: 0, LIGHT: 0, DEEP: 0, REM: 0 },
+          LIGHT: { AWAKE: 0, LIGHT: 0, DEEP: 0, REM: 0 },
+          DEEP: { AWAKE: 0, LIGHT: 0, DEEP: 0, REM: 0 },
+          REM: { AWAKE: 0, LIGHT: 0, DEEP: 0, REM: 0 },
+        };
+
         analyses.forEach((analysis) => {
           const sleepStats = analysis.sleepStats;
           if (!sleepStats) return;
@@ -360,10 +471,28 @@ export class AdminSleepSummaryService {
             kappaSum += sleepStats.kappaScore || 0;
             deepBiasSum += sleepStats.deepDiffSec || 0;
             remBiasSum += sleepStats.remDiffSec || 0;
+
+            // Aggregate confusion matrix
+            if (sleepStats.confusionMatrix) {
+              const cm = sleepStats.confusionMatrix;
+              (Object.keys(aggregatedCM) as SleepStage[]).forEach((trueStage) => {
+                (Object.keys(aggregatedCM[trueStage]) as SleepStage[]).forEach((predStage) => {
+                  aggregatedCM[trueStage][predStage] += cm[trueStage]?.[predStage] || 0;
+                });
+              });
+            }
           }
         });
 
         if (validationCount > 0) {
+          // Calculate stage-wise sensitivity from aggregated confusion matrix
+          const stageSensitivity = {
+            AWAKE: SleepAnalysisService.calculateStageSensitivity(aggregatedCM, "AWAKE"),
+            LIGHT: SleepAnalysisService.calculateStageSensitivity(aggregatedCM, "LIGHT"),
+            DEEP: SleepAnalysisService.calculateStageSensitivity(aggregatedCM, "DEEP"),
+            REM: SleepAnalysisService.calculateStageSensitivity(aggregatedCM, "REM"),
+          };
+
           results.push({
             benchmarkDevice: benchmark,
             avgAccuracyPercent: accuracySum / validationCount,
@@ -371,6 +500,7 @@ export class AdminSleepSummaryService {
             avgDeepBiasSec: deepBiasSum / validationCount,
             avgRemBiasSec: remBiasSum / validationCount,
             totalSessions: validationCount,
+            stageSensitivity,
           });
         }
       }
@@ -378,6 +508,220 @@ export class AdminSleepSummaryService {
       return results.sort((a, b) => b.avgAccuracyPercent - a.avgAccuracyPercent);
     } catch (error) {
       console.error("[AdminSleepSummaryService] Error getting benchmark comparison:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get firmware comparison for a specific user
+   */
+  static async getUserFirmwareComparison(userId: Types.ObjectId | string): Promise<IFirmwareComparison[]> {
+    try {
+      // Fetch all sleep sessions for this user
+      const sessions = await Session.find({
+        userId,
+        metric: "Sleep",
+        isValid: true,
+      });
+
+      if (sessions.length === 0) {
+        return [];
+      }
+
+      // Group by firmware version
+      const firmwareGroups = new Map<string, Types.ObjectId[]>();
+      
+      sessions.forEach((session) => {
+        const lunaDevice = session.devices.find((d: any) => d.deviceType === "luna");
+        const firmware = lunaDevice?.firmwareVersion || "unknown";
+        
+        if (!firmwareGroups.has(firmware)) {
+          firmwareGroups.set(firmware, []);
+        }
+        firmwareGroups.get(firmware)!.push(session._id);
+      });
+
+      const results: IFirmwareComparison[] = [];
+
+      // Calculate metrics for each firmware version
+      for (const [firmware, sessionIds] of firmwareGroups.entries()) {
+        const analyses = await SessionAnalysis.find({
+          sessionId: { $in: sessionIds },
+          isValid: true,
+        });
+
+        if (analyses.length === 0) continue;
+
+        let accuracySum = 0;
+        let kappaSum = 0;
+        let totalSleepBiasSum = 0;
+        let deepBiasSum = 0;
+        let remBiasSum = 0;
+        let validationCount = 0;
+
+        // Aggregate confusion matrix for stage-wise sensitivity
+        const aggregatedCM: IConfusionMatrix = {
+          AWAKE: { AWAKE: 0, LIGHT: 0, DEEP: 0, REM: 0 },
+          LIGHT: { AWAKE: 0, LIGHT: 0, DEEP: 0, REM: 0 },
+          DEEP: { AWAKE: 0, LIGHT: 0, DEEP: 0, REM: 0 },
+          REM: { AWAKE: 0, LIGHT: 0, DEEP: 0, REM: 0 },
+        };
+
+        analyses.forEach((analysis) => {
+          const sleepStats = analysis.sleepStats;
+          if (!sleepStats) return;
+
+          if (sleepStats.epochAccuracyPercent !== undefined) {
+            validationCount++;
+            accuracySum += sleepStats.epochAccuracyPercent;
+            kappaSum += sleepStats.kappaScore || 0;
+            totalSleepBiasSum += sleepStats.totalSleepDiffSec || 0;
+            deepBiasSum += sleepStats.deepDiffSec || 0;
+            remBiasSum += sleepStats.remDiffSec || 0;
+
+            // Aggregate confusion matrix
+            if (sleepStats.confusionMatrix) {
+              const cm = sleepStats.confusionMatrix;
+              (Object.keys(aggregatedCM) as SleepStage[]).forEach((trueStage) => {
+                (Object.keys(aggregatedCM[trueStage]) as SleepStage[]).forEach((predStage) => {
+                  aggregatedCM[trueStage][predStage] += cm[trueStage]?.[predStage] || 0;
+                });
+              });
+            }
+          }
+        });
+
+        if (validationCount > 0) {
+          // Calculate stage-wise sensitivity from aggregated confusion matrix
+          const stageSensitivity = {
+            AWAKE: SleepAnalysisService.calculateStageSensitivity(aggregatedCM, "AWAKE"),
+            LIGHT: SleepAnalysisService.calculateStageSensitivity(aggregatedCM, "LIGHT"),
+            DEEP: SleepAnalysisService.calculateStageSensitivity(aggregatedCM, "DEEP"),
+            REM: SleepAnalysisService.calculateStageSensitivity(aggregatedCM, "REM"),
+          };
+
+          results.push({
+            firmwareVersion: firmware,
+            avgAccuracyPercent: accuracySum / validationCount,
+            avgKappaScore: kappaSum / validationCount,
+            avgTotalSleepBiasSec: totalSleepBiasSum / validationCount,
+            avgDeepBiasSec: deepBiasSum / validationCount,
+            avgRemBiasSec: remBiasSum / validationCount,
+            totalSessions: validationCount,
+            stageSensitivity,
+          });
+        }
+      }
+
+      return results.sort((a, b) => b.avgAccuracyPercent - a.avgAccuracyPercent);
+    } catch (error) {
+      console.error("[AdminSleepSummaryService] Error getting user firmware comparison:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get benchmark comparison for a specific user
+   */
+  static async getUserBenchmarkComparison(userId: Types.ObjectId | string): Promise<IBenchmarkComparison[]> {
+    try {
+      // Fetch all sleep sessions for this user
+      const sessions = await Session.find({
+        userId,
+        metric: "Sleep",
+        isValid: true,
+      });
+
+      if (sessions.length === 0) {
+        return [];
+      }
+
+      // Group by benchmark device
+      const benchmarkGroups = new Map<string, Types.ObjectId[]>();
+      
+      sessions.forEach((session) => {
+        const benchmark = session.benchmarkDeviceType || "none";
+        
+        if (!benchmarkGroups.has(benchmark)) {
+          benchmarkGroups.set(benchmark, []);
+        }
+        benchmarkGroups.get(benchmark)!.push(session._id);
+      });
+
+      const results: IBenchmarkComparison[] = [];
+
+      // Calculate metrics for each benchmark device
+      for (const [benchmark, sessionIds] of benchmarkGroups.entries()) {
+        if (benchmark === "none") continue;
+
+        const analyses = await SessionAnalysis.find({
+          sessionId: { $in: sessionIds },
+          isValid: true,
+        });
+
+        if (analyses.length === 0) continue;
+
+        let accuracySum = 0;
+        let kappaSum = 0;
+        let deepBiasSum = 0;
+        let remBiasSum = 0;
+        let validationCount = 0;
+
+        // Aggregate confusion matrix for stage-wise sensitivity
+        const aggregatedCM: IConfusionMatrix = {
+          AWAKE: { AWAKE: 0, LIGHT: 0, DEEP: 0, REM: 0 },
+          LIGHT: { AWAKE: 0, LIGHT: 0, DEEP: 0, REM: 0 },
+          DEEP: { AWAKE: 0, LIGHT: 0, DEEP: 0, REM: 0 },
+          REM: { AWAKE: 0, LIGHT: 0, DEEP: 0, REM: 0 },
+        };
+
+        analyses.forEach((analysis) => {
+          const sleepStats = analysis.sleepStats;
+          if (!sleepStats) return;
+
+          if (sleepStats.epochAccuracyPercent !== undefined) {
+            validationCount++;
+            accuracySum += sleepStats.epochAccuracyPercent;
+            kappaSum += sleepStats.kappaScore || 0;
+            deepBiasSum += sleepStats.deepDiffSec || 0;
+            remBiasSum += sleepStats.remDiffSec || 0;
+
+            // Aggregate confusion matrix
+            if (sleepStats.confusionMatrix) {
+              const cm = sleepStats.confusionMatrix;
+              (Object.keys(aggregatedCM) as SleepStage[]).forEach((trueStage) => {
+                (Object.keys(aggregatedCM[trueStage]) as SleepStage[]).forEach((predStage) => {
+                  aggregatedCM[trueStage][predStage] += cm[trueStage]?.[predStage] || 0;
+                });
+              });
+            }
+          }
+        });
+
+        if (validationCount > 0) {
+          // Calculate stage-wise sensitivity from aggregated confusion matrix
+          const stageSensitivity = {
+            AWAKE: SleepAnalysisService.calculateStageSensitivity(aggregatedCM, "AWAKE"),
+            LIGHT: SleepAnalysisService.calculateStageSensitivity(aggregatedCM, "LIGHT"),
+            DEEP: SleepAnalysisService.calculateStageSensitivity(aggregatedCM, "DEEP"),
+            REM: SleepAnalysisService.calculateStageSensitivity(aggregatedCM, "REM"),
+          };
+
+          results.push({
+            benchmarkDevice: benchmark,
+            avgAccuracyPercent: accuracySum / validationCount,
+            avgKappaScore: kappaSum / validationCount,
+            avgDeepBiasSec: deepBiasSum / validationCount,
+            avgRemBiasSec: remBiasSum / validationCount,
+            totalSessions: validationCount,
+            stageSensitivity,
+          });
+        }
+      }
+
+      return results.sort((a, b) => b.avgAccuracyPercent - a.avgAccuracyPercent);
+    } catch (error) {
+      console.error("[AdminSleepSummaryService] Error getting user benchmark comparison:", error);
       throw error;
     }
   }
@@ -404,57 +748,105 @@ export class AdminSleepSummaryService {
         throw new Error("No sleep analysis data available for this user");
       }
 
-      // Calculate user-specific validation metrics
-      let lowAgreementCount = 0; // Sessions with <60% accuracy
+      // Calculate aggregated metrics
+      let totalSleepSum = 0;
+      let timeInBedSum = 0;
+      let deepSum = 0;
+      let lightSum = 0;
+      let remSum = 0;
+      let awakeSum = 0;
+      let efficiencySum = 0;
       let accuracySum = 0;
       let kappaSum = 0;
+      let deepBiasSum = 0;
+      let remBiasSum = 0;
+      let totalSleepBiasSum = 0;
       let validationCount = 0;
 
-      // Aggregate confusion matrix
-      const aggregatedMatrix: IConfusionMatrix = {
-        AWAKE: { AWAKE: 0, LIGHT: 0, DEEP: 0, REM: 0 },
-        LIGHT: { AWAKE: 0, LIGHT: 0, DEEP: 0, REM: 0 },
-        DEEP: { AWAKE: 0, LIGHT: 0, DEEP: 0, REM: 0 },
-        REM: { AWAKE: 0, LIGHT: 0, DEEP: 0, REM: 0 },
-      };
+      // For best/worst sessions
+      let bestSession: any = null;
+      let worstSession: any = null;
+      let bestAccuracy = -1;
+      let worstAccuracy = 101;
 
       analyses.forEach((analysis) => {
         const sleepStats = analysis.sleepStats;
         if (!sleepStats) return;
 
+        const totalSleep = sleepStats.totalSleepLunaSec || 0;
+        const deep = sleepStats.deepLunaSec || 0;
+        const rem = sleepStats.remLunaSec || 0;
+        const light = sleepStats.lightLunaSec || 0;
+        const awake = sleepStats.awakeLunaSec || 0;
+        const efficiency = sleepStats.sleepEfficiency || 0;
+        const timeInBed = totalSleep + awake;
+
+        totalSleepSum += totalSleep;
+        timeInBedSum += timeInBed;
+        deepSum += deep;
+        lightSum += light;
+        remSum += rem;
+        awakeSum += awake;
+        efficiencySum += efficiency;
+
         if (sleepStats.epochAccuracyPercent !== undefined) {
           validationCount++;
-          accuracySum += sleepStats.epochAccuracyPercent;
+          const accuracy = sleepStats.epochAccuracyPercent;
+          accuracySum += accuracy;
           kappaSum += sleepStats.kappaScore || 0;
+          deepBiasSum += sleepStats.deepDiffSec || 0;
+          remBiasSum += sleepStats.remDiffSec || 0;
+          totalSleepBiasSum += sleepStats.totalSleepDiffSec || 0;
 
-          if (sleepStats.epochAccuracyPercent < 60) {
-            lowAgreementCount++;
-          }
-
-          // Aggregate confusion matrix
-          if (sleepStats.confusionMatrix) {
-            const cm = sleepStats.confusionMatrix;
-            (Object.keys(cm) as SleepStage[]).forEach((truthStage) => {
-              (Object.keys(cm[truthStage]) as SleepStage[]).forEach((predStage) => {
-                aggregatedMatrix[truthStage][predStage] += cm[truthStage][predStage];
-              });
-            });
+          // Track best/worst sessions
+          const session = sessions.find(s => s._id.toString() === analysis.sessionId.toString());
+          if (session) {
+            if (accuracy > bestAccuracy) {
+              bestAccuracy = accuracy;
+              bestSession = {
+                sessionId: session._id.toString(),
+                sessionName: session.name || 'Unknown',
+                accuracyPercent: accuracy,
+                date: session.startTime,
+              };
+            }
+            if (accuracy < worstAccuracy) {
+              worstAccuracy = accuracy;
+              worstSession = {
+                sessionId: session._id.toString(),
+                sessionName: session.name || 'Unknown',
+                accuracyPercent: accuracy,
+                date: session.startTime,
+              };
+            }
           }
         }
       });
 
-      // Calculate deep detection rate
-      const deepTP = aggregatedMatrix.DEEP.DEEP;
-      const deepFN = aggregatedMatrix.DEEP.AWAKE + aggregatedMatrix.DEEP.LIGHT + aggregatedMatrix.DEEP.REM;
-      const deepDetectionRate = (deepTP / (deepTP + deepFN)) * 100;
+      const count = analyses.length;
+      const totalStages = totalSleepSum + awakeSum;
 
       return {
-        totalSessions: analyses.length,
-        avgAgreementPercent: validationCount > 0 ? accuracySum / validationCount : 0,
+        userId: userId.toString(),
+        totalSessions: count,
+        avgTotalSleepTimeSec: totalSleepSum / count,
+        avgTimeInBedSec: timeInBedSum / count,
+        avgDeepSec: deepSum / count,
+        avgLightSec: lightSum / count,
+        avgRemSec: remSum / count,
+        avgAwakeSec: awakeSum / count,
+        avgDeepPercent: totalStages > 0 ? (deepSum / totalStages) * 100 : 0,
+        avgLightPercent: totalStages > 0 ? (lightSum / totalStages) * 100 : 0,
+        avgRemPercent: totalStages > 0 ? (remSum / totalStages) * 100 : 0,
+        avgAwakePercent: totalStages > 0 ? (awakeSum / totalStages) * 100 : 0,
+        avgSleepEfficiencyPercent: efficiencySum / count,
+        avgEpochAccuracyPercent: validationCount > 0 ? accuracySum / validationCount : 0,
         avgKappaScore: validationCount > 0 ? kappaSum / validationCount : 0,
-        lowAgreementPercent: (lowAgreementCount / validationCount) * 100,
-        deepDetectionRate,
-        aggregatedConfusionMatrix: aggregatedMatrix,
+        avgDeepBiasSec: validationCount > 0 ? deepBiasSum / validationCount : 0,
+        avgRemBiasSec: validationCount > 0 ? remBiasSum / validationCount : 0,
+        avgTotalSleepBiasSec: validationCount > 0 ? totalSleepBiasSum / validationCount : 0,
+        bestSession,
+        worstSession,
       };
     } catch (error) {
       console.error("[AdminSleepSummaryService] Error getting admin user summary:", error);
@@ -503,6 +895,35 @@ export class AdminSleepSummaryService {
       // Get firmware version
       const lunaDevice = session.devices.find((d: any) => d.deviceType === "luna");
       const firmwareVersion = lunaDevice?.firmwareVersion;
+      const benchmarkDeviceType = session.benchmarkDeviceType;
+
+      // Build Luna metrics
+      const lunaMetrics = {
+        totalSleepTimeSec: sleepStats.totalSleepLunaSec || 0,
+        timeInBedSec: (sleepStats.totalSleepLunaSec || 0) + (sleepStats.awakeLunaSec || 0),
+        deepSec: sleepStats.deepLunaSec || 0,
+        lightSec: sleepStats.lightLunaSec || 0,
+        remSec: sleepStats.remLunaSec || 0,
+        awakeSec: sleepStats.awakeLunaSec || 0,
+        sleepEfficiencyPercent: sleepStats.sleepEfficiency || 0,
+        sleepOnsetTime: sleepStats.lunaSleepOnsetTime,
+        finalWakeTime: sleepStats.lunaFinalWakeTime,
+      };
+
+      // Build Benchmark metrics if available
+      let benchmarkMetrics = undefined;
+      if (sleepStats.totalSleepBenchmarkSec !== undefined) {
+        benchmarkMetrics = {
+          totalSleepTimeSec: sleepStats.totalSleepBenchmarkSec || 0,
+          timeInBedSec: (sleepStats.totalSleepBenchmarkSec || 0) + (sleepStats.awakeBenchmarkSec || 0),
+          deepSec: sleepStats.deepBenchmarkSec || 0,
+          lightSec: sleepStats.lightBenchmarkSec || 0,
+          remSec: sleepStats.remBenchmarkSec || 0,
+          awakeSec: sleepStats.awakeBenchmarkSec || 0,
+          sleepOnsetTime: sleepStats.benchmarkSleepOnsetTime,
+          finalWakeTime: sleepStats.benchmarkFinalWakeTime,
+        };
+      }
 
       return {
         sessionId: session._id.toString(),
@@ -510,6 +931,11 @@ export class AdminSleepSummaryService {
         userName: (session.userId as any).name,
         date: session.startTime,
         firmwareVersion,
+        benchmarkDeviceType,
+        sessionStartTime: session.startTime,
+        sessionEndTime: session.endTime,
+        luna: lunaMetrics,
+        benchmark: benchmarkMetrics,
         accuracyPercent: sleepStats.epochAccuracyPercent || 0,
         kappaScore: sleepStats.kappaScore || 0,
         deepBiasSec: sleepStats.deepDiffSec || 0,

@@ -77,6 +77,20 @@ router.get("/admin/benchmark-comparison", AdminSleepController.getBenchmarkCompa
 router.get("/admin/user/:userId", AdminSleepController.getAdminUserSummary);
 
 /**
+ * @route   GET /api/sleep/admin/user/:userId/firmware-comparison
+ * @desc    Get firmware comparison for specific user
+ * @access  Private (Admin)
+ */
+router.get("/admin/user/:userId/firmware-comparison", AdminSleepController.getUserFirmwareComparison);
+
+/**
+ * @route   GET /api/sleep/admin/user/:userId/benchmark-comparison
+ * @desc    Get benchmark comparison for specific user
+ * @access  Private (Admin)
+ */
+router.get("/admin/user/:userId/benchmark-comparison", AdminSleepController.getUserBenchmarkComparison);
+
+/**
  * @route   GET /api/sleep/admin/session/:sessionId
  * @desc    Admin Session Level Summary (2E - most technical)
  * @access  Private (Admin)

@@ -34,6 +34,7 @@ export class IngestSleepService {
     let userEmail: string | undefined;
     let userName: string | undefined;
     let sessionName: string | undefined;
+    let sessionEndTime: Date | undefined;
     const metric = 'Sleep';
     const extractedFolders: string[] = []; // Track extracted folders for cleanup
     
@@ -52,11 +53,12 @@ export class IngestSleepService {
         }
       }
       
-      // Fetch session name for email notification
+      // Fetch session details (name and endTime for Apple Health date filtering)
       if (sessionId) {
         const session = await Session.findById(sessionId);
         if (session) {
           sessionName = session.name;
+          sessionEndTime = session.endTime; // Morning time for sleep session
         }
       }
 
@@ -85,7 +87,8 @@ export class IngestSleepService {
             sessionId,
             userId,
             filePath,
-            benchmarkDeviceType
+            benchmarkDeviceType,
+            sessionEndTime
           );
           if (result.epochsInserted > 0) anyInserted = true;
           // Track extracted folder if ZIP was extracted
@@ -263,7 +266,8 @@ export class IngestSleepService {
     sessionId: Types.ObjectId | string,
     userId: Types.ObjectId | string,
     filePath: string,
-    benchmarkDeviceType: string
+    benchmarkDeviceType: string,
+    sleepDate?: Date
   ): Promise<{ epochsInserted: number; extractedFolder?: string }> {
     let extractedFolder: string | undefined;
 
@@ -292,7 +296,7 @@ export class IngestSleepService {
       let parseResult;
       if (benchmarkDeviceType === 'apple') {
         const { AppleHealthSleepParser } = await import('../../parsers/sleep/AppleHealthSleepParser');
-        parseResult = await AppleHealthSleepParser.parse(fileToProcess, sessionId.toString(), userId.toString());
+        parseResult = await AppleHealthSleepParser.parse(fileToProcess, sessionId.toString(), userId.toString(), sleepDate);
       } else {
         // For other benchmarks, use AppleSleepParser as fallback
         parseResult = await AppleSleepParser.parse(fileToProcess, sessionId.toString(), userId.toString());

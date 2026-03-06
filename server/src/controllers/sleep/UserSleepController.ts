@@ -12,7 +12,7 @@ export class UserSleepController {
    */
   static async getUserSleepOverview(req: Request, res: Response): Promise<void> {
     try {
-      const userId = (req as any).user?.userId;
+      const userId = req.userId;
       
       if (!userId) {
         res.status(401).json({ error: "Unauthorized" });
@@ -41,16 +41,16 @@ export class UserSleepController {
   static async getSingleSessionView(req: Request, res: Response): Promise<void> {
     try {
       const { sessionId } = req.params;
-      const userId = (req as any).user?.userId;
+      const userId = req.userId;
 
       if (!userId) {
         res.status(401).json({ error: "Unauthorized" });
         return;
       }
 
-      // TODO: Verify user owns this session
+      const includeEpochs = req.query.includeEpochs === 'true';
 
-      const sessionView = await UserSleepSummaryService.getSingleSessionView(sessionId);
+      const sessionView = await UserSleepSummaryService.getSingleSessionView(sessionId, includeEpochs);
       
       res.json({
         success: true,
@@ -71,7 +71,7 @@ export class UserSleepController {
    */
   static async getSleepTrend(req: Request, res: Response): Promise<void> {
     try {
-      const userId = (req as any).user?.userId;
+      const userId = req.userId;
 
       if (!userId) {
         res.status(401).json({ error: "Unauthorized" });
@@ -99,7 +99,7 @@ export class UserSleepController {
    */
   static async getSleepArchitecture(req: Request, res: Response): Promise<void> {
     try {
-      const userId = (req as any).user?.userId;
+      const userId = req.userId;
 
       if (!userId) {
         res.status(401).json({ error: "Unauthorized" });
@@ -128,7 +128,7 @@ export class UserSleepController {
   static async getHypnogram(req: Request, res: Response): Promise<void> {
     try {
       const { sessionId } = req.params;
-      const userId = (req as any).user?.userId;
+      const userId = req.userId;
 
       if (!userId) {
         res.status(401).json({ error: "Unauthorized" });

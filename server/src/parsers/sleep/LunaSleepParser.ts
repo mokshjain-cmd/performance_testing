@@ -1,6 +1,7 @@
 import { Types } from "mongoose";
 import * as fs from 'fs';
 import * as readline from 'readline';
+import { normalizeTimestampMs } from '../../utils/timestampNormalizer';
 
 /**
  * Sleep stage constants
@@ -169,12 +170,16 @@ export class LunaSleepParser {
         };
       }
 
-      // Convert epochs to database format (with IST offset)
-      const epochs: ISleepEpochData[] = session.epochs30Sec.map(epoch => ({
-        timestamp: new Date((epoch.startSec + parser.IST_OFFSET_SEC) * 1000),
-        stage: epoch.stage,
-        durationSec: epoch.durationSec
-      }));
+      // Convert epochs to database format (with IST offset and timestamp normalization)
+      const epochs: ISleepEpochData[] = session.epochs30Sec.map(epoch => {
+        const rawTimestampMs = (epoch.startSec + parser.IST_OFFSET_SEC) * 1000;
+        const normalizedTimestampMs = normalizeTimestampMs(rawTimestampMs);
+        return {
+          timestamp: new Date(normalizedTimestampMs),
+          stage: epoch.stage,
+          durationSec: epoch.durationSec
+        };
+      });
 
       // Build metadata
       const metadata: ILunaSleepMetadata = {

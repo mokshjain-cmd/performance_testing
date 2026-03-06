@@ -103,11 +103,6 @@ export const createSession = async (
       
       // End time: Given date at 09:00 (9 AM)
       end = new Date(Date.UTC(year, month - 1, day, 9, 0, 0));
-      
-      console.log('Sleep session date range:');
-      console.log('  Input date:', sleepDate);
-      console.log('  Start time (previous night 21:00 UTC):', start.toISOString());
-      console.log('  End time (morning 09:00 UTC):', end.toISOString());
     } else {
       // For other metrics, require explicit startTime and endTime
       if (!startTime || !endTime) {
@@ -120,8 +115,6 @@ export const createSession = async (
       
       start = parseISTString(startTime);
       end = parseISTString(endTime);
-      console.log('Parsed start time (UTC):', start.toISOString());
-      console.log('Parsed end time (UTC):', end.toISOString());
     }
 
     // Validate firmwareVersion is provided (required for Luna)
@@ -195,29 +188,19 @@ export const createSession = async (
     });
 
     // Upload files to Google Cloud Storage and get download URLs
-    console.log(`📤 Uploading ${files.length} files to GCS for session ${session._id}`);
-    console.log(`📂 Files to upload:`, files.map(f => ({ fieldname: f.fieldname, filename: f.filename, path: f.path })));
+    console.log(`📤 Uploading files to GCS for session ${session._id}`);
     let rawFiles: Record<string, string> = {};
     if(process.env.ENV==='production') {
       try {
-      console.log('🔧 Calling storageService.uploadDeviceFiles...');
-
       rawFiles = await storageService.uploadDeviceFiles(files, session._id.toString());
-      
-      console.log(`📥 Received rawFiles from GCS:`, rawFiles);
       
       // Update session with raw file URLs
       session.rawFiles = rawFiles;
-      console.log('💾 Saving session with rawFiles...');
       await session.save();
       
-      console.log(`✅ Raw files uploaded and URLs stored in session ${session._id}`);
-      console.log(`✅ Session rawFiles:`, session.rawFiles);
+      console.log(`✅ Raw files uploaded for session ${session._id}`);
     } catch (uploadError) {
-      console.error('❌ DETAILED ERROR uploading files to GCS:');
-      console.error('Error message:', uploadError instanceof Error ? uploadError.message : uploadError);
-      console.error('Error stack:', uploadError instanceof Error ? uploadError.stack : 'No stack trace');
-      console.error('Full error object:', uploadError);
+      console.error('❌ Error uploading files to GCS:', uploadError instanceof Error ? uploadError.message : uploadError);
       // Continue with session creation even if upload fails
       // Files are still available locally for processing
     }
@@ -248,10 +231,8 @@ export const createSession = async (
       });
     } else if (metric === 'Sleep') {
       // Call sleep ingestion service
-      // This runs asynchronously - parse files, store epochs, then analyze, then update summaries
       IngestSleepService.ingestSleepSession(session._id, userId, files, benchmarkDeviceType, mobileType).then(() => {
         console.log(`✅ Sleep ingestion completed for session ${session._id}`);
-        // After ingestion, run analysis
         return SleepAnalysisService.analyzeSession(session._id);
       }).then(async () => {
         console.log(`✅ Sleep analysis completed for session ${session._id}`);
@@ -262,23 +243,14 @@ export const createSession = async (
         const lunaFirmware = lunaDevice?.firmwareVersion;
         
         // Update all summary collections
-        console.log(`🔄 Updating summary collections for Sleep session ${session._id}...`);
-        
-        // 1. Update AdminGlobalSummary
         await updateAdminGlobalSummary('Sleep');
-        
-        // 2. Update FirmwarePerformance (if Luna firmware available)
         if (lunaFirmware) {
           await updateFirmwarePerformanceForLuna(lunaFirmware, 'Sleep');
         }
-        
-        // 3. Update BenchmarkComparisonSummary (if benchmark device available)
         await updateBenchmarkComparisonSummariesForSession(session._id);
-        
-        // 4. Update AdminDailyTrend
         await updateAdminDailyTrend(session.startTime, 'Sleep');
         
-        console.log(`✅ All summary collections updated for Sleep session ${session._id}`);
+        console.log(`✅ Summary collections updated for session ${session._id}`);
       }).catch((error) => {
         console.error(`❌ Error in sleep ingestion/analysis/summary update for session ${session._id}:`, error);
       });

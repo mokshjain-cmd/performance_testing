@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as readline from 'readline';
+import { normalizeTimestampMs } from '../../utils/timestampNormalizer';
 import type {
   ISleepEpochData,
   ILunaSleepMetadata,
@@ -62,12 +63,16 @@ export class AppleHealthSleepParser {
         };
       }
 
-      // Convert epochs to database format (with IST offset to match Luna parser format)
-      const epochs: ISleepEpochData[] = session.records.map(record => ({
-        timestamp: new Date((record.startTimestamp + parser.IST_OFFSET_SEC) * 1000),
-        stage: record.stage,
-        durationSec: record.durationSec
-      }));
+      // Convert epochs to database format (with IST offset and timestamp normalization)
+      const epochs: ISleepEpochData[] = session.records.map(record => {
+        const rawTimestampMs = (record.startTimestamp + parser.IST_OFFSET_SEC) * 1000;
+        const normalizedTimestampMs = normalizeTimestampMs(rawTimestampMs);
+        return {
+          timestamp: new Date(normalizedTimestampMs),
+          stage: record.stage,
+          durationSec: record.durationSec
+        };
+      });
 
       // Calculate metadata
       const stageTotals = {

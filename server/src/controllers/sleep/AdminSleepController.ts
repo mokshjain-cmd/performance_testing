@@ -97,6 +97,52 @@ export class AdminSleepController {
   }
 
   /**
+   * GET /api/admin/sleep/user/:userId/firmware-comparison
+   * Get firmware comparison for specific user
+   */
+  static async getUserFirmwareComparison(req: Request, res: Response): Promise<void> {
+    try {
+      const { userId } = req.params;
+
+      const comparison = await AdminSleepSummaryService.getUserFirmwareComparison(userId);
+      
+      res.json({
+        success: true,
+        data: comparison,
+      });
+    } catch (error: any) {
+      console.error("[AdminSleepController] Error getting user firmware comparison:", error);
+      res.status(500).json({
+        success: false,
+        error: error.message || "Failed to get user firmware comparison",
+      });
+    }
+  }
+
+  /**
+   * GET /api/admin/sleep/user/:userId/benchmark-comparison
+   * Get benchmark comparison for specific user
+   */
+  static async getUserBenchmarkComparison(req: Request, res: Response): Promise<void> {
+    try {
+      const { userId } = req.params;
+
+      const comparison = await AdminSleepSummaryService.getUserBenchmarkComparison(userId);
+      
+      res.json({
+        success: true,
+        data: comparison,
+      });
+    } catch (error: any) {
+      console.error("[AdminSleepController] Error getting user benchmark comparison:", error);
+      res.status(500).json({
+        success: false,
+        error: error.message || "Failed to get user benchmark comparison",
+      });
+    }
+  }
+
+  /**
    * GET /api/admin/sleep/session/:sessionId
    * 2E) Admin Session Level Summary (most technical)
    */

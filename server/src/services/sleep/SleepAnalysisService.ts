@@ -47,6 +47,7 @@ export class SleepAnalysisService {
         "meta.sessionId": sessionId,
         "meta.deviceType": "luna",
       }).sort({ timestamp: 1 });
+      console.log(`[SleepAnalysisService] 📊 Found ${lunaEpochs.length} Luna epochs`);
 
       // Fetch benchmark device epochs (if available)
       const benchmarkDeviceType = session.benchmarkDeviceType;
@@ -56,6 +57,7 @@ export class SleepAnalysisService {
           "meta.sessionId": sessionId,
           "meta.deviceType": benchmarkDeviceType,
         }).sort({ timestamp: 1 });
+        console.log(`[SleepAnalysisService] 📊 Found ${benchmarkEpochs.length} ${benchmarkDeviceType} epochs`);
       }
 
       // Calculate Luna stats
@@ -76,6 +78,7 @@ export class SleepAnalysisService {
         confusionMatrix = this.buildConfusionMatrix(lunaEpochs, benchmarkEpochs);
         epochAccuracyPercent = this.calculateAccuracy(confusionMatrix);
         kappaScore = this.calculateKappa(confusionMatrix);
+        console.log(`[SleepAnalysisService] ✅ Accuracy: ${epochAccuracyPercent.toFixed(1)}%, Kappa: ${kappaScore.toFixed(3)}`);
       }
 
       // Calculate sleep efficiency (if we have onset/wake times)
@@ -204,8 +207,18 @@ export class SleepAnalysisService {
       const ts = new Date(epoch.timestamp).getTime();
       benchmarkMap.set(ts, epoch.stage);
     });
+    console.log(`[SleepAnalysisService] 🗺️  Benchmark timestamp map created with ${benchmarkMap.size} entries`);
+    
+    // Log first few timestamps for debugging
+    if (lunaEpochs.length > 0 && benchmarkEpochs.length > 0) {
+      console.log(`[SleepAnalysisService] 🕐 Sample Luna timestamps (first 3):`, 
+        lunaEpochs.slice(0, 3).map(e => new Date(e.timestamp).toISOString()));
+      console.log(`[SleepAnalysisService] 🕐 Sample Benchmark timestamps (first 3):`, 
+        benchmarkEpochs.slice(0, 3).map(e => new Date(e.timestamp).toISOString()));
+    }
 
     // Match Luna epochs with benchmark epochs
+    let matchedCount = 0;
     lunaEpochs.forEach((lunaEpoch) => {
       const ts = new Date(lunaEpoch.timestamp).getTime();
       const benchmarkStage = benchmarkMap.get(ts);
@@ -213,8 +226,14 @@ export class SleepAnalysisService {
       if (benchmarkStage) {
         const lunaStage = lunaEpoch.stage as SleepStage;
         matrix[benchmarkStage][lunaStage]++;
+        matchedCount++;
       }
     });
+    
+    console.log(`[SleepAnalysisService] 🎯 Matched ${matchedCount} out of ${lunaEpochs.length} Luna epochs`);
+    if (matchedCount === 0 && lunaEpochs.length > 0 && benchmarkEpochs.length > 0) {
+      console.warn(`[SleepAnalysisService] ⚠️  NO MATCHES FOUND! Timestamps may not align.`);
+    }
 
     return matrix;
   }
@@ -253,7 +272,9 @@ export class SleepAnalysisService {
       });
     });
 
-    if (total === 0) return 0;
+    if (total === 0) {
+      return 0;
+    }
 
     // Observed agreement (diagonal sum / total)
     let observedAgreement = 0;
@@ -281,8 +302,6 @@ export class SleepAnalysisService {
     });
 
     const pe = expectedAgreement;
-
-    // Kappa = (po - pe) / (1 - pe)
     const kappa = (po - pe) / (1 - pe);
     return Math.max(0, Math.min(1, kappa)); // Clamp between 0 and 1
   }

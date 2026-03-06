@@ -35,16 +35,19 @@ interface IUserSleepOverview {
 }
 
 interface ISingleSessionView {
-  sessionId: string;
-  sessionName?: string;
-  date: Date;
-  activityType: string;
+  session: {
+    _id: string;
+    name?: string;
+    startTime: Date;
+    endTime: Date;
+    date: Date;
+  };
   
   // Luna metrics
   luna: {
     totalSleepTimeSec: number;
     timeInBedSec: number;
-    sleepEfficiency: number;
+    sleepEfficiencyPercent: number;
     deepSec: number;
     remSec: number;
     lightSec: number;
@@ -56,33 +59,51 @@ interface ISingleSessionView {
   
   // Benchmark metrics (if available)
   benchmark?: {
+    deviceType: string;
     totalSleepTimeSec: number;
+    timeInBedSec: number;
+    sleepEfficiencyPercent: number;
     deepSec: number;
     remSec: number;
     lightSec: number;
     awakeSec: number;
     sleepOnsetTime?: Date;
     finalWakeTime?: Date;
+    sleepScore?: number;
   };
   
   // Comparison (if benchmark available)
   comparison?: {
-    totalSleepDiffSec: number;
-    deepDiffSec: number;
-    remDiffSec: number;
-    accuracyPercent: number;
+    agreementPercent: number;
     kappaScore: number;
+    totalSleepDifferenceSec: number;
+    deepDifferenceSec: number;
+    remDifferenceSec: number;
   };
+  
+  // Epochs data (if requested)
+  epochs?: {
+    luna: ISleepEpochData[];
+    benchmark?: ISleepEpochData[];
+  };
+}
+
+interface ISleepEpochData {
+  timestamp: Date;
+  stage: 'AWAKE' | 'LIGHT' | 'DEEP' | 'REM';
+  durationSec: number;
 }
 
 interface ISleepTrendData {
   date: Date;
-  totalSleepSec: number;
+  totalSleepTimeSec: number;
   deepSec: number;
   remSec: number;
   lightSec: number;
-  sleepEfficiency: number;
+  awakeSec: number;
+  sleepEfficiencyPercent: number;
   accuracyPercent?: number; // If comparison available
+  kappaScore?: number;
 }
 
 interface ISleepArchitectureDistribution {
@@ -110,7 +131,21 @@ export class UserSleepSummaryService {
       });
 
       if (sessions.length === 0) {
-        throw new Error("No sleep sessions found for this user");
+        // Return empty/default data instead of throwing error
+        return {
+          totalSessions: 0,
+          avgTotalSleepTimeSec: 0,
+          avgTimeInBedSec: 0,
+          avgSleepEfficiency: 0,
+          avgDeepSleepSec: 0,
+          avgRemSleepSec: 0,
+          avgLightSleepSec: 0,
+          avgAwakeSec: 0,
+          avgDeepPercent: 0,
+          avgRemPercent: 0,
+          avgLightPercent: 0,
+          sleepDurationStdDev: 0,
+        };
       }
 
       const sessionIds = sessions.map((s) => s._id);
@@ -122,7 +157,21 @@ export class UserSleepSummaryService {
       });
 
       if (analyses.length === 0) {
-        throw new Error("No sleep analysis data available");
+        // Return empty/default data instead of throwing error
+        return {
+          totalSessions: sessions.length,
+          avgTotalSleepTimeSec: 0,
+          avgTimeInBedSec: 0,
+          avgSleepEfficiency: 0,
+          avgDeepSleepSec: 0,
+          avgRemSleepSec: 0,
+          avgLightSleepSec: 0,
+          avgAwakeSec: 0,
+          avgDeepPercent: 0,
+          avgRemPercent: 0,
+          avgLightPercent: 0,
+          sleepDurationStdDev: 0,
+        };
       }
 
       // Calculate aggregates
@@ -229,7 +278,10 @@ export class UserSleepSummaryService {
   /**
    * Get single session detailed view (1B)
    */
-  static async getSingleSessionView(sessionId: Types.ObjectId | string): Promise<ISingleSessionView> {
+  static async getSingleSessionView(
+    sessionId: Types.ObjectId | string,
+    includeEpochs: boolean = false
+  ): Promise<ISingleSessionView> {
     try {
       const session = await Session.findById(sessionId);
       if (!session) {
@@ -257,14 +309,17 @@ export class UserSleepSummaryService {
       const efficiency = sleepStats.sleepEfficiency || 0;
 
       const response: ISingleSessionView = {
-        sessionId: session._id.toString(),
-        sessionName: session.name,
-        date: session.startTime,
-        activityType: session.activityType,
+        session: {
+          _id: session._id.toString(),
+          name: session.name,
+          startTime: session.startTime,
+          endTime: session.endTime,
+          date: session.startTime,
+        },
         luna: {
           totalSleepTimeSec: totalSleepLuna,
           timeInBedSec: timeInBedLuna,
-          sleepEfficiency: efficiency,
+          sleepEfficiencyPercent: efficiency,
           deepSec: deepLuna,
           remSec: remLuna,
           lightSec: lightLuna,
@@ -282,27 +337,41 @@ export class UserSleepSummaryService {
         const remBenchmark = sleepStats.remBenchmarkSec || 0;
         const lightBenchmark = sleepStats.lightBenchmarkSec || 0;
         const awakeBenchmark = sleepStats.awakeBenchmarkSec || 0;
+        const timeInBedBenchmark = totalSleepBenchmark + awakeBenchmark;
+        const efficiencyBenchmark = timeInBedBenchmark > 0 
+          ? (totalSleepBenchmark / timeInBedBenchmark) * 100 
+          : 0;
 
         response.benchmark = {
+          deviceType: session.benchmarkDeviceType || 'unknown',
           totalSleepTimeSec: totalSleepBenchmark,
+          timeInBedSec: timeInBedBenchmark,
+          sleepEfficiencyPercent: efficiencyBenchmark,
           deepSec: deepBenchmark,
           remSec: remBenchmark,
           lightSec: lightBenchmark,
           awakeSec: awakeBenchmark,
           sleepOnsetTime: sleepStats.benchmarkSleepOnsetTime,
           finalWakeTime: sleepStats.benchmarkFinalWakeTime,
+          sleepScore: undefined, // Benchmark devices typically don't provide sleep scores
         };
 
         // Add comparison
         if (sleepStats.epochAccuracyPercent !== undefined) {
           response.comparison = {
-            totalSleepDiffSec: sleepStats.totalSleepDiffSec || 0,
-            deepDiffSec: sleepStats.deepDiffSec || 0,
-            remDiffSec: sleepStats.remDiffSec || 0,
-            accuracyPercent: sleepStats.epochAccuracyPercent,
+            agreementPercent: sleepStats.epochAccuracyPercent,
             kappaScore: sleepStats.kappaScore || 0,
+            totalSleepDifferenceSec: sleepStats.totalSleepDiffSec || 0,
+            deepDifferenceSec: sleepStats.deepDiffSec || 0,
+            remDifferenceSec: sleepStats.remDiffSec || 0,
           };
         }
+      }
+
+      // Fetch epochs if requested
+      if (includeEpochs) {
+        const epochsData = await this.getHypnogramData(sessionId);
+        response.epochs = epochsData;
       }
 
       return response;
@@ -346,15 +415,18 @@ export class UserSleepSummaryService {
         const deep = sleepStats.deepLunaSec || 0;
         const rem = sleepStats.remLunaSec || 0;
         const light = totalSleep - deep - rem;
+        const awake = sleepStats.awakeLunaSec || 0;
 
         trendData.push({
           date: session.startTime,
-          totalSleepSec: totalSleep,
+          totalSleepTimeSec: totalSleep,
           deepSec: deep,
           remSec: rem,
           lightSec: light,
-          sleepEfficiency: sleepStats.sleepEfficiency || 0,
+          awakeSec: awake,
+          sleepEfficiencyPercent: sleepStats.sleepEfficiency || 0,
           accuracyPercent: sleepStats.epochAccuracyPercent,
+          kappaScore: sleepStats.kappaScore,
         });
       });
 
@@ -379,6 +451,16 @@ export class UserSleepSummaryService {
         overview.avgRemSleepSec +
         overview.avgLightSleepSec +
         overview.avgAwakeSec;
+
+      // Handle case where there's no data (total is 0)
+      if (total === 0) {
+        return {
+          lightPercent: 0,
+          deepPercent: 0,
+          remPercent: 0,
+          awakePercent: 0,
+        };
+      }
 
       return {
         lightPercent: (overview.avgLightSleepSec / total) * 100,

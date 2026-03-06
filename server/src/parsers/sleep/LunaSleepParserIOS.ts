@@ -5,6 +5,7 @@ import type {
   ISleepEpoch30Sec,
   SleepStageType,
 } from './LunaSleepParser';
+import { normalizeTimestampMs } from '../../utils/timestampNormalizer';
 
 /**
  * iOS Sleep Distribution segment from device logs
@@ -163,9 +164,10 @@ export class LunaSleepParserIOS {
 
     return epochs.map((epoch) => {
       const timestampMs = epoch.startSec * 1000 + IST_OFFSET_MS;
+      const normalizedTimestampMs = normalizeTimestampMs(timestampMs);
 
       return {
-        timestamp: new Date(timestampMs),
+        timestamp: new Date(normalizedTimestampMs),
         stage: epoch.stage as "AWAKE" | "LIGHT" | "DEEP" | "REM",
         durationSec: epoch.durationSec,
       };
