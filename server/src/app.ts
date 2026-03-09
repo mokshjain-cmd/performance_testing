@@ -31,6 +31,7 @@ const corsOptions = {
   optionsSuccessStatus: 200
 };
   app.use(cors(corsOptions));
+  app.options('*', cors(corsOptions));
   app.use(morgan('dev')); // Logging
   app.use(express.json()); // Parse JSON bodies
   app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
