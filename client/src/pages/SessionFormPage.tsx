@@ -32,8 +32,7 @@ const METRIC_OPTIONS = [
   { value: 'HR', label: 'Heart Rate (HR)' },
   { value: 'SPO2', label: 'Blood Oxygen (SPO2)' },
   { value: 'Sleep', label: 'Sleep' },
-  { value: 'Calories', label: 'Calories' },
-  { value: 'Steps', label: 'Steps' },
+  { value: 'Activity', label: 'Activity (Steps/Calories/Distance)' },
 ];
 
 const BENCHMARK_DEVICE_OPTIONS_HR = [
@@ -45,6 +44,10 @@ const BENCHMARK_DEVICE_OPTIONS_SPO2 = [
 ];
 
 const BENCHMARK_DEVICE_OPTIONS_SLEEP = [
+  { value: 'apple', label: 'Apple' },
+];
+
+const BENCHMARK_DEVICE_OPTIONS_ACTIVITY = [
   { value: 'apple', label: 'Apple' },
 ];
 
@@ -65,10 +68,11 @@ export default function SessionFormPage() {
     startTime: '',
     endTime: '',
     sleepDate: '', // For Sleep sessions: the morning date (night before -> this morning)
+    activityDate: '', // For Activity sessions: the date of the activity
     benchmarkDeviceType: '',
     bandPosition: '',
     firmwareVersion: '',
-    mobileType: 'Android', // For Sleep with Luna: Android or iOS
+    mobileType: 'Android', // For Sleep/Activity with Luna: Android or iOS
     devices: ['luna'],
   });
   const [deviceFiles, setDeviceFiles] = useState<{ [key: string]: File | null }>({ luna: null });
@@ -95,8 +99,33 @@ export default function SessionFormPage() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     
+    // If metric changed to Activity, add Apple as benchmark device
+    if (name === 'metric' && value === 'Activity') {
+      const compatibleDevices = formData.devices.filter(d => d === 'luna' || d === 'apple');
+      const updatedDevices = compatibleDevices.includes('apple') 
+        ? compatibleDevices 
+        : [...compatibleDevices, 'apple'];
+      setFormData({
+        ...formData,
+        metric: value,
+        benchmarkDeviceType: 'apple',
+        devices: updatedDevices.length > 0 ? updatedDevices : ['luna', 'apple'],
+      });
+      // Remove files for incompatible devices
+      const newDeviceFiles = { ...deviceFiles };
+      Object.keys(newDeviceFiles).forEach(d => {
+        if (d !== 'luna' && d !== 'apple') {
+          delete newDeviceFiles[d];
+        }
+      });
+      // Initialize apple file input if not present
+      if (!newDeviceFiles.apple) {
+        newDeviceFiles.apple = null;
+      }
+      setDeviceFiles(newDeviceFiles);
+    }
     // If metric changed to Sleep, add Apple as benchmark device and set activity to 'sleeping'
-    if (name === 'metric' && value === 'Sleep') {
+    else if (name === 'metric' && value === 'Sleep') {
       const compatibleDevices = formData.devices.filter(d => d === 'luna' || d === 'apple');
       const updatedDevices = compatibleDevices.includes('apple') 
         ? compatibleDevices 
@@ -144,6 +173,32 @@ export default function SessionFormPage() {
       });
       // Initialize masimo file input if not present
       if (!newDeviceFiles.masimo) {
+        newDeviceFiles.masimo = null;
+      }
+      setDeviceFiles(newDeviceFiles);
+    }
+    // If metric changed FROM Activity to something else, remove activity-only devices
+    else if (name === 'metric' && formData.metric === 'Activity' && value !== 'Activity') {
+      const compatibleDevices = formData.devices.filter(d => d !== 'apple');
+      // If switching to HR, ensure polar is added as benchmark device
+      const updatedDevices = value === 'HR' && !compatibleDevices.includes('polar')
+        ? [...compatibleDevices, 'polar']
+        : value === 'SPO2' && !compatibleDevices.includes('masimo')
+        ? [...compatibleDevices, 'masimo']
+        : compatibleDevices;
+      setFormData({
+        ...formData,
+        metric: value,
+        benchmarkDeviceType: value === 'HR' ? 'polar' : value === 'SPO2' ? 'masimo' : '',
+        devices: updatedDevices.length > 0 ? updatedDevices : ['luna'],
+      });
+      // Remove apple files if present
+      const newDeviceFiles = { ...deviceFiles };
+      delete newDeviceFiles.apple;
+      // Initialize benchmark device file input if needed
+      if (value === 'HR' && !newDeviceFiles.polar) {
+        newDeviceFiles.polar = null;
+      } else if (value === 'SPO2' && !newDeviceFiles.masimo) {
         newDeviceFiles.masimo = null;
       }
       setDeviceFiles(newDeviceFiles);
@@ -297,6 +352,7 @@ export default function SessionFormPage() {
     }
     // For Sleep sessions, compute startTime/endTime from sleepDate
     // sleepDate represents the morning date, so sleep session is from previous night (10 PM) to morning (8 AM)
+    // For Activity sessions, use activityDate to compute a default time range
     let startTime, endTime;
     if (formData.metric === 'Sleep' && formData.sleepDate) {
       const morningDate = new Date(formData.sleepDate);
@@ -308,6 +364,15 @@ export default function SessionFormPage() {
       const endDate = new Date(morningDate);
       endDate.setHours(8, 0, 0, 0);
       startTime = startDate.toISOString().slice(0, 19); // Remove milliseconds and Z
+      endTime = endDate.toISOString().slice(0, 19);
+    } else if (formData.metric === 'Activity' && formData.activityDate) {
+      // For Activity, use the full day (00:00 to 23:59)
+      const activityDay = new Date(formData.activityDate);
+      const startDate = new Date(activityDay);
+      startDate.setHours(0, 0, 0, 0);
+      const endDate = new Date(activityDay);
+      endDate.setHours(23, 59, 59, 0);
+      startTime = startDate.toISOString().slice(0, 19);
       endTime = endDate.toISOString().slice(0, 19);
     } else {
       startTime = ensureSeconds(formData.startTime);
@@ -323,8 +388,11 @@ export default function SessionFormPage() {
     form.append('metric', formData.metric);
     
     // For Sleep sessions, send sleepDate instead of startTime/endTime
+    // For Activity sessions, send activityDate instead of startTime/endTime
     if (formData.metric === 'Sleep' && formData.sleepDate) {
       form.append('sleepDate', formData.sleepDate);
+    } else if (formData.metric === 'Activity' && formData.activityDate) {
+      form.append('activityDate', formData.activityDate);
     } else {
       form.append('startTime', startTime);
       form.append('endTime', endTime);
@@ -358,6 +426,7 @@ export default function SessionFormPage() {
         startTime: '',
         endTime: '',
         sleepDate: '',
+        activityDate: '',
         benchmarkDeviceType: '',
         bandPosition: '',
         firmwareVersion: '',
@@ -420,6 +489,20 @@ export default function SessionFormPage() {
                 ℹ️ Enter the morning date when you woke up. The session will be computed from the previous night (10 PM) to this morning (8 AM).
               </p>
             </div>
+          ) : formData.metric === 'Activity' ? (
+            <div>
+              <Input
+                type="date"
+                label="Activity Date"
+                name="activityDate"
+                value={formData.activityDate}
+                onChange={handleChange}
+                required
+              />
+              <p className="text-xs text-gray-500 mt-1 ml-1">
+                ℹ️ Enter the date for which you want to track activity data (steps, calories, distance).
+              </p>
+            </div>
           ) : (
             <>
               <Input
@@ -445,7 +528,7 @@ export default function SessionFormPage() {
             name="benchmarkDeviceType"
             value={formData.benchmarkDeviceType}
             onChange={handleChange}
-            options={formData.metric === 'SPO2' ? BENCHMARK_DEVICE_OPTIONS_SPO2 : formData.metric === 'Sleep' ? BENCHMARK_DEVICE_OPTIONS_SLEEP : BENCHMARK_DEVICE_OPTIONS_HR}
+            options={formData.metric === 'SPO2' ? BENCHMARK_DEVICE_OPTIONS_SPO2 : formData.metric === 'Sleep' ? BENCHMARK_DEVICE_OPTIONS_SLEEP : formData.metric === 'Activity' ? BENCHMARK_DEVICE_OPTIONS_ACTIVITY : BENCHMARK_DEVICE_OPTIONS_HR}
             placeholder="Select benchmark device"
             required
           />
@@ -485,7 +568,7 @@ export default function SessionFormPage() {
             required
           />
 
-          {formData.metric === 'Sleep' && (
+          {(formData.metric === 'Sleep' || formData.metric === 'Activity') && (
             <Select
               label="Mobile Type (Luna Device)"
               name="mobileType"
@@ -507,6 +590,8 @@ export default function SessionFormPage() {
                 if (formData.metric === 'SPO2') return opt.spo2Only;
                 // For Sleep, only show Sleep-compatible devices
                 if (formData.metric === 'Sleep') return opt.sleepOnly;
+                // For Activity, only show Activity-compatible devices (Apple for benchmark)
+                if (formData.metric === 'Activity') return opt.value === 'apple';
                 // For HR, only show HR-compatible devices
                 if (formData.metric === 'HR') return opt.hrOnly;
                 // For other metrics, hide device-specific devices
@@ -538,8 +623,8 @@ export default function SessionFormPage() {
 
           {/* Per-device file upload */}
           {formData.devices.map((device) => {
-            // For Apple Health sleep data, accept ZIP files. Otherwise, accept CSV/TXT
-            const acceptedFormats = (device === 'apple' && formData.metric === 'Sleep')
+            // For Apple Health sleep/activity data, accept ZIP files. Otherwise, accept CSV/TXT
+            const acceptedFormats = (device === 'apple' && (formData.metric === 'Sleep' || formData.metric === 'Activity'))
               ? ".csv,.CSV,.txt,.TXT,.zip,.ZIP"
               : ".csv,.CSV,.txt,.TXT";
             
@@ -548,7 +633,7 @@ export default function SessionFormPage() {
                 <label className="text-sm font-medium text-gray-700">
                   Upload {DEVICE_OPTIONS.find((d) => d.value === device)?.label} File
                   <span className="text-red-500 ml-1">*</span>
-                  {device === 'apple' && formData.metric === 'Sleep' && (
+                  {device === 'apple' && (formData.metric === 'Sleep' || formData.metric === 'Activity') && (
                     <span className="text-xs text-gray-500 ml-2">(ZIP or CSV)</span>
                   )}
                 </label>

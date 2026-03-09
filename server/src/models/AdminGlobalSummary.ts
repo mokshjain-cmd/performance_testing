@@ -26,9 +26,19 @@ export interface IAdminGlobalSummary extends Document {
     avgRemPercent?: number;
   };
 
+  activityStats?: {
+    stepsAccuracy?: number;
+    distanceAccuracy?: number;
+    calorieAccuracy?: number;
+    avgStepMAE?: number;
+    avgStepMAPE?: number;
+    avgStepBias?: number;
+    avgDistanceMAPE?: number;
+    avgCalorieMAPE?: number;
+  };
 
-
-
+  // Firmware version used for this aggregation (if filtered)
+  latestFirmwareVersion?: string;
 
   computedAt: Date;
 }
@@ -65,11 +75,24 @@ const AdminGlobalSummarySchema = new Schema<IAdminGlobalSummary>({
     avgRemPercent: Number,
   },
 
+  activityStats: {
+    stepsAccuracy: Number,
+    distanceAccuracy: Number,
+    calorieAccuracy: Number,
+    avgStepMAE: Number,
+    avgStepMAPE: Number,
+    avgStepBias: Number,
+    avgDistanceMAPE: Number,
+    avgCalorieMAPE: Number,
+  },
+
 //   invalidStats: {
 //     invalidSessions: Number,
 //     invalidReadings: Number,
 //     invalidReadingPercent: Number,
 //   },
+
+  latestFirmwareVersion: String,
 
   computedAt: { type: Date, default: Date.now, index: true },
 });

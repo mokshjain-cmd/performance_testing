@@ -2,23 +2,84 @@ import Session from '../models/Session';
 import SessionAnalysis from '../models/SessionAnalysis';
 import NormalizedReading from '../models/NormalizedReadings';
 import AdminGlobalSummary from '../models/AdminGlobalSummary';
+import { getLatestFirmwareVersion } from '../controllers/firmwareConfig.controller';
 
 /**
  * Update admin global summary
  * Aggregates overall Luna performance across all users and sessions
  * This should be called after each session ingestion/analysis
  * @param metric - The metric to calculate summary for (HR, SPO2, etc.)
+ * @param latestFirmwareOnly - Whether to filter by latest firmware version only (default: true)
  */
-export async function updateAdminGlobalSummary(metric: 'HR' | 'SPO2' | 'Sleep' | 'Calories' | 'Steps' = 'HR') {
-  console.log(`\n🔄 Updating AdminGlobalSummary for metric: ${metric}...`);
+export async function updateAdminGlobalSummary(
+  metric: 'HR' | 'SPO2' | 'Sleep' | 'Calories' | 'Steps' = 'HR',
+  latestFirmwareOnly: boolean = true
+) {
+  console.log(`\n🔄 ========================================`);
+  console.log(`🔄 Updating AdminGlobalSummary for metric: ${metric}`);
+  console.log(`🔄 latestFirmwareOnly: ${latestFirmwareOnly}`);
+  console.log(`🔄 ========================================`);
 
-  // Get all valid sessions for this metric
-  const sessions = await Session.find({ isValid: true, metric });
+  let sessions;
+  let latestFirmware: string | null = null;
+
+  if (latestFirmwareOnly) {
+    // Get the latest firmware version from configuration
+    latestFirmware = await getLatestFirmwareVersion(metric);
+    
+    console.log(`[AdminGlobalSummary] 📋 Firmware Config Check:`);
+    console.log(`[AdminGlobalSummary]    - Configured latest firmware: ${latestFirmware || 'NOT SET'}`);
+    
+    if (latestFirmware) {
+      console.log(`[AdminGlobalSummary] 🔍 Filtering by latest firmware: "${latestFirmware}"`);
+      
+      // Find sessions where luna device has the latest firmware version
+      const allSessions = await Session.find({
+        isValid: true,
+        metric,
+      });
+      
+      console.log(`[AdminGlobalSummary] 📊 Total valid sessions for ${metric}: ${allSessions.length}`);
+      
+      // Show firmware versions of all sessions for debugging
+      if (allSessions.length > 0) {
+        console.log(`[AdminGlobalSummary] 📝 Session firmware versions:`);
+        allSessions.forEach((s) => {
+          const lunaDevice = s.devices.find((d: any) => d.deviceType === "luna");
+          const fw = lunaDevice?.firmwareVersion;
+          const matches = fw === latestFirmware;
+          console.log(`[AdminGlobalSummary]    - Session ${s._id}: firmware="${fw}" ${matches ? '✅ MATCH' : '❌ NO MATCH'}`);
+        });
+      }
+      
+      // Filter sessions by firmware version
+      sessions = allSessions.filter((session) => {
+        const lunaDevice = session.devices.find((d: any) => d.deviceType === "luna");
+        return lunaDevice?.firmwareVersion === latestFirmware;
+      });
+      
+      console.log(`[AdminGlobalSummary] ✅ Sessions matching firmware "${latestFirmware}": ${sessions.length}`);
+    } else {
+      console.log(`[AdminGlobalSummary] ⚠️  No latest firmware configured for ${metric}, using all sessions`);
+      sessions = await Session.find({ isValid: true, metric });
+      console.log(`[AdminGlobalSummary] 📊 Total sessions (no filter): ${sessions.length}`);
+    }
+  } else {
+    // Get all valid sessions for this metric
+    console.log(`[AdminGlobalSummary] 🔓 Firmware filtering disabled, fetching all sessions`);
+    sessions = await Session.find({ isValid: true, metric });
+    console.log(`[AdminGlobalSummary] 📊 Total sessions: ${sessions.length}`);
+  }
 
   if (sessions.length === 0) {
-    console.log('⚠️ No valid sessions found');
+    console.log(`[AdminGlobalSummary] ⚠️  ========================================`);
+    console.log(`[AdminGlobalSummary] ⚠️  NO VALID SESSIONS FOUND!`);
+    console.log(`[AdminGlobalSummary] ⚠️  Returning null - no AdminGlobalSummary created`);
+    console.log(`[AdminGlobalSummary] ⚠️  ========================================`);
     return null;
   }
+  
+  console.log(`[AdminGlobalSummary] ✅ Proceeding with ${sessions.length} sessions`);
 
   // Count unique users
   const uniqueUserIds = new Set(sessions.map(s => s.userId.toString()));
@@ -94,19 +155,22 @@ export async function updateAdminGlobalSummary(metric: 'HR' | 'SPO2' | 'Sleep' |
         avgDeepPercent: avgTotalSleep > 0 ? (deepSum / count / avgTotalSleep) * 100 : undefined,
         avgRemPercent: avgTotalSleep > 0 ? (remSum / count / avgTotalSleep) * 100 : undefined,
       },
+      latestFirmwareVersion: latestFirmware || undefined,
       computedAt: new Date(),
     };
 
+    console.log(`[AdminGlobalSummary] 💾 Saving Sleep summary to database...`);
+    console.log(`[AdminGlobalSummary]    - Deleting old document for metric: ${metric}`);
     await AdminGlobalSummary.deleteOne({ metric });
+    console.log(`[AdminGlobalSummary]    - Creating new document...`);
     const result = await AdminGlobalSummary.create(summary);
-
-    console.log('✅ AdminGlobalSummary (Sleep) updated:', {
-      totalUsers: summary.totalUsers,
-      totalSessions: summary.totalSessions,
-      avgAccuracyPercent: summary.sleepStats.avgAccuracyPercent?.toFixed(2),
-      avgKappa: summary.sleepStats.avgKappa?.toFixed(3),
-      avgTotalSleepSec: summary.sleepStats.avgTotalSleepSec?.toFixed(0),
-    });
+    console.log(`[AdminGlobalSummary] ✅ AdminGlobalSummary (Sleep) SAVED to database!`);
+    console.log(`[AdminGlobalSummary]    - Document ID: ${result._id}`);
+    console.log(`[AdminGlobalSummary]    - Total Users: ${summary.totalUsers}`);
+    console.log(`[AdminGlobalSummary]    - Total Sessions: ${summary.totalSessions}`);
+    console.log(`[AdminGlobalSummary]    - Firmware: ${summary.latestFirmwareVersion || 'NONE'}`);
+    console.log(`[AdminGlobalSummary]    - Avg Accuracy: ${summary.sleepStats.avgAccuracyPercent?.toFixed(2)}%`);
+    console.log(`[AdminGlobalSummary] ========================================\n`);
 
     return result;
   }
@@ -188,24 +252,26 @@ export async function updateAdminGlobalSummary(metric: 'HR' | 'SPO2' | 'Sleep' |
       avgCoveragePercent: countCoverage > 0 ? totalCoverage / countCoverage : undefined,
       avgBias: countBias > 0 ? totalBias / countBias : undefined,
     },
+    latestFirmwareVersion: latestFirmware || undefined,
     computedAt: new Date(),
   };
 
   // Delete existing for this metric and create new
+  console.log(`[AdminGlobalSummary] 💾 Saving HR/SPO2 summary to database...`);
+  console.log(`[AdminGlobalSummary]    - Deleting old document for metric: ${metric}`);
   await AdminGlobalSummary.deleteOne({ metric });
+  console.log(`[AdminGlobalSummary]    - Creating new document...`);
   const result = await AdminGlobalSummary.create(summary);
-
-  console.log('✅ AdminGlobalSummary updated:', {
-    totalUsers: summary.totalUsers,
-    totalSessions: summary.totalSessions,
-    totalReadings: summary.totalReadings,
-    avgMAE: summary.lunaStats.avgMAE?.toFixed(2),
-    avgRMSE: summary.lunaStats.avgRMSE?.toFixed(2),
-    avgMAPE: summary.lunaStats.avgMAPE?.toFixed(2),
-    avgPearson: summary.lunaStats.avgPearson?.toFixed(3),
-    avgCoveragePercent: summary.lunaStats.avgCoveragePercent?.toFixed(1),
-    avgBias: summary.lunaStats.avgBias?.toFixed(2),
-  });
+  console.log(`[AdminGlobalSummary] ✅ AdminGlobalSummary (${metric}) SAVED to database!`);
+  console.log(`[AdminGlobalSummary]    - Document ID: ${result._id}`);
+  console.log(`[AdminGlobalSummary]    - Total Users: ${summary.totalUsers}`);
+  console.log(`[AdminGlobalSummary]    - Total Sessions: ${summary.totalSessions}`);
+  console.log(`[AdminGlobalSummary]    - Total Readings: ${summary.totalReadings}`);
+  console.log(`[AdminGlobalSummary]    - Firmware: ${summary.latestFirmwareVersion || 'NONE'}`);
+  console.log(`[AdminGlobalSummary]    - Avg MAE: ${summary.lunaStats.avgMAE?.toFixed(2)}`);
+  console.log(`[AdminGlobalSummary]    - Avg RMSE: ${summary.lunaStats.avgRMSE?.toFixed(2)}`);
+  console.log(`[AdminGlobalSummary]    - Avg Pearson: ${summary.lunaStats.avgPearson?.toFixed(3)}`);
+  console.log(`[AdminGlobalSummary] ========================================\n`);
 
   return result;
 }

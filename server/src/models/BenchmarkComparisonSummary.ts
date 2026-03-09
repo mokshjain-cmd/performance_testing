@@ -22,6 +22,23 @@ export interface IBenchmarkComparisonSummary extends Document {
     avgRemBiasSec?: number;
   };
 
+  activityStats?: {
+    steps?: {
+      avgAccuracy?: number;
+      avgMAE?: number;
+      avgMAPE?: number;
+      avgBias?: number;
+    };
+    distance?: {
+      avgAccuracy?: number;
+      avgMAPE?: number;
+    };
+    calories?: {
+      avgAccuracy?: number;
+      avgMAPE?: number;
+    };
+  };
+
   lastUpdated: Date;
 }
 
@@ -51,6 +68,23 @@ const BenchmarkComparisonSummarySchema =
       avgTotalSleepBiasSec: Number,
       avgDeepBiasSec: Number,
       avgRemBiasSec: Number,
+    },
+
+    activityStats: {
+      steps: {
+        avgAccuracy: Number,
+        avgMAE: Number,
+        avgMAPE: Number,
+        avgBias: Number,
+      },
+      distance: {
+        avgAccuracy: Number,
+        avgMAPE: Number,
+      },
+      calories: {
+        avgAccuracy: Number,
+        avgMAPE: Number,
+      },
     },
 
     lastUpdated: { type: Date, default: Date.now },

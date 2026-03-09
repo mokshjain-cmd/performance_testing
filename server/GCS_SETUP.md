@@ -287,19 +287,26 @@ gsutil iam ch -d allUsers:objectViewer gs://performance-testing-device-logs/
 # Enable uniform bucket-level access
 gsutil uniformbucketlevelaccess set on gs://performance-testing-device-logs/
 
-# Set CORS for frontend access (if needed)
+# Set CORS for frontend access
 cat > cors-config.json <<EOF
 [
   {
-    "origin": ["https://yourfrontend.com"],
+    "origin": [
+      "https://performance-testing-frontend-326803110924.asia-south2.run.app",
+      "http://localhost:5173",
+      "http://localhost:3000"
+    ],
     "method": ["GET", "HEAD"],
-    "responseHeader": ["Content-Type"],
+    "responseHeader": ["Content-Type", "Content-Length", "Content-Disposition"],
     "maxAgeSeconds": 3600
   }
 ]
 EOF
 
-gsutil cors set cors-config.json gs://performance-testing-device-logs/
+gsutil cors set cors-config.json gs://benchmarkperformancebucket-1
+
+# Verify CORS configuration
+gsutil cors get gs://benchmarkperformancebucket-1
 ```
 
 ### 3. Signed URL Expiration

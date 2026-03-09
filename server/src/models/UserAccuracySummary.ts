@@ -19,6 +19,28 @@ export interface IUserAccuracySummary extends Document {
     avgSleepEfficiency?: number;
     avgAgreementPercent?: number;
   };
+  activityOverview?: {
+    steps?: {
+      avgAccuracy?: number;
+      avgMAE?: number;
+      avgMAPE?: number;
+      avgBias?: number;
+    };
+    distance?: {
+      avgAccuracy?: number;
+      avgMAPE?: number;
+    };
+    calories?: {
+      avgAccuracy?: number;
+      avgMAPE?: number;
+    };
+    activeCalories?: {
+      avgAccuracy?: number;
+    };
+    basalCalories?: {
+      avgAccuracy?: number;
+    };
+  };
   bestSession?: {
     sessionId: Types.ObjectId;
     activityType: string;
@@ -72,6 +94,28 @@ const UserAccuracySummarySchema = new Schema<IUserAccuracySummary>({
     avgAwakeSec: Number,
     avgSleepEfficiency: Number,
     avgAgreementPercent: Number,
+  },
+  activityOverview: {
+    steps: {
+      avgAccuracy: Number,
+      avgMAE: Number,
+      avgMAPE: Number,
+      avgBias: Number,
+    },
+    distance: {
+      avgAccuracy: Number,
+      avgMAPE: Number,
+    },
+    calories: {
+      avgAccuracy: Number,
+      avgMAPE: Number,
+    },
+    activeCalories: {
+      avgAccuracy: Number,
+    },
+    basalCalories: {
+      avgAccuracy: Number,
+    },
   },
   bestSession: {
     sessionId: { type: Schema.Types.ObjectId, ref: "Session" },

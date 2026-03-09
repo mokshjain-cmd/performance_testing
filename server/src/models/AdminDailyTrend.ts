@@ -20,10 +20,21 @@ export interface IAdminDailyTrend extends Document {
     avgTotalSleepBiasSec?: number;
   };
 
+  activityStats?: {
+    stepsAccuracy?: number;
+    distanceAccuracy?: number;
+    calorieAccuracy?: number;
+    stepMAE?: number;
+    distanceMAE?: number;
+  };
+
 //   invalidStats: {
 //     invalidSessions: number;
 //     invalidReadings: number;
 //   };
+
+  // Firmware version used for this aggregation (if filtered)
+  latestFirmwareVersion?: string;
 
   computedAt: Date;
 }
@@ -53,10 +64,20 @@ const AdminDailyTrendSchema = new Schema<IAdminDailyTrend>({
     avgTotalSleepBiasSec: Number,
   },
 
+  activityStats: {
+    stepsAccuracy: Number,
+    distanceAccuracy: Number,
+    calorieAccuracy: Number,
+    stepMAE: Number,
+    distanceMAE: Number,
+  },
+
 //   invalidStats: {
 //     invalidSessions: Number,
 //     invalidReadings: Number,
 //   },
+
+  latestFirmwareVersion: String,
 
   computedAt: { type: Date, default: Date.now },
 });

@@ -14,6 +14,7 @@ interface GlobalSummary {
   totalSessions: number;
   totalReadings: number;
   computedAt: string;
+  latestFirmwareVersion?: string;
   lunaStats: {
     avgMAE: number;
     avgRMSE: number;
@@ -158,7 +159,11 @@ const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({ metric, subTab }) =
                 <p className="text-3xl font-bold bg-gradient-to-r from-purple-500 to-purple-600 bg-clip-text text-transparent">
                   {globalSummary?.totalSessions || 0}
                 </p>
-                <p className="text-xs text-gray-500">Across all users</p>
+                <p className="text-xs text-gray-500">
+                  {globalSummary?.latestFirmwareVersion 
+                    ? `Firmware: ${globalSummary.latestFirmwareVersion}` 
+                    : 'Across all users'}
+                </p>
               </div>
             </Card>
 

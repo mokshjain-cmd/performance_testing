@@ -34,3 +34,7 @@ export { LunaSleepParser } from './sleep/LunaSleepParser';
 export { LunaSleepParserIOS } from './sleep/LunaSleepParserIOS';
 export { AppleSleepParser } from './sleep/AppleSleepParser';
 export { AppleHealthSleepParser } from './sleep/AppleHealthSleepParser';
+
+// Export activity parsers
+export { LunaActivityParser } from './activity/LunaActivityParser';
+export { AppleHealthActivityParser } from './activity/AppleHealthActivityParser';

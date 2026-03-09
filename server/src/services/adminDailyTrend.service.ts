@@ -1,14 +1,20 @@
 import Session from '../models/Session';
 import SessionAnalysis from '../models/SessionAnalysis';
 import AdminDailyTrend from '../models/AdminDailyTrend';
+import { getLatestFirmwareVersion } from '../controllers/firmwareConfig.controller';
 
 /**
  * Update admin daily trend for a specific date
  * Aggregates Luna performance stats for all sessions on that date
  * @param date - The date to update (will be normalized to midnight UTC)
  * @param metric - The metric to calculate trend for (HR, SPO2, etc.)
+ * @param latestFirmwareOnly - Whether to filter by latest firmware version only (default: true)
  */
-export async function updateAdminDailyTrend(date: Date, metric: 'HR' | 'SPO2' | 'Sleep' | 'Calories' | 'Steps' = 'HR') {
+export async function updateAdminDailyTrend(
+  date: Date, 
+  metric: 'HR' | 'SPO2' | 'Sleep' | 'Calories' | 'Steps' = 'HR',
+  latestFirmwareOnly: boolean = true
+) {
   // Normalize to midnight UTC
   const dateOnly = new Date(Date.UTC(
     date.getUTCFullYear(),
@@ -22,15 +28,54 @@ export async function updateAdminDailyTrend(date: Date, metric: 'HR' | 'SPO2' | 
 
   console.log(`\n🔄 Updating AdminDailyTrend for date: ${dateOnly.toISOString().split('T')[0]}, metric: ${metric}`);
 
-  // Get all sessions that started on this date with this metric
-  const sessions = await Session.find({
-    startTime: {
-      $gte: dateOnly,
-      $lt: nextDay,
-    },
-    isValid: true,
-    metric,
-  });
+  // Get sessions for this date and metric
+  let sessions;
+  let latestFirmware: string | null = null;
+
+  if (latestFirmwareOnly) {
+    // Get the latest firmware version from configuration
+    latestFirmware = await getLatestFirmwareVersion(metric);
+    
+    if (latestFirmware) {
+      console.log(`[AdminDailyTrend] Filtering by latest firmware: ${latestFirmware}`);
+      
+      // Find all sessions for this date/metric first
+      const allSessions = await Session.find({
+        startTime: {
+          $gte: dateOnly,
+          $lt: nextDay,
+        },
+        isValid: true,
+        metric,
+      });
+      
+      // Filter by firmware version
+      sessions = allSessions.filter((session) => {
+        const lunaDevice = session.devices.find((d: any) => d.deviceType === "luna");
+        return lunaDevice?.firmwareVersion === latestFirmware;
+      });
+    } else {
+      console.log(`[AdminDailyTrend] No latest firmware configured for ${metric}, using all sessions`);
+      sessions = await Session.find({
+        startTime: {
+          $gte: dateOnly,
+          $lt: nextDay,
+        },
+        isValid: true,
+        metric,
+      });
+    }
+  } else {
+    // Get all sessions for this date/metric
+    sessions = await Session.find({
+      startTime: {
+        $gte: dateOnly,
+        $lt: nextDay,
+      },
+      isValid: true,
+      metric,
+    });
+  }
 
   if (sessions.length === 0) {
     console.log(`⚠️ No sessions found for date: ${dateOnly.toISOString().split('T')[0]}, metric: ${metric}`);
@@ -86,6 +131,7 @@ export async function updateAdminDailyTrend(date: Date, metric: 'HR' | 'SPO2' | 
         avgKappa: totalKappa / countComparison,
         avgTotalSleepBiasSec: totalSleepBias / countComparison,
       } : undefined,
+      latestFirmwareVersion: latestFirmware || undefined,
       computedAt: new Date(),
     };
 
@@ -168,6 +214,7 @@ export async function updateAdminDailyTrend(date: Date, metric: 'HR' | 'SPO2' | 
       avgPearson: countPearson > 0 ? totalPearson / countPearson : undefined,
       avgCoveragePercent: countCoverage > 0 ? totalCoverage / countCoverage : undefined,
     },
+    latestFirmwareVersion: latestFirmware || undefined,
     computedAt: new Date(),
   };
 

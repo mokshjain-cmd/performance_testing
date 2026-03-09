@@ -23,6 +23,14 @@ export interface IFirmwarePerformance extends Document {
     avgDeepBiasSec?: number;
     avgRemBiasSec?: number;
   };
+  activityStats?: {
+    stepsAccuracy?: number;
+    distanceAccuracy?: number;
+    calorieAccuracy?: number;
+    avgStepMAPE?: number;
+    avgStepMAE?: number;
+    totalSessions?: number;
+  };
   computedAt: Date;
 }
 
@@ -55,6 +63,14 @@ const FirmwarePerformanceSchema = new Schema<IFirmwarePerformance>({
     avgTotalSleepBiasSec: Number,
     avgDeepBiasSec: Number,
     avgRemBiasSec: Number,
+  },
+  activityStats: {
+    stepsAccuracy: Number,
+    distanceAccuracy: Number,
+    calorieAccuracy: Number,
+    avgStepMAPE: Number,
+    avgStepMAE: Number,
+    totalSessions: Number,
   },
   computedAt: { type: Date, default: Date.now },
 });

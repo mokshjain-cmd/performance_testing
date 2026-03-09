@@ -51,6 +51,13 @@ export async function ingestSessionFiles({
       }
     }
     
+    // Get session to access device firmware versions
+    const session = await Session.findById(sessionId);
+    if (!session) {
+      console.error('Session not found:', sessionId);
+      return;
+    }
+
     let anyInserted = false;
     for (const file of files) {
       const deviceType = file.fieldname;
@@ -60,11 +67,14 @@ export async function ingestSessionFiles({
       const device = await Device.findOne({ deviceType });
       if (!device) continue;
       
+      // Get firmware version from session's devices array, not from Device lookup
+      const sessionDevice = session.devices.find((d: any) => d.deviceType === deviceType);
+      const firmwareVersion = sessionDevice?.firmwareVersion || device.firmwareVersion;
 
       const meta = {
         sessionId: sessionId,
         userId: userId,
-        firmwareVersion: device.firmwareVersion,
+        firmwareVersion: firmwareVersion,
         bandPosition: bandPosition,
         activityType: activityType,
       };
@@ -119,16 +129,20 @@ export async function ingestSessionFiles({
         
         // Update admin daily trend for session date
         if (startTime) {
-          await updateAdminDailyTrend(startTime, metric);
+          await updateAdminDailyTrend(startTime, metric, true);
           console.log('Admin daily trend updated for session date, metric:', metric);
         }
         
         // Update benchmark comparison summaries for devices in this session
         await updateBenchmarkComparisonSummariesForSession(sessionId);
         
-        // Update admin global summary
-        await updateAdminGlobalSummary(metric);
-        console.log('Admin global summary updated for metric:', metric);
+        // Update admin global summary (filtered by latest firmware)
+        console.log(`\n📊 ========================================`);
+        console.log(`📊 Calling updateAdminGlobalSummary for metric: ${metric}`);
+        console.log(`📊 ========================================`);
+        await updateAdminGlobalSummary(metric, true);
+        console.log(`📊 Finished updateAdminGlobalSummary call`);
+        console.log(`📊 ========================================\n`);
         
       } catch (err) {
         console.error('❌ Session analysis failed:', err);

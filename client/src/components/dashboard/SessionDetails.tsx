@@ -9,27 +9,27 @@ interface Props {
 
 const SessionDetails: React.FC<Props> = ({ session, actionButton }) => {
   /**
-   * Downloads a file programmatically to mask the GCS URL
+   * Downloads a file by opening the signed URL in a new window
+   * Bypasses CORS by using browser navigation instead of fetch
    * @param url - The GCS signed URL
-   * @param filename - The desired filename for download
+   * @param filename - The desired filename (not used with this method)
    */
   const handleDownload = async (url: string, filename: string) => {
     try {
-      const response = await fetch(url);
-      if (!response.ok) throw new Error('Download failed');
-      
-      const blob = await response.blob();
-      const blobUrl = window.URL.createObjectURL(blob);
-      
+      // Open the signed URL in a new window/tab
+      // Browser will handle the download naturally without CORS issues
       const link = document.createElement('a');
-      link.href = blobUrl;
+      link.href = url;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      
+      // For better UX, set download attribute if supported
+      // (works for same-origin or CORS-enabled resources)
       link.download = filename;
+      
       document.body.appendChild(link);
       link.click();
-      
-      // Cleanup
       document.body.removeChild(link);
-      window.URL.revokeObjectURL(blobUrl);
     } catch (error) {
       console.error('Download error:', error);
       alert('Failed to download file. Please try again.');
@@ -140,6 +140,19 @@ const SessionDetails: React.FC<Props> = ({ session, actionButton }) => {
             ))}
           </div>
         </div>
+
+        {/* Luna Firmware Version */}
+        {(() => {
+          const lunaDevice = session.devices.find(d => d.deviceType === 'luna');
+          return lunaDevice?.firmwareVersion ? (
+            <div className="flex flex-col gap-0.5">
+              <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Luna Firmware</span>
+              <span className="text-sm text-gray-800 bg-blue-50 px-2 py-1 rounded border border-blue-200 font-mono">
+                {lunaDevice.firmwareVersion}
+              </span>
+            </div>
+          ) : null;
+        })()}
 
         {/* Benchmark */}
         <div className="flex flex-col gap-0.5">

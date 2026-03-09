@@ -80,6 +80,43 @@ export interface ISessionAnalysis extends Document {
       REM: { AWAKE: number; LIGHT: number; DEEP: number; REM: number };
     };
   };
+  activityStats?: {
+    steps?: {
+      lunaTotal?: number;
+      benchmarkTotal?: number;
+      error?: number;
+      accuracyPercent?: number;
+      mae?: number;
+      mape?: number;
+      rmse?: number;
+      bias?: number;
+      ratio?: number;
+    };
+    distance?: {
+      lunaMeters?: number;
+      benchmarkMeters?: number;
+      errorMeters?: number;
+      accuracyPercent?: number;
+      mape?: number;
+    };
+    calories?: {
+      lunaTotal?: number;
+      benchmarkTotal?: number;
+      error?: number;
+      accuracyPercent?: number;
+      mape?: number;
+    };
+    activeCalories?: {
+      lunaActive?: number;
+      benchmarkActive?: number;
+      accuracyPercent?: number;
+    };
+    basalCalories?: {
+      lunaBasal?: number;
+      benchmarkBasal?: number;
+      accuracyPercent?: number;
+    };
+  };
   isValid: boolean;
   computedAt: Date;
 }
@@ -165,6 +202,47 @@ const SleepStatsSchema = new Schema(
   { _id: false }
 );
 
+const ActivityStatsSchema = new Schema(
+  {
+    steps: {
+      lunaTotal: Number,
+      benchmarkTotal: Number,
+      error: Number,
+      accuracyPercent: Number,
+      mae: Number,
+      mape: Number,
+      rmse: Number,
+      bias: Number,
+      ratio: Number,
+    },
+    distance: {
+      lunaMeters: Number,
+      benchmarkMeters: Number,
+      errorMeters: Number,
+      accuracyPercent: Number,
+      mape: Number,
+    },
+    calories: {
+      lunaTotal: Number,
+      benchmarkTotal: Number,
+      error: Number,
+      accuracyPercent: Number,
+      mape: Number,
+    },
+    activeCalories: {
+      lunaActive: Number,
+      benchmarkActive: Number,
+      accuracyPercent: Number,
+    },
+    basalCalories: {
+      lunaBasal: Number,
+      benchmarkBasal: Number,
+      accuracyPercent: Number,
+    },
+  },
+  { _id: false }
+);
+
 const SessionAnalysisSchema = new Schema<ISessionAnalysis>({
   sessionId: { type: Schema.Types.ObjectId, ref: "Session", index: true },
   userId: { type: Schema.Types.ObjectId, ref: "User", index: true },
@@ -181,6 +259,7 @@ const SessionAnalysisSchema = new Schema<ISessionAnalysis>({
   pairwiseComparisons: [PairwiseSchema],
   lunaAccuracyPercent: Number,
   sleepStats: SleepStatsSchema,
+  activityStats: ActivityStatsSchema,
   isValid: { type: Boolean, default: true },
   computedAt: { type: Date, default: Date.now },
 });

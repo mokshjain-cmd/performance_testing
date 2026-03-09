@@ -37,6 +37,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
       }
     } else if (route === 'create-session') {
       navigate('/session/new');
+    } else if (route === 'admin/firmware-config') {
+      navigate('/admin/firmware-config');
     } else {
       navigate('/');
     }

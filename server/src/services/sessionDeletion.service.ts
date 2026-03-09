@@ -85,7 +85,7 @@ export async function deleteSession(sessionId: Types.ObjectId | string) {
 
   // 7. Recalculate admin daily trend for session date
   if (startTime) {
-    await updateAdminDailyTrend(startTime, metric);
+    await updateAdminDailyTrend(startTime, metric, true);
     console.log(`✅ Recalculated admin daily trend for session date metric ${metric}`);
   }
 
@@ -95,8 +95,8 @@ export async function deleteSession(sessionId: Types.ObjectId | string) {
     console.log(`✅ Recalculated benchmark comparison for ${deviceType} metric ${metric}`);
   }
 
-  // 9. Recalculate admin global summary
-  await updateAdminGlobalSummary(metric);
+  // 9. Recalculate admin global summary (filtered by latest firmware)
+  await updateAdminGlobalSummary(metric, true);
   console.log(`✅ Recalculated admin global summary for metric ${metric}`);
 
   return {

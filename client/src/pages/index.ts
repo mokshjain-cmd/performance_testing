@@ -7,3 +7,5 @@ export { SleepOverviewPage } from './SleepOverviewPage';
 export { SleepSessionPage } from './SleepSessionPage';
 export { AdminSleepDashboardPage } from './AdminSleepDashboardPage';
 export { AdminSleepSessionPage } from './AdminSleepSessionPage';
+export { ActivityOverviewPage } from './ActivityOverviewPage';
+export { AdminActivityDashboardPage } from './AdminActivityDashboardPage';

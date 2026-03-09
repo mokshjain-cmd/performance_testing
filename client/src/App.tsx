@@ -8,9 +8,12 @@ import {
   SleepOverviewPage,
   SleepSessionPage,
   AdminSleepDashboardPage,
-  AdminSleepSessionPage
+  AdminSleepSessionPage,
+  ActivityOverviewPage,
+  AdminActivityDashboardPage
 } from './pages';
 import SignUpPage from './pages/SignUpPage';
+import FirmwareConfigPage from './pages/FirmwareConfigPage';
 import { ProtectedRoute, AdminRoute, TesterRoute } from './components/common';
 
 function App() {
@@ -42,6 +45,20 @@ function App() {
           </AdminRoute>
         } />
         
+        {/* Admin Activity Dashboard - Only accessible by admins */}
+        <Route path="/admin/activity" element={
+          <AdminRoute>
+            <AdminActivityDashboardPage />
+          </AdminRoute>
+        } />
+        
+        {/* Admin Firmware Configuration - Only accessible by admins */}
+        <Route path="/admin/firmware-config" element={
+          <AdminRoute>
+            <FirmwareConfigPage />
+          </AdminRoute>
+        } />
+        
         {/* Tester Dashboard - Only accessible by testers */}
         <Route path="/dashboard" element={
           <TesterRoute>
@@ -60,6 +77,13 @@ function App() {
         <Route path="/sleep/session/:sessionId" element={
           <ProtectedRoute>
             <SleepSessionPage />
+          </ProtectedRoute>
+        } />
+        
+        {/* User Activity Overview - Available to authenticated users */}
+        <Route path="/activity" element={
+          <ProtectedRoute>
+            <ActivityOverviewPage />
           </ProtectedRoute>
         } />
         

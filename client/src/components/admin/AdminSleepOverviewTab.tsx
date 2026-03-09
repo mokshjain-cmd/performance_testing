@@ -78,8 +78,10 @@ const AdminSleepOverviewTab: React.FC<AdminSleepOverviewTabProps> = ({ subTab })
   useEffect(() => {
     setLoading(true);
     
-    // Fetch global summary
-    apiClient.get('/sleep/admin/global-summary')
+    // Fetch global summary with latest firmware filter enabled
+    apiClient.get('/sleep/admin/global-summary', {
+      params: { latestFirmwareOnly: true }
+    })
       .then(res => {
         setGlobalSummary(res.data.data);
       })
@@ -154,7 +156,11 @@ const AdminSleepOverviewTab: React.FC<AdminSleepOverviewTabProps> = ({ subTab })
             <p className="text-3xl font-bold bg-gradient-to-r from-green-500 to-green-600 bg-clip-text text-transparent">
               {globalSummary?.totalSessions || 0}
             </p>
-            <p className="text-xs text-gray-500">Sleep sessions analyzed</p>
+            <p className="text-xs text-gray-500">
+              {globalSummary?.latestFirmwareVersion 
+                ? `Firmware: ${globalSummary.latestFirmwareVersion}` 
+                : 'Sleep sessions analyzed'}
+            </p>
           </div>
         </Card>
 

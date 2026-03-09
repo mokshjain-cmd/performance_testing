@@ -3,6 +3,7 @@ import Session from "../../models/Session";
 import SessionAnalysis from "../../models/SessionAnalysis";
 import SleepStageEpoch from "../../models/SleepStageEpoch";
 import { SleepAnalysisService } from "./SleepAnalysisService";
+import { getLatestFirmwareVersion } from "../../controllers/firmwareConfig.controller";
 
 type SleepStage = "AWAKE" | "LIGHT" | "DEEP" | "REM";
 
@@ -187,20 +188,40 @@ export class AdminSleepSummaryService {
     latestFirmwareOnly: boolean = false
   ): Promise<IAdminGlobalSummary> {
     try {
-      let firmwareFilter = {};
+      let sessions;
       
       if (latestFirmwareOnly) {
-        // TODO: Determine latest firmware version
-        // For now, we'll skip this filter
-        console.log("[AdminSleepSummaryService] Latest firmware filter not yet implemented");
+        // Get the latest firmware version from configuration
+        const latestFirmware = await getLatestFirmwareVersion("Sleep");
+        
+        if (latestFirmware) {
+          console.log(`[AdminSleepSummaryService] Filtering by latest firmware: ${latestFirmware}`);
+          
+          // Find sessions where luna device has the latest firmware version
+          const allSessions = await Session.find({
+            metric: "Sleep",
+            isValid: true,
+          });
+          
+          // Filter sessions by firmware version
+          sessions = allSessions.filter((session) => {
+            const lunaDevice = session.devices.find((d: any) => d.deviceType === "luna");
+            return lunaDevice?.firmwareVersion === latestFirmware;
+          });
+        } else {
+          console.log("[AdminSleepSummaryService] No latest firmware configured, using all sessions");
+          sessions = await Session.find({
+            metric: "Sleep",
+            isValid: true,
+          });
+        }
+      } else {
+        // Fetch all valid sleep sessions
+        sessions = await Session.find({
+          metric: "Sleep",
+          isValid: true,
+        });
       }
-
-      // Fetch all valid sleep sessions
-      const sessions = await Session.find({
-        metric: "Sleep",
-        isValid: true,
-        ...firmwareFilter,
-      });
 
       const sessionIds = sessions.map((s) => s._id);
       
