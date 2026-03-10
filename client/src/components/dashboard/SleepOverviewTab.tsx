@@ -191,7 +191,7 @@ const SleepOverviewTab: React.FC<SleepOverviewTabProps> = () => {
                 </div>
                 <p className="text-xs">
                   {overview.comparison.avgAccuracyPercent >= 80 
-                    ? '✓ Excellent - Luna closely matches benchmark' 
+                    ? '✓ Excellent - Falcon closely matches benchmark' 
                     : overview.comparison.avgAccuracyPercent >= 70 
                     ? '△ Good - Minor differences expected' 
                     : '⚠ Needs review - Consider recalibration'}
@@ -202,7 +202,7 @@ const SleepOverviewTab: React.FC<SleepOverviewTabProps> = () => {
 
           {/* Bias Metrics - Enhanced */}
           <div className="mb-4">
-            <h4 className="text-sm font-semibold text-gray-700 mb-3">Average Differences (Luna vs Benchmark)</h4>
+            <h4 className="text-sm font-semibold text-gray-700 mb-3">Average Differences (Falcon vs Benchmark)</h4>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
@@ -223,7 +223,7 @@ const SleepOverviewTab: React.FC<SleepOverviewTabProps> = () => {
                   </span>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
-                  {overview.comparison.avgTotalSleepDiffSec > 0 ? 'Luna detects more sleep' : 'Luna detects less sleep'}
+                  {overview.comparison.avgTotalSleepDiffSec > 0 ? 'Falcon detects more sleep' : 'Falcon detects less sleep'}
                 </p>
               </div>
             </div>
@@ -245,7 +245,7 @@ const SleepOverviewTab: React.FC<SleepOverviewTabProps> = () => {
                   </span>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
-                  {overview.comparison.avgDeepDiffSec > 0 ? 'Luna detects more' : 'Luna detects less'}
+                  {overview.comparison.avgDeepDiffSec > 0 ? 'Falcon detects more' : 'Falcon detects less'}
                 </p>
               </div>
             </div>
@@ -267,7 +267,7 @@ const SleepOverviewTab: React.FC<SleepOverviewTabProps> = () => {
                   </span>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
-                  {overview.comparison.avgRemDiffSec > 0 ? 'Luna detects more' : 'Luna detects less'}
+                  {overview.comparison.avgRemDiffSec > 0 ? 'Falcon detects more' : 'Falcon detects less'}
                 </p>
               </div>
             </div>

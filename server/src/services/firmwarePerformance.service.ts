@@ -9,7 +9,7 @@ import { Types } from 'mongoose';
  * @param firmwareVersion - The firmware version to update
  * @param metric - The metric to calculate performance for (HR, SPO2, etc.)
  */
-export async function updateFirmwarePerformanceForLuna(firmwareVersion: string, metric: 'HR' | 'SPO2' | 'Sleep' | 'Calories' | 'Steps' = 'HR') {
+export async function updateFirmwarePerformanceForLuna(firmwareVersion: string, metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity' = 'HR') {
   // Find all sessions and analyses for Luna with this firmware and metric
   const sessions = await Session.find({ 'devices.deviceType': 'luna', 'devices.firmwareVersion': firmwareVersion, metric }).lean();
   if (!sessions.length) return;

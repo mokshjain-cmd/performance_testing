@@ -43,7 +43,7 @@ export interface ISessionAnalysis extends Document {
   sessionId: Types.ObjectId;
   userId: Types.ObjectId;
   activityType: string;
-  metric: 'HR' | 'SPO2' | 'Sleep' | 'Calories' | 'Steps';
+  metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity';
   startTime: Date;
   endTime: Date;
   deviceStats: IDeviceStats[];
@@ -98,6 +98,8 @@ export interface ISessionAnalysis extends Document {
       errorMeters?: number;
       accuracyPercent?: number;
       mape?: number;
+      bias?: number;
+      mae?: number;
     };
     calories?: {
       lunaTotal?: number;
@@ -105,16 +107,24 @@ export interface ISessionAnalysis extends Document {
       error?: number;
       accuracyPercent?: number;
       mape?: number;
+      bias?: number;
+      mae?: number;
     };
     activeCalories?: {
       lunaActive?: number;
       benchmarkActive?: number;
       accuracyPercent?: number;
+      bias?: number;
+      mae?: number;
+      mape?: number;
     };
     basalCalories?: {
       lunaBasal?: number;
       benchmarkBasal?: number;
       accuracyPercent?: number;
+      bias?: number;
+      mae?: number;
+      mape?: number;
     };
   };
   isValid: boolean;
@@ -221,6 +231,8 @@ const ActivityStatsSchema = new Schema(
       errorMeters: Number,
       accuracyPercent: Number,
       mape: Number,
+      bias: Number,
+      mae: Number,
     },
     calories: {
       lunaTotal: Number,
@@ -228,16 +240,24 @@ const ActivityStatsSchema = new Schema(
       error: Number,
       accuracyPercent: Number,
       mape: Number,
+      bias: Number,
+      mae: Number,
     },
     activeCalories: {
       lunaActive: Number,
       benchmarkActive: Number,
       accuracyPercent: Number,
+      bias: Number,
+      mae: Number,
+      mape: Number,
     },
     basalCalories: {
       lunaBasal: Number,
       benchmarkBasal: Number,
       accuracyPercent: Number,
+      bias: Number,
+      mae: Number,
+      mape: Number,
     },
   },
   { _id: false }
@@ -249,7 +269,7 @@ const SessionAnalysisSchema = new Schema<ISessionAnalysis>({
   activityType: String,
   metric: { 
     type: String, 
-    enum: ['HR', 'SPO2', 'Sleep', 'Calories', 'Steps'],
+    enum: ['HR', 'SPO2', 'Sleep', 'Activity'],
     required: true,
     index: true 
   },

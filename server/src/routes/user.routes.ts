@@ -15,11 +15,11 @@ const router = Router();
 router.get('/by-email', requireRole('admin'),getUserByEmail);
 
 // GET /api/users/summary - Get current user's summary (from JWT)
-// Optional query param: ?metric=HR|SPO2|Sleep|Calories|Steps (defaults to HR)
+// Optional query param: ?metric=HR|SPO2|Sleep|Activity (defaults to HR)
 router.get('/summary', getUserOverallSummary);
 
 // GET /api/users/summary/:userId - Admin and Tester can view any user's summary
-// Optional query param: ?metric=HR|SPO2|Sleep|Calories|Steps (defaults to HR)
+// Optional query param: ?metric=HR|SPO2|Sleep|Activity (defaults to HR)
 router.get('/summary/:userId', requireRole(['admin', 'tester']), getUserOverallSummary);
 
 router.get('/',requireRole('admin'),getAllUsers);

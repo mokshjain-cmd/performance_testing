@@ -5,6 +5,11 @@ export { default as AdminOverviewTab } from './AdminOverviewTab';
 export { default as AdminUserView } from './AdminUserView';
 export { default as AdminSessionView } from './AdminSessionView';
 export { default as DeviceManagement } from './DeviceManagement';
+export { default as AdminActivityOverviewTab } from './AdminActivityOverviewTab';
+export { default as AdminActivityBenchmarkTab } from './AdminActivityBenchmarkTab';
+export { default as AdminActivityFirmwareTab } from './AdminActivityFirmwareTab';
+export { default as AdminActivityUserView } from './AdminActivityUserView';
+export { default as AdminActivitySessionView } from './AdminActivitySessionView';
 
 export type { Metric } from './MetricsSelector';
 export type { SubTab } from './SubTabBar';

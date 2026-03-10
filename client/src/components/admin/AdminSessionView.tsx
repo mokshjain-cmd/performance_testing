@@ -7,6 +7,7 @@ import SessionDetails from '../dashboard/SessionDetails';
 import HeartRateChart from '../dashboard/HeartrateChart';
 import AnalysisSection from '../dashboard/AnalysisSection';
 import AdminSleepSessionView from './AdminSleepSessionView';
+import AdminActivitySessionView from './AdminActivitySessionView';
 import { Download } from 'lucide-react';
 
 interface AdminSessionViewProps {
@@ -19,6 +20,11 @@ const AdminSessionView: React.FC<AdminSessionViewProps> = ({ sessionId, userId: 
   // Handle sleep metric separately
   if (metric === 'sleep') {
     return <AdminSleepSessionView sessionId={sessionId} />;
+  }
+
+  // Handle activity metric separately
+  if (metric === 'activity') {
+    return <AdminActivitySessionView sessionId={sessionId} />;
   }
 
   const [sessionDetails, setSessionDetails] = useState<SessionFullDetails | null>(null);

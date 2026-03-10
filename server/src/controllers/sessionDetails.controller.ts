@@ -41,10 +41,11 @@ export const getSessionFullDetails = async (req: Request, res: Response): Promis
       projection['metrics.spo2'] = 1;
     } else if (metric === 'Sleep') {
       projection['metrics.sleep'] = 1;
-    } else if (metric === 'Calories') {
-      projection['metrics.calories'] = 1;
-    } else if (metric === 'Steps') {
+    } else if (metric === 'Activity') {
+      // Activity data is handled separately via ActivityDailyReading, not NormalizedReading
       projection['metrics.steps'] = 1;
+      projection['metrics.calories'] = 1;
+      projection['metrics.distance'] = 1;
     } else {
       // Default to heartRate if unknown metric
       projection['metrics.heartRate'] = 1;
@@ -78,10 +79,11 @@ export const getSessionFullDetails = async (req: Request, res: Response): Promis
         metricsData.spo2 = metricsObj?.spo2 ?? null;
       } else if (metric === 'Sleep') {
         metricsData.sleep = metricsObj?.sleep ?? null;
-      } else if (metric === 'Calories') {
-        metricsData.calories = metricsObj?.calories ?? null;
-      } else if (metric === 'Steps') {
+      } else if (metric === 'Activity') {
+        // Activity data includes steps, calories, and distance
         metricsData.steps = metricsObj?.steps ?? null;
+        metricsData.calories = metricsObj?.calories ?? null;
+        metricsData.distance = metricsObj?.distance ?? null;
       } else {
         // Default to heartRate
         metricsData.heartRate = metricsObj?.heartRate ?? null;

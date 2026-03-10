@@ -5,7 +5,7 @@ import DashboardLayout from '../components/dashboard/DashboardLayout';
 
 interface FirmwareConfig {
   _id: string;
-  metric: 'HR' | 'SPO2' | 'Sleep' | 'Calories' | 'Steps';
+  metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity';
   latestFirmwareVersion: string;
   description?: string;
   updatedAt: string;
@@ -22,12 +22,11 @@ const FirmwareConfigPage: React.FC = () => {
   });
   const [saveLoading, setSaveLoading] = useState(false);
 
-  const metrics: Array<'HR' | 'SPO2' | 'Sleep' | 'Calories' | 'Steps'> = [
+  const metrics: Array<'HR' | 'SPO2' | 'Sleep' | 'Activity'> = [
     'HR',
     'SPO2',
     'Sleep',
-    'Calories',
-    'Steps',
+    'Activity',
   ];
 
   useEffect(() => {

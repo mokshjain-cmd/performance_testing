@@ -26,9 +26,11 @@ export const activityService = {
    * Note: userId is extracted from JWT token by backend
    */
   getUserActivityOverview: async (): Promise<UserActivityOverview> => {
+    console.log('[Activity Service] 🔵 API Call: GET /activity/overview');
     const response = await apiClient.get<ApiResponse<UserActivityOverview>>(
       '/activity/overview'
     );
+    console.log('[Activity Service] ✅ Response:', response.data);
     return response.data.data!;
   },
 
@@ -56,6 +58,22 @@ export const activityService = {
     return response.data.data!;
   },
 
+  /**
+   * Convenience method: Get single activity session view
+   */
+  getSingleSessionView: async (
+    sessionId: string,
+    includeDailyData: boolean = true
+  ): Promise<UserSingleActivitySessionView> => {
+    console.log(`[Activity Service] 🔵 API Call: GET /activity/session/${sessionId}`);
+    const response = await apiClient.get<ApiResponse<UserSingleActivitySessionView>>(
+      `/activity/session/${sessionId}`,
+      { params: { includeDailyData } }
+    );
+    console.log('[Activity Service] ✅ Response:', response.data);
+    return response.data.data!;
+  },
+
   // ========================
   // ADMIN APIs
   // ========================
@@ -66,10 +84,12 @@ export const activityService = {
   getAdminGlobalSummary: async (
     params?: GetAdminGlobalActivitySummaryParams
   ): Promise<AdminGlobalActivitySummary> => {
+    console.log('[Activity Service] 🔵 API Call: GET /activity/admin/global-summary', params);
     const response = await apiClient.get<ApiResponse<AdminGlobalActivitySummary>>(
       '/activity/admin/global-summary',
       { params }
     );
+    console.log('[Activity Service] ✅ Response:', response.data);
     return response.data.data!;
   },
 
@@ -91,9 +111,11 @@ export const activityService = {
    * Get firmware-wise performance comparison
    */
   getFirmwareComparison: async (): Promise<FirmwareActivityPerformance[]> => {
+    console.log('[Activity Service] 🔵 API Call: GET /activity/admin/firmware-comparison');
     const response = await apiClient.get<ApiResponse<FirmwareActivityPerformance[]>>(
       '/activity/admin/firmware-comparison'
     );
+    console.log('[Activity Service] ✅ Response:', response.data);
     return response.data.data || [];
   },
 
@@ -101,9 +123,11 @@ export const activityService = {
    * Get benchmark-wise performance comparison
    */
   getBenchmarkComparison: async (): Promise<BenchmarkActivityComparison[]> => {
+    console.log('[Activity Service] 🔵 API Call: GET /activity/admin/benchmark-comparison');
     const response = await apiClient.get<ApiResponse<BenchmarkActivityComparison[]>>(
       '/activity/admin/benchmark-comparison'
     );
+    console.log('[Activity Service] ✅ Response:', response.data);
     return response.data.data || [];
   },
 
@@ -113,9 +137,11 @@ export const activityService = {
   getAdminUserSummary: async (
     params: GetAdminActivityUserSummaryParams
   ): Promise<AdminUserActivitySummary> => {
+    console.log('[Activity Service] 🔵 API Call: GET /activity/admin/user/' + params.userId);
     const response = await apiClient.get<ApiResponse<AdminUserActivitySummary>>(
       `/activity/admin/user/${params.userId}`
     );
+    console.log('[Activity Service] ✅ Response:', response.data);
     return response.data.data!;
   },
 
@@ -125,9 +151,11 @@ export const activityService = {
   getAdminSessionSummary: async (
     params: GetAdminActivitySessionSummaryParams
   ): Promise<AdminActivitySessionSummary> => {
+    console.log('[Activity Service] 🔵 API Call: GET /activity/admin/session/' + params.sessionId);
     const response = await apiClient.get<ApiResponse<AdminActivitySessionSummary>>(
       `/activity/admin/session/${params.sessionId}`
     );
+    console.log('[Activity Service] ✅ Response:', response.data);
     return response.data.data!;
   },
 
@@ -152,6 +180,20 @@ export const activityService = {
     const response = await apiClient.get<ApiResponse<BenchmarkActivityComparison[]>>(
       `/activity/admin/user/${userId}/benchmark-comparison`
     );
+    return response.data.data || [];
+  },
+
+  /**
+   * Get admin user activity trend
+   */
+  getAdminUserActivityTrend: async (
+    userId: string
+  ): Promise<ActivityTrendData[]> => {
+    console.log('[Activity Service] 🔵 API Call: GET /activity/admin/user/' + userId + '/trend');
+    const response = await apiClient.get<ApiResponse<ActivityTrendData[]>>(
+      `/activity/admin/user/${userId}/trend`
+    );
+    console.log('[Activity Service] ✅ Response:', response.data);
     return response.data.data || [];
   },
 };

@@ -33,7 +33,7 @@ export interface SleepStats {
   epochAccuracyPercent: number;
   cohenKappa: number;
   
-  // Bias metrics (Luna - Benchmark)
+  // Bias metrics (Falcon - Benchmark)
   deepBiasSec: number;
   remBiasSec: number;
   totalSleepBiasSec: number;

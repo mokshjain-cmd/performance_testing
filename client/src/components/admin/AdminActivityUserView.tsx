@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
+import { Card } from '../common';
 import { Footprints, Activity, TrendingUp, CheckCircle, Info } from 'lucide-react';
-import { Card } from '../components/common';
-import { activityService } from '../services/activity.service';
-import type { UserActivityOverview, ActivityTrendData } from '../types/activity.types';
+import { activityService } from '../../services/activity.service';
+import type { AdminUserActivitySummary, ActivityTrendData } from '../../types/activity.types';
 import {
   LineChart,
   Line,
@@ -14,47 +14,61 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 
-export const ActivityOverviewPage: React.FC = () => {
-  const [overview, setOverview] = useState<UserActivityOverview | null>(null);
+interface AdminActivityUserViewProps {
+  userId: string;
+}
+
+const AdminActivityUserView: React.FC<AdminActivityUserViewProps> = ({ userId }) => {
+  const [userSummary, setUserSummary] = useState<AdminUserActivitySummary | null>(null);
   const [trendData, setTrendData] = useState<ActivityTrendData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        setLoading(true);        console.log('[User Activity Overview] Fetching user activity overview and trend...');        const [overviewData, trend] = await Promise.all([
-          activityService.getUserActivityOverview(),
-          activityService.getUserActivityTrend(),
+        setLoading(true);
+        console.log('[Activity User View] Fetching user summary and trend for userId:', userId);
+        
+        const [summary, trend] = await Promise.all([
+          activityService.getAdminUserSummary({ userId }),
+          activityService.getAdminUserActivityTrend(userId),
         ]);
-
-        setOverview(overviewData);
+        
+        console.log('[Activity User View] ✅ Received summary:', summary);
+        console.log('[Activity User View] ✅ Received trend:', trend);
+        setUserSummary(summary);
         setTrendData(trend);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load activity data');
+        console.error('[Activity User View] ❌ Error:', err);
+        console.error('Error loading user activity data:', err);
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, []);
+  }, [userId]);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-lg text-gray-600">Loading activity data...</div>
+      <div className="flex items-center justify-center py-20">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading user activity data...</p>
+        </div>
       </div>
     );
   }
 
-  if (error || !overview) {
+  if (!userSummary || !userSummary.activityOverview) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-lg text-red-600">{error || 'No activity data available'}</div>
+      <div className="text-center py-12">
+        <p className="text-gray-600">No activity data available for this user</p>
       </div>
     );
   }
+
+  const overview = userSummary.activityOverview;
 
   const getAccuracyColor = (accuracy: number): string => {
     if (accuracy >= 90) return 'text-green-600 bg-green-50';
@@ -63,21 +77,18 @@ export const ActivityOverviewPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Activity Overview</h1>
-          <p className="text-gray-600 mt-1">
-            Analysis of your activity patterns over the last {overview.totalSessions} sessions
-          </p>
-        </div>
-        <Footprints className="w-12 h-12 text-blue-500" />
+      <div>
+        <h2 className="text-2xl font-bold mb-2">User Activity Performance</h2>
+        <p className="text-gray-600">
+          Analysis of activity patterns over {overview.totalSessions} sessions
+        </p>
       </div>
 
       {/* Core Metrics Grid */}
       <div>
-        <h2 className="text-xl font-semibold mb-4">Core Activity Metrics</h2>
+        <h3 className="text-xl font-semibold mb-4">Core Activity Metrics</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card>
             <div className="space-y-2">
@@ -122,185 +133,183 @@ export const ActivityOverviewPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Validation Metrics (if comparison available) */}
-      {overview.comparison && (
-        <div>
-          <h2 className="text-xl font-semibold mb-4">Validation Metrics</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Steps Accuracy */}
-            <Card>
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <Footprints className="w-5 h-5 text-blue-500" />
-                Steps Accuracy
-              </h3>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Accuracy</span>
-                  <div className={`px-3 py-1 rounded-full ${getAccuracyColor(overview.comparison.steps.avgAccuracyPercent)}`}>
-                    <span className="font-semibold">
-                      {overview.comparison.steps.avgAccuracyPercent.toFixed(1)}%
-                    </span>
-                  </div>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600 flex items-center gap-1">
-                    Avg Difference
-                    <span className="group relative">
-                      <Info className="w-3 h-3 text-gray-400 cursor-help" />
-                      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                        Average bias across all sessions (Falcon - Benchmark)
-                      </span>
-                    </span>
-                  </span>
-                  <span className="font-semibold text-gray-700">
-                    {overview.comparison.steps.avgDifference > 0 ? '+' : ''}
-                    {overview.comparison.steps.avgDifference.toFixed(0)} steps
+      {/* Validation Metrics */}
+      <div>
+        <h3 className="text-xl font-semibold mb-4">Validation Metrics</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Steps Accuracy */}
+          <Card>
+            <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <Footprints className="w-5 h-5 text-blue-500" />
+              Steps Accuracy
+            </h4>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Accuracy</span>
+                <div className={`px-3 py-1 rounded-full ${getAccuracyColor(overview.avgStepsAccuracyPercent)}`}>
+                  <span className="font-semibold">
+                    {overview.avgStepsAccuracyPercent.toFixed(1)}%
                   </span>
                 </div>
               </div>
-            </Card>
-
-            {/* Distance Accuracy */}
-            <Card>
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <Activity className="w-5 h-5 text-green-500" />
-                Distance Accuracy
-              </h3>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Accuracy</span>
-                  <div className={`px-3 py-1 rounded-full ${getAccuracyColor(overview.comparison.distance.avgAccuracyPercent)}`}>
-                    <span className="font-semibold">
-                      {overview.comparison.distance.avgAccuracyPercent.toFixed(1)}%
-                    </span>
-                  </div>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600 flex items-center gap-1">
-                    Avg Difference
-                    <span className="group relative">
-                      <Info className="w-3 h-3 text-gray-400 cursor-help" />
-                      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                        Average bias across all sessions (Falcon - Benchmark)
-                      </span>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600 flex items-center gap-1">
+                  Avg Difference
+                  <span className="group relative">
+                    <Info className="w-3 h-3 text-gray-400 cursor-help" />
+                    <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                      Average bias across all sessions (Falcon - Benchmark)
                     </span>
                   </span>
-                  <span className="font-semibold text-gray-700">
-                    {overview.comparison.distance.avgDifference > 0 ? '+' : ''}
-                    {overview.comparison.distance.avgDifference.toFixed(0)}m
-                  </span>
-                </div>
-              </div>
-            </Card>
-
-            {/* Calories Accuracy */}
-            <Card>
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-orange-500" />
-                Calories Accuracy
-              </h3>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Accuracy</span>
-                  <div className={`px-3 py-1 rounded-full ${getAccuracyColor(overview.comparison.calories.avgAccuracyPercent)}`}>
-                    <span className="font-semibold">
-                      {overview.comparison.calories.avgAccuracyPercent.toFixed(1)}%
-                    </span>
-                  </div>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600 flex items-center gap-1">
-                    Avg Difference
-                    <span className="group relative">
-                      <Info className="w-3 h-3 text-gray-400 cursor-help" />
-                      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                        Average bias across all sessions (Falcon - Benchmark)
-                      </span>
-                    </span>
-                  </span>
-                  <span className="font-semibold text-gray-700">
-                    {overview.comparison.calories.avgDifference > 0 ? '+' : ''}
-                    {overview.comparison.calories.avgDifference.toFixed(0)} kcal
-                  </span>
-                </div>
-              </div>
-            </Card>
-          </div>
-
-          {/* Calorie Breakdown (Active vs Basal) */}
-          {(overview.comparison.activeCalories || overview.comparison.basalCalories) && (
-            <div className="mt-6">
-              <h3 className="text-lg font-semibold mb-4">Calorie Breakdown Accuracy</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {overview.comparison.activeCalories && (
-                  <Card>
-                    <h4 className="text-md font-semibold mb-3">Active Calories</h4>
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-600">Accuracy</span>
-                        <div className={`px-3 py-1 rounded-full ${getAccuracyColor(overview.comparison.activeCalories.avgAccuracyPercent)}`}>
-                          <span className="font-semibold">
-                            {overview.comparison.activeCalories.avgAccuracyPercent.toFixed(1)}%
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-600 flex items-center gap-1">
-                          Avg Difference
-                          <span className="group relative">
-                            <Info className="w-3 h-3 text-gray-400 cursor-help" />
-                            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                              Average bias across all sessions (Falcon - Benchmark)
-                            </span>
-                          </span>
-                        </span>
-                        <span className="font-semibold text-gray-700">
-                          {overview.comparison.activeCalories.avgDifference > 0 ? '+' : ''}
-                          {overview.comparison.activeCalories.avgDifference.toFixed(0)} kcal
-                        </span>
-                      </div>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-3">Energy from physical activity</p>
-                  </Card>
-                )}
-                {overview.comparison.basalCalories && (
-                  <Card>
-                    <h4 className="text-md font-semibold mb-3">Basal Calories</h4>
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-600">Accuracy</span>
-                        <div className={`px-3 py-1 rounded-full ${getAccuracyColor(overview.comparison.basalCalories.avgAccuracyPercent)}`}>
-                          <span className="font-semibold">
-                            {overview.comparison.basalCalories.avgAccuracyPercent.toFixed(1)}%
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-600 flex items-center gap-1">
-                          Avg Difference
-                          <span className="group relative">
-                            <Info className="w-3 h-3 text-gray-400 cursor-help" />
-                            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                              Average bias across all sessions (Falcon - Benchmark)
-                            </span>
-                          </span>
-                        </span>
-                        <span className="font-semibold text-gray-700">
-                          {overview.comparison.basalCalories.avgDifference > 0 ? '+' : ''}
-                          {overview.comparison.basalCalories.avgDifference.toFixed(0)} kcal
-                        </span>
-                      </div>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-3">Energy at rest (BMR)</p>
-                  </Card>
-                )}
+                </span>
+                <span className="font-semibold text-gray-700">
+                  {overview.avgStepsBias > 0 ? '+' : ''}
+                  {overview.avgStepsBias.toFixed(0)} steps
+                </span>
               </div>
             </div>
-          )}
-        </div>
-      )}
+          </Card>
 
-      {/* Activity Trend Chart */}
+          {/* Distance Accuracy */}
+          <Card>
+            <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <Activity className="w-5 h-5 text-green-500" />
+              Distance Accuracy
+            </h4>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Accuracy</span>
+                <div className={`px-3 py-1 rounded-full ${getAccuracyColor(overview.avgDistanceAccuracyPercent)}`}>
+                  <span className="font-semibold">
+                    {overview.avgDistanceAccuracyPercent.toFixed(1)}%
+                  </span>
+                </div>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600 flex items-center gap-1">
+                  Avg Difference
+                  <span className="group relative">
+                    <Info className="w-3 h-3 text-gray-400 cursor-help" />
+                    <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                      Average bias across all sessions (Falcon - Benchmark)
+                    </span>
+                  </span>
+                </span>
+                <span className="font-semibold text-gray-700">
+                  {overview.avgDistanceBias > 0 ? '+' : ''}
+                  {overview.avgDistanceBias.toFixed(0)}m
+                </span>
+              </div>
+            </div>
+          </Card>
+
+          {/* Calories Accuracy */}
+          <Card>
+            <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-orange-500" />
+              Calories Accuracy
+            </h4>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Accuracy</span>
+                <div className={`px-3 py-1 rounded-full ${getAccuracyColor(overview.avgCaloriesAccuracyPercent)}`}>
+                  <span className="font-semibold">
+                    {overview.avgCaloriesAccuracyPercent.toFixed(1)}%
+                  </span>
+                </div>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600 flex items-center gap-1">
+                  Avg Difference
+                  <span className="group relative">
+                    <Info className="w-3 h-3 text-gray-400 cursor-help" />
+                    <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                      Average bias across all sessions (Falcon - Benchmark)
+                    </span>
+                  </span>
+                </span>
+                <span className="font-semibold text-gray-700">
+                  {overview.avgCaloriesBias > 0 ? '+' : ''}
+                  {overview.avgCaloriesBias.toFixed(0)} kcal
+                </span>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        {/* Calorie Breakdown (Active vs Basal) */}
+        {(overview.avgActiveCaloriesAccuracyPercent > 0 || overview.avgBasalCaloriesAccuracyPercent > 0) && (
+          <div className="mt-6">
+            <h4 className="text-lg font-semibold mb-4">Calorie Breakdown Accuracy</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {overview.avgActiveCaloriesAccuracyPercent > 0 && (
+                <Card>
+                  <h5 className="text-md font-semibold mb-3">Active Calories</h5>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Accuracy</span>
+                      <div className={`px-3 py-1 rounded-full ${getAccuracyColor(overview.avgActiveCaloriesAccuracyPercent)}`}>
+                        <span className="font-semibold">
+                          {overview.avgActiveCaloriesAccuracyPercent.toFixed(1)}%
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600 flex items-center gap-1">
+                        Avg Difference
+                        <span className="group relative">
+                          <Info className="w-3 h-3 text-gray-400 cursor-help" />
+                          <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                            Average bias across all sessions (Falcon - Benchmark)
+                          </span>
+                        </span>
+                      </span>
+                      <span className="font-semibold text-gray-700">
+                        {overview.avgActiveCaloriesBias > 0 ? '+' : ''}
+                        {overview.avgActiveCaloriesBias.toFixed(0)} kcal
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-3">Energy from physical activity</p>
+                </Card>
+              )}
+              {overview.avgBasalCaloriesAccuracyPercent > 0 && (
+                <Card>
+                  <h5 className="text-md font-semibold mb-3">Basal Calories</h5>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Accuracy</span>
+                      <div className={`px-3 py-1 rounded-full ${getAccuracyColor(overview.avgBasalCaloriesAccuracyPercent)}`}>
+                        <span className="font-semibold">
+                          {overview.avgBasalCaloriesAccuracyPercent.toFixed(1)}%
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600 flex items-center gap-1">
+                        Avg Difference
+                        <span className="group relative">
+                          <Info className="w-3 h-3 text-gray-400 cursor-help" />
+                          <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                            Average bias across all sessions (Falcon - Benchmark)
+                          </span>
+                        </span>
+                      </span>
+                      <span className="font-semibold text-gray-700">
+                        {overview.avgBasalCaloriesBias > 0 ? '+' : ''}
+                        {overview.avgBasalCaloriesBias.toFixed(0)} kcal
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-3">Energy at rest (BMR)</p>
+                </Card>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Activity Trend Charts */}
       {trendData.length > 0 && (
         <>
           <div className="bg-white p-6 rounded-lg shadow">
@@ -530,7 +539,7 @@ export const ActivityOverviewPage: React.FC = () => {
         <div className="flex items-start gap-3">
           <CheckCircle className="w-5 h-5 text-blue-500 mt-1" />
           <div>
-            <h3 className="font-semibold mb-1">Understanding Your Activity Metrics</h3>
+            <h3 className="font-semibold mb-1">Understanding Activity Metrics</h3>
             <ul className="text-sm text-gray-600 space-y-1 list-disc list-inside">
               <li><strong>Steps:</strong> Daily step count tracked by Falcon device</li>
               <li><strong>Distance:</strong> Total distance covered based on step count and stride length</li>
@@ -546,3 +555,5 @@ export const ActivityOverviewPage: React.FC = () => {
     </div>
   );
 };
+
+export default AdminActivityUserView;

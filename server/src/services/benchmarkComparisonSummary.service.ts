@@ -8,7 +8,7 @@ import BenchmarkComparisonSummary from '../models/BenchmarkComparisonSummary';
  * @param benchmarkDeviceType - The device type to compare against Luna (e.g., 'polar', 'coros')
  * @param metric - The metric to calculate comparison for (HR, SPO2, etc.)
  */
-export async function updateBenchmarkComparisonSummary(benchmarkDeviceType: string, metric: 'HR' | 'SPO2' | 'Sleep' | 'Calories' | 'Steps' = 'HR') {
+export async function updateBenchmarkComparisonSummary(benchmarkDeviceType: string, metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity' = 'HR') {
   console.log(`\n🔄 Updating BenchmarkComparisonSummary for: ${benchmarkDeviceType}, metric: ${metric}`);
 
   // Handle Sleep metric differently (uses sleepStats instead of pairwiseComparisons)

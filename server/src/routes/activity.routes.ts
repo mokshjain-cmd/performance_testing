@@ -77,6 +77,13 @@ router.get("/admin/user/:userId/firmware-comparison", AdminActivityController.ge
 router.get("/admin/user/:userId/benchmark-comparison", AdminActivityController.getUserBenchmarkComparison);
 
 /**
+ * @route   GET /api/activity/admin/user/:userId/trend
+ * @desc    Get activity trend for specific user
+ * @access  Private (Admin)
+ */
+router.get("/admin/user/:userId/trend", AdminActivityController.getUserActivityTrend);
+
+/**
  * @route   GET /api/activity/admin/session/:sessionId
  * @desc    Admin Activity Session Level Summary
  * @access  Private (Admin)

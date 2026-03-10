@@ -141,12 +141,12 @@ const SessionDetails: React.FC<Props> = ({ session, actionButton }) => {
           </div>
         </div>
 
-        {/* Luna Firmware Version */}
+        {/* Falcon Firmware Version */}
         {(() => {
           const lunaDevice = session.devices.find(d => d.deviceType === 'luna');
           return lunaDevice?.firmwareVersion ? (
             <div className="flex flex-col gap-0.5">
-              <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Luna Firmware</span>
+              <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Falcon Firmware</span>
               <span className="text-sm text-gray-800 bg-blue-50 px-2 py-1 rounded border border-blue-200 font-mono">
                 {lunaDevice.firmwareVersion}
               </span>

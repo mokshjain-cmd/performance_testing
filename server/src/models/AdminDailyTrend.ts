@@ -2,7 +2,7 @@ import { Schema, model, Document } from "mongoose";
 
 export interface IAdminDailyTrend extends Document {
   date: Date; // store date as midnight UTC
-  metric: 'HR' | 'SPO2' | 'Sleep' | 'Calories' | 'Steps';
+  metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity';
 
   totalSessions: number;
   totalUsers: number;
@@ -21,11 +21,26 @@ export interface IAdminDailyTrend extends Document {
   };
 
   activityStats?: {
-    stepsAccuracy?: number;
-    distanceAccuracy?: number;
-    calorieAccuracy?: number;
-    stepMAE?: number;
-    distanceMAE?: number;
+    steps?: {
+      avgAccuracyPercent?: number;
+      avgDifference?: number;
+    };
+    distance?: {
+      avgAccuracyPercent?: number;
+      avgDifference?: number;
+    };
+    calories?: {
+      avgAccuracyPercent?: number;
+      avgDifference?: number;
+    };
+    activeCalories?: {
+      avgAccuracyPercent?: number;
+      avgDifference?: number;
+    };
+    basalCalories?: {
+      avgAccuracyPercent?: number;
+      avgDifference?: number;
+    };
   };
 
 //   invalidStats: {
@@ -43,7 +58,7 @@ const AdminDailyTrendSchema = new Schema<IAdminDailyTrend>({
   date: { type: Date, required: true, index: true },
   metric: { 
     type: String, 
-    enum: ['HR', 'SPO2', 'Sleep', 'Calories', 'Steps'],
+    enum: ['HR', 'SPO2', 'Sleep', 'Activity'],
     required: true,
     index: true 
   },
@@ -65,11 +80,26 @@ const AdminDailyTrendSchema = new Schema<IAdminDailyTrend>({
   },
 
   activityStats: {
-    stepsAccuracy: Number,
-    distanceAccuracy: Number,
-    calorieAccuracy: Number,
-    stepMAE: Number,
-    distanceMAE: Number,
+    steps: {
+      avgAccuracyPercent: Number,
+      avgDifference: Number,
+    },
+    distance: {
+      avgAccuracyPercent: Number,
+      avgDifference: Number,
+    },
+    calories: {
+      avgAccuracyPercent: Number,
+      avgDifference: Number,
+    },
+    activeCalories: {
+      avgAccuracyPercent: Number,
+      avgDifference: Number,
+    },
+    basalCalories: {
+      avgAccuracyPercent: Number,
+      avgDifference: Number,
+    },
   },
 
 //   invalidStats: {

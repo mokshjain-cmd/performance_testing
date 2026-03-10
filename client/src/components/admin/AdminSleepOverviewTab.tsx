@@ -166,11 +166,13 @@ const AdminSleepOverviewTab: React.FC<AdminSleepOverviewTabProps> = ({ subTab })
 
         <Card>
           <div className="space-y-2">
-            <p className="text-sm text-gray-500 uppercase tracking-wide">Total Sleep Time</p>
+            <p className="text-sm text-gray-500 uppercase tracking-wide">Latest Firmware</p>
+
             <p className="text-3xl font-bold bg-gradient-to-r from-indigo-500 to-indigo-600 bg-clip-text text-transparent">
-              {formatTime(globalSummary?.totalSleepTimeSec || 0)}
+              {globalSummary?.latestFirmwareVersion || "N/A"}
             </p>
-            <p className="text-xs text-gray-500">Across all users (firmware {globalSummary?.latestFirmwareVersion})</p>
+
+            <p className="text-xs text-gray-500">Sleep Firmware Version</p>
           </div>
         </Card>
 
@@ -253,31 +255,22 @@ const AdminSleepOverviewTab: React.FC<AdminSleepOverviewTabProps> = ({ subTab })
           </div>
         </div>
 
-        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600 uppercase tracking-wide">Latest Firmware Version</p>
-              <p className="text-xs text-gray-500 mt-0.5">Current system version</p>
-            </div>
-            <p className="text-2xl font-bold text-indigo-900">
-              {globalSummary?.latestFirmwareVersion || 'N/A'}
-            </p>
-          </div>
-        </div>
+        
 
-        {/* Interpretation Guide - Collapsed */}
-        <details className="group mt-4">
+       {/* Interpretation Guide - Expanded */}
+        <details className="group mt-4" open>
           <summary className="cursor-pointer text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center">
             <svg className="h-4 w-4 mr-1 transform group-open:rotate-90 transition-transform" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
             </svg>
             What do these metrics mean?
           </summary>
+
           <div className="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-4">
             <div className="text-sm text-blue-900 space-y-2">
-              <p><strong>Epoch Accuracy:</strong> Percentage of 30-second epochs where Luna agrees with benchmark. Target: &gt;85% for clinical-grade accuracy.</p>
+              <p><strong>Epoch Accuracy:</strong> Percentage of 30-second epochs where Falcon agrees with benchmark. Target: &gt;85% for clinical-grade accuracy.</p>
               <p><strong>Cohen's Kappa:</strong> Statistical measure of agreement accounting for chance. &gt;0.8 = Excellent, 0.6-0.8 = Good, 0.4-0.6 = Moderate, &lt;0.4 = Poor.</p>
-              <p><strong>Total Sleep Bias:</strong> Average difference in total sleep time. ↑ = Luna overestimates (detects more sleep), ↓ = Luna underestimates.</p>
+              <p><strong>Total Sleep Bias:</strong> Average difference in total sleep time. ↑ = Falcon overestimates (detects more sleep), ↓ = Falcon underestimates.</p>
             </div>
           </div>
         </details>
@@ -293,7 +286,7 @@ const AdminSleepOverviewTab: React.FC<AdminSleepOverviewTabProps> = ({ subTab })
             </span>
           )}
         </h3>
-        <p className="text-sm text-gray-600 mb-4">How accurately Luna detects each sleep stage when compared to benchmark devices</p>
+        <p className="text-sm text-gray-600 mb-4">How accurately Falcon detects each sleep stage when compared to benchmark devices</p>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
           <div className="text-center p-4 bg-gray-50 rounded-lg">
             <p className="text-sm text-gray-600 mb-1">Awake</p>
@@ -324,7 +317,7 @@ const AdminSleepOverviewTab: React.FC<AdminSleepOverviewTabProps> = ({ subTab })
         <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-sm text-green-900">
           <p className="font-semibold mb-2">Understanding Detection Accuracy:</p>
           <ul className="space-y-1 ml-4 list-disc">
-            <li>Measures True Positive Rate: Of all actual stage occurrences in benchmark data, what percentage did Luna correctly detect?</li>
+            <li>Measures True Positive Rate: Of all actual stage occurrences in benchmark data, what percentage did Falcon correctly detect?</li>
             <li>&gt;80%: Excellent detection accuracy</li>
             <li>60-80%: Moderate detection accuracy</li>
             <li>&lt;60%: Poor detection accuracy</li>
@@ -334,8 +327,8 @@ const AdminSleepOverviewTab: React.FC<AdminSleepOverviewTabProps> = ({ subTab })
 
       {/* Bias Breakdown */}
       <Card>
-        <h3 className="text-lg font-semibold mb-4">Stage-wise Bias (Luna vs Benchmark)</h3>
-        <p className="text-sm text-gray-600 mb-4">Average difference between Luna and benchmark devices</p>
+        <h3 className="text-lg font-semibold mb-4">Stage-wise Bias (Falcon vs Benchmark)</h3>
+        <p className="text-sm text-gray-600 mb-4">Average difference between Falcon and benchmark devices</p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
           <div className="text-center p-4 bg-gray-50 rounded-lg">
             <p className="text-sm text-gray-600 mb-1">Total Sleep</p>
@@ -369,8 +362,8 @@ const AdminSleepOverviewTab: React.FC<AdminSleepOverviewTabProps> = ({ subTab })
         <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 text-sm text-purple-900">
           <p className="font-semibold mb-2">Interpreting Bias:</p>
           <ul className="space-y-1 ml-4 list-disc">
-            <li>↑ Over = Luna overestimates (detects more than benchmark)</li>
-            <li>↓ Under = Luna underestimates (detects less than benchmark)</li>
+            <li>↑ Over = Falcon overestimates (detects more than benchmark)</li>
+            <li>↓ Under = Falcon underestimates (detects less than benchmark)</li>
             <li>Systematic bias helps identify calibration opportunities</li>
           </ul>
         </div>

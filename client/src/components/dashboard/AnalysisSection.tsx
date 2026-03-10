@@ -76,9 +76,9 @@ const AnalysisSection: React.FC<Props> = ({ analysis, isAdmin = false }) => {
             </div>
           </div>
           
-          {/* Bland-Altman Plot for Luna vs Benchmark (Admin Only) */}
+          {/* Bland-Altman Plot for Falcon vs Benchmark (Admin Only) */}
           {isAdmin && (() => {
-            // Find Luna vs benchmark comparison (Luna is always d1, benchmark is d2)
+            // Find Falcon vs benchmark comparison (Falcon is always d1, benchmark is d2)
             const lunaComparison = analysis.pairwiseComparisons.find(
               pair => pair.d1 === 'luna' && pair.d2 !== 'luna'
             );

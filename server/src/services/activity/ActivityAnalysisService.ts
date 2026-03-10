@@ -21,8 +21,8 @@ export class ActivityAnalysisService {
         throw new Error(`Session ${sessionId} not found`);
       }
 
-      if (session.metric !== "Steps" && session.metric !== "Calories") {
-        throw new Error(`Session ${sessionId} is not an activity session (Steps/Calories)`);
+      if (session.metric !== "Activity") {
+        throw new Error(`Session ${sessionId} is not an activity session`);
       }
 
       // Fetch Luna daily readings
@@ -160,6 +160,8 @@ export class ActivityAnalysisService {
         errorMeters: Math.round(errorMeters),
         accuracyPercent: Math.round(accuracyPercent * 100) / 100,
         mape: Math.round(mape * 100) / 100,
+        bias: Math.round(errorMeters),
+        mae: Math.round(Math.abs(errorMeters)),
       };
     }
 
@@ -175,34 +177,46 @@ export class ActivityAnalysisService {
         error: Math.round(error),
         accuracyPercent: Math.round(accuracyPercent * 100) / 100,
         mape: Math.round(mape * 100) / 100,
+        bias: Math.round(error),
+        mae: Math.round(Math.abs(error)),
       };
     }
 
     // Active calories stats
     if (benchmarkTotals.caloriesActive > 0) {
+      const error = lunaTotals.caloriesActive - benchmarkTotals.caloriesActive;
+      const mape = Math.abs(error / benchmarkTotals.caloriesActive) * 100;
       const accuracyPercent = Math.max(
         0,
-        (1 - Math.abs(lunaTotals.caloriesActive - benchmarkTotals.caloriesActive) / benchmarkTotals.caloriesActive) * 100
+        (1 - Math.abs(error) / benchmarkTotals.caloriesActive) * 100
       );
 
       activityStats.activeCalories = {
         lunaActive: Math.round(lunaTotals.caloriesActive),
         benchmarkActive: Math.round(benchmarkTotals.caloriesActive),
         accuracyPercent: Math.round(accuracyPercent * 100) / 100,
+        bias: Math.round(error),
+        mae: Math.round(Math.abs(error)),
+        mape: Math.round(mape * 100) / 100,
       };
     }
 
     // Basal calories stats
     if (benchmarkTotals.caloriesBasal > 0) {
+      const error = lunaTotals.caloriesBasal - benchmarkTotals.caloriesBasal;
+      const mape = Math.abs(error / benchmarkTotals.caloriesBasal) * 100;
       const accuracyPercent = Math.max(
         0,
-        (1 - Math.abs(lunaTotals.caloriesBasal - benchmarkTotals.caloriesBasal) / benchmarkTotals.caloriesBasal) * 100
+        (1 - Math.abs(error) / benchmarkTotals.caloriesBasal) * 100
       );
 
       activityStats.basalCalories = {
         lunaBasal: Math.round(lunaTotals.caloriesBasal),
         benchmarkBasal: Math.round(benchmarkTotals.caloriesBasal),
         accuracyPercent: Math.round(accuracyPercent * 100) / 100,
+        bias: Math.round(error),
+        mae: Math.round(Math.abs(error)),
+        mape: Math.round(mape * 100) / 100,
       };
     }
 

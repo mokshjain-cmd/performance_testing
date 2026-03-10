@@ -8,6 +8,9 @@ import ActivityAnalysisTab from './ActivityAnalysisTab';
 import BenchmarkComparisonTab from './BenchmarkComparisonTab';
 import FirmwarePerformanceTab from './FirmwarePerformanceTab';
 import AdminSleepOverviewTab from './AdminSleepOverviewTab';
+import AdminActivityOverviewTab from './AdminActivityOverviewTab';
+import AdminActivityBenchmarkTab from './AdminActivityBenchmarkTab';
+import AdminActivityFirmwareTab from './AdminActivityFirmwareTab';
 
 interface GlobalSummary {
   totalUsers: number;
@@ -46,6 +49,18 @@ const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({ metric, subTab }) =
   // Handle sleep metric separately with dedicated component
   if (metric === 'sleep') {
     return <AdminSleepOverviewTab subTab={subTab} />;
+  }
+
+  // Handle activity metric separately with dedicated components
+  if (metric === 'activity') {
+    if (subTab === 'benchmark') {
+      return <AdminActivityBenchmarkTab />;
+    }
+    if (subTab === 'firmware') {
+      return <AdminActivityFirmwareTab />;
+    }
+    // Default to overview for activity
+    return <AdminActivityOverviewTab />;
   }
 
   const [globalSummary, setGlobalSummary] = useState<GlobalSummary | null>(null);
@@ -145,7 +160,7 @@ const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({ metric, subTab }) =
 
             <Card>
               <div className="space-y-2">
-                <p className="text-sm text-gray-500 uppercase tracking-wide">Total Luna Readings</p>
+                <p className="text-sm text-gray-500 uppercase tracking-wide">Total Falcon Readings</p>
                 <p className="text-3xl font-bold bg-gradient-to-r from-green-500 to-green-600 bg-clip-text text-transparent">
                   {globalSummary?.totalReadings.toLocaleString() || 0}
                 </p>

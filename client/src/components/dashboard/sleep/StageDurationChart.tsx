@@ -37,22 +37,22 @@ export const StageDurationChart: React.FC<StageDurationChartProps> = ({
   const data = [
     {
       stage: 'Deep',
-      Luna: parseFloat(toHours(lunaData.deep)),
+      Falcon: parseFloat(toHours(lunaData.deep)),
       Benchmark: benchmarkData ? parseFloat(toHours(benchmarkData.deep)) : 0,
     },
     {
       stage: 'Light',
-      Luna: parseFloat(toHours(lunaData.light)),
+      Falcon: parseFloat(toHours(lunaData.light)),
       Benchmark: benchmarkData ? parseFloat(toHours(benchmarkData.light)) : 0,
     },
     {
       stage: 'REM',
-      Luna: parseFloat(toHours(lunaData.rem)),
+      Falcon: parseFloat(toHours(lunaData.rem)),
       Benchmark: benchmarkData ? parseFloat(toHours(benchmarkData.rem)) : 0,
     },
     {
       stage: 'Awake',
-      Luna: parseFloat(toHours(lunaData.awake)),
+      Falcon: parseFloat(toHours(lunaData.awake)),
       Benchmark: benchmarkData ? parseFloat(toHours(benchmarkData.awake)) : 0,
     },
   ];
@@ -66,7 +66,7 @@ export const StageDurationChart: React.FC<StageDurationChartProps> = ({
           <YAxis label={{ value: 'Hours', angle: -90, position: 'insideLeft' }} />
           <Tooltip formatter={(value) => value ? `${value} hrs` : ''} />
           <Legend />
-          <Bar dataKey="Luna" fill="#3b82f6" />
+          <Bar dataKey="Falcon" fill="#3b82f6" />
           {showComparison && benchmarkData && (
             <Bar dataKey="Benchmark" fill="#10b981" />
           )}

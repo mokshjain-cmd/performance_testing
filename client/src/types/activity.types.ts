@@ -18,6 +18,8 @@ export interface ActivityStats {
   steps: ActivityMetricStats;
   distance: ActivityMetricStats;
   calories: ActivityMetricStats;
+  activeCalories?: ActivityMetricStats;
+  basalCalories?: ActivityMetricStats;
 }
 
 // ========================
@@ -35,21 +37,23 @@ export interface UserActivityOverview {
   comparison?: {
     steps: {
       avgAccuracyPercent: number;
-      avgBias: number;
-      avgMae: number;
-      avgMape: number;
+      avgDifference: number;
     };
     distance: {
       avgAccuracyPercent: number;
-      avgBias: number;
-      avgMae: number;
-      avgMape: number;
+      avgDifference: number;
     };
     calories: {
       avgAccuracyPercent: number;
-      avgBias: number;
-      avgMae: number;
-      avgMape: number;
+      avgDifference: number;
+    };
+    activeCalories?: {
+      avgAccuracyPercent: number;
+      avgDifference: number;
+    };
+    basalCalories?: {
+      avgAccuracyPercent: number;
+      avgDifference: number;
     };
   };
 }
@@ -75,7 +79,7 @@ export interface UserSingleActivitySessionView {
     date: string;
   };
   
-  // Luna metrics
+  // Falcon metrics
   luna: {
     totalSteps: number;
     totalDistance: number; // meters
@@ -111,11 +115,24 @@ export interface ActivityTrendData {
   date: string;
   lunaSteps: number;
   benchmarkSteps?: number;
-  accuracyPercent?: number;
+  stepsBias?: number;
+  stepsAccuracyPercent?: number;
   lunaDistance: number;
   benchmarkDistance?: number;
+  distanceBias?: number;
+  distanceAccuracyPercent?: number;
   lunaCalories: number;
   benchmarkCalories?: number;
+  caloriesBias?: number;
+  caloriesAccuracyPercent?: number;
+  lunaCaloriesActive?: number;
+  benchmarkCaloriesActive?: number;
+  activeCaloriesBias?: number;
+  activeCaloriesAccuracyPercent?: number;
+  lunaCaloriesBasal?: number;
+  benchmarkCaloriesBasal?: number;
+  basalCaloriesBias?: number;
+  basalCaloriesAccuracyPercent?: number;
 }
 
 // ========================
@@ -128,21 +145,23 @@ export interface AdminGlobalActivitySummary {
   activityStats: {
     steps: {
       avgAccuracyPercent: number;
-      avgBias: number;
-      avgMae: number;
-      avgMape: number;
+      avgDifference: number;
     };
     distance: {
       avgAccuracyPercent: number;
-      avgBias: number;
-      avgMae: number;
-      avgMape: number;
+      avgDifference: number;
     };
     calories: {
       avgAccuracyPercent: number;
-      avgBias: number;
-      avgMae: number;
-      avgMape: number;
+      avgDifference: number;
+    };
+    activeCalories?: {
+      avgAccuracyPercent: number;
+      avgDifference: number;
+    };
+    basalCalories?: {
+      avgAccuracyPercent: number;
+      avgDifference: number;
     };
   };
 }
@@ -156,18 +175,23 @@ export interface FirmwareActivityPerformance {
   activityStats: {
     steps: {
       avgAccuracyPercent: number;
-      avgBias: number;
-      avgMae: number;
+      avgDifference: number;
     };
     distance: {
       avgAccuracyPercent: number;
-      avgBias: number;
-      avgMae: number;
+      avgDifference: number;
     };
     calories: {
       avgAccuracyPercent: number;
-      avgBias: number;
-      avgMae: number;
+      avgDifference: number;
+    };
+    activeCalories?: {
+      avgAccuracyPercent: number;
+      avgDifference: number;
+    };
+    basalCalories?: {
+      avgAccuracyPercent: number;
+      avgDifference: number;
     };
   };
 }
@@ -181,18 +205,23 @@ export interface BenchmarkActivityComparison {
   activityStats: {
     steps: {
       avgAccuracyPercent: number;
-      avgBias: number;
-      avgMae: number;
+      avgDifference: number;
     };
     distance: {
       avgAccuracyPercent: number;
-      avgBias: number;
-      avgMae: number;
+      avgDifference: number;
     };
     calories: {
       avgAccuracyPercent: number;
-      avgBias: number;
-      avgMae: number;
+      avgDifference: number;
+    };
+    activeCalories?: {
+      avgAccuracyPercent: number;
+      avgDifference: number;
+    };
+    basalCalories?: {
+      avgAccuracyPercent: number;
+      avgDifference: number;
     };
   };
 }
@@ -217,12 +246,19 @@ export interface AdminUserActivitySummary {
   totalSessions: number;
   activityOverview: {
     totalSessions: number;
+    avgTotalSteps: number;
+    avgTotalDistance: number;
+    avgTotalCalories: number;
     avgStepsAccuracyPercent: number;
     avgDistanceAccuracyPercent: number;
     avgCaloriesAccuracyPercent: number;
+    avgActiveCaloriesAccuracyPercent: number;
+    avgBasalCaloriesAccuracyPercent: number;
     avgStepsBias: number;
     avgDistanceBias: number;
     avgCaloriesBias: number;
+    avgActiveCaloriesBias: number;
+    avgBasalCaloriesBias: number;
   } | null;
 }
 
@@ -234,21 +270,23 @@ export interface ActivityAccuracyTrend {
   activityStats: {
     steps: {
       avgAccuracyPercent: number;
-      avgBias: number;
-      avgMae: number;
-      avgMape: number;
+      avgDifference: number;
     };
     distance: {
       avgAccuracyPercent: number;
-      avgBias: number;
-      avgMae: number;
-      avgMape: number;
+      avgDifference: number;
     };
     calories: {
       avgAccuracyPercent: number;
-      avgBias: number;
-      avgMae: number;
-      avgMape: number;
+      avgDifference: number;
+    };
+    activeCalories?: {
+      avgAccuracyPercent: number;
+      avgDifference: number;
+    };
+    basalCalories?: {
+      avgAccuracyPercent: number;
+      avgDifference: number;
     };
   };
   sessionCount: number;

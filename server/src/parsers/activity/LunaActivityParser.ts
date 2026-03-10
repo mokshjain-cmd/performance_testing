@@ -128,24 +128,52 @@ export class LunaActivityParser {
   /**
    * Parse Luna activity file (Android format)
    * This may have a different format based on the Android app
+   * @param filePath - Path to the Luna activity file
+   * @param startDate - Optional start date to filter activity data
+   * @param endDate - Optional end date to filter activity data
    */
   static async parseLunaActivityFileAndroid(
-    filePath: string
+    filePath: string,
+    startDate?: Date,
+    endDate?: Date
   ): Promise<ILunaActivityParseResult> {
-    // For now, use the same parser
-    // Can be extended if Android has a different format
-    return this.parseLunaActivityFile(filePath);
+    console.log(`[LunaActivityParser Android] Parsing file: ${filePath}`);
+    if (startDate && endDate) {
+      console.log(`[LunaActivityParser Android] 📅 Filtering by date range: ${startDate.toISOString().split('T')[0]} to ${endDate.toISOString().split('T')[0]}`);
+    }
+    
+    const result = await this.parseLunaActivityFile(filePath);
+    
+    // Filter by date if specified
+    if (startDate && endDate && result.dailyTotals) {
+      const targetDateStr = startDate.toISOString().split('T')[0];
+      result.dailyTotals = result.dailyTotals.filter(daily => {
+        const dailyDateStr = daily.date.toISOString().split('T')[0];
+        return dailyDateStr === targetDateStr;
+      });
+      console.log(`[LunaActivityParser Android] ✅ Filtered to ${result.dailyTotals.length} records for date ${targetDateStr}`);
+    }
+    
+    return result;
   }
 
   /**
    * Parse Luna activity file (iOS format)
    * Parses ZHDRings (Luna iOS) Data from ZHDRingsLogs.txt
    * Extracts daily step, calorie, and distance data
+   * @param filePath - Path to the Luna activity file
+   * @param startDate - Optional start date to filter activity data
+   * @param endDate - Optional end date to filter activity data
    */
   static async parseLunaActivityFileIOS(
-    filePath: string
+    filePath: string,
+    startDate?: Date,
+    endDate?: Date
   ): Promise<ILunaActivityParseResult> {
     console.log(`[LunaActivityParser iOS] Parsing file: ${filePath}`);
+    if (startDate && endDate) {
+      console.log(`[LunaActivityParser iOS] 📅 Filtering by date range: ${startDate.toISOString().split('T')[0]} to ${endDate.toISOString().split('T')[0]}`);
+    }
 
     try {
       const content = fs.readFileSync(filePath, 'utf8');
@@ -237,9 +265,17 @@ export class LunaActivityParser {
       
       console.log(`[LunaActivityParser iOS] Extracted ${dailyEntries.length} daily entries`);
       
+      // Filter by target date if specified
+      let filteredEntries = dailyEntries;
+      if (startDate && endDate) {
+        const targetDateStr = startDate.toISOString().split('T')[0];
+        filteredEntries = dailyEntries.filter(entry => entry.date === targetDateStr);
+        console.log(`[LunaActivityParser iOS] 📅 Filtered to ${filteredEntries.length} entries for date ${targetDateStr}`);
+      }
+      
       // Group by date and take the last entry for each date (most recent update)
       const dateMap = new Map<string, any>();
-      for (const entry of dailyEntries) {
+      for (const entry of filteredEntries) {
         dateMap.set(entry.date, entry);
       }
       
@@ -247,13 +283,17 @@ export class LunaActivityParser {
       const dailyTotals: ILunaActivityDailyTotals[] = [];
       
       for (const [dateStr, entry] of dateMap.entries()) {
+        const totalCal = entry.calories || 0;
+        const activeCal = entry.todaySportCalorieData || 0;
+        const basalCal = totalCal - activeCal; // Basal = Total - Active
+        
         dailyTotals.push({
           date: new Date(dateStr),
           steps: entry.steps || 0,
           distanceMeters: entry.distance || 0,
-          caloriesTotal: entry.calories || 0,
-          caloriesActive: entry.todaySportCalorieData || 0,
-          caloriesBasal: entry.todayOuraCalorieData || 0,
+          caloriesTotal: totalCal,
+          caloriesActive: activeCal,
+          caloriesBasal: basalCal,
         });
       }
       

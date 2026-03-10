@@ -36,7 +36,7 @@ export class IngestActivityService {
     let sessionName: string | undefined;
     let sessionStartTime: Date | undefined;
     let sessionEndTime: Date | undefined;
-    const metric = 'Steps'; // or 'Calories' depending on session type
+    const metric = 'Activity'; // Unified metric for steps, calories, and distance
     const extractedFolders: string[] = []; // Track extracted folders for cleanup
     
     try {
@@ -80,7 +80,9 @@ export class IngestActivityService {
             sessionId,
             userId,
             filePath,
-            mobileType
+            mobileType,
+            sessionStartTime,
+            sessionEndTime
           );
           if (recordsInserted > 0) anyInserted = true;
         } else if (benchmarkDeviceType && deviceType === benchmarkDeviceType) {
@@ -195,27 +197,33 @@ export class IngestActivityService {
    * Process Luna activity data
    * Parse the file and store daily totals in ActivityDailyReading collection
    * @param mobileType Optional mobile type (Android/iOS) to determine which parser to use
+   * @param startDate Optional start date to filter activity data
+   * @param endDate Optional end date to filter activity data
    * @returns Number of records inserted
    */
   private static async processLunaActivityData(
     sessionId: Types.ObjectId | string,
     userId: Types.ObjectId | string,
     filePath: string,
-    mobileType?: string
+    mobileType?: string,
+    startDate?: Date,
+    endDate?: Date
   ): Promise<number> {
     try {
       console.log(`[IngestActivityService] Processing Luna activity data from: ${filePath}`);
-      console.log(`[IngestActivityService] Mobile type: ${mobileType || 'Android (default)'}`);
+      console.log(`[IngestActivityService] Mobile type: ${mobileType || 'Android (default)'}`);      if (startDate && endDate) {
+        console.log(`[IngestActivityService] 📅 Date range: ${startDate.toISOString().split('T')[0]} to ${endDate.toISOString().split('T')[0]}`);
+      }
 
       let parseResult;
       
       if (mobileType === 'iOS') {
         console.log(`[IngestActivityService] Using iOS Luna parser`);
-        parseResult = await LunaActivityParser.parseLunaActivityFileIOS(filePath);
+        parseResult = await LunaActivityParser.parseLunaActivityFileIOS(filePath, startDate, endDate);
       } else {
         // Default to Android parser for backward compatibility
         console.log(`[IngestActivityService] Using Android Luna parser`);
-        parseResult = await LunaActivityParser.parseLunaActivityFileAndroid(filePath);
+        parseResult = await LunaActivityParser.parseLunaActivityFileAndroid(filePath, startDate, endDate);
       }
 
       // Get firmware version from session devices

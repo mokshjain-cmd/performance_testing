@@ -1,7 +1,7 @@
 import { Schema, model, Document } from "mongoose";
 
 export interface IAdminGlobalSummary extends Document {
-  metric: 'HR' | 'SPO2' | 'Sleep' | 'Calories' | 'Steps';
+  metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity';
   totalUsers: number;
   totalSessions: number;
   totalReadings: number;
@@ -27,14 +27,26 @@ export interface IAdminGlobalSummary extends Document {
   };
 
   activityStats?: {
-    stepsAccuracy?: number;
-    distanceAccuracy?: number;
-    calorieAccuracy?: number;
-    avgStepMAE?: number;
-    avgStepMAPE?: number;
-    avgStepBias?: number;
-    avgDistanceMAPE?: number;
-    avgCalorieMAPE?: number;
+    steps?: {
+      avgAccuracyPercent?: number;
+      avgDifference?: number;
+    };
+    distance?: {
+      avgAccuracyPercent?: number;
+      avgDifference?: number;
+    };
+    calories?: {
+      avgAccuracyPercent?: number;
+      avgDifference?: number;
+    };
+    activeCalories?: {
+      avgAccuracyPercent?: number;
+      avgDifference?: number;
+    };
+    basalCalories?: {
+      avgAccuracyPercent?: number;
+      avgDifference?: number;
+    };
   };
 
   // Firmware version used for this aggregation (if filtered)
@@ -46,7 +58,7 @@ export interface IAdminGlobalSummary extends Document {
 const AdminGlobalSummarySchema = new Schema<IAdminGlobalSummary>({
   metric: { 
     type: String, 
-    enum: ['HR', 'SPO2', 'Sleep', 'Calories', 'Steps'],
+    enum: ['HR', 'SPO2', 'Sleep', 'Activity'],
     required: true,
     unique: true,
     index: true 
@@ -76,14 +88,26 @@ const AdminGlobalSummarySchema = new Schema<IAdminGlobalSummary>({
   },
 
   activityStats: {
-    stepsAccuracy: Number,
-    distanceAccuracy: Number,
-    calorieAccuracy: Number,
-    avgStepMAE: Number,
-    avgStepMAPE: Number,
-    avgStepBias: Number,
-    avgDistanceMAPE: Number,
-    avgCalorieMAPE: Number,
+    steps: {
+      avgAccuracyPercent: Number,
+      avgDifference: Number,
+    },
+    distance: {
+      avgAccuracyPercent: Number,
+      avgDifference: Number,
+    },
+    calories: {
+      avgAccuracyPercent: Number,
+      avgDifference: Number,
+    },
+    activeCalories: {
+      avgAccuracyPercent: Number,
+      avgDifference: Number,
+    },
+    basalCalories: {
+      avgAccuracyPercent: Number,
+      avgDifference: Number,
+    },
   },
 
 //   invalidStats: {

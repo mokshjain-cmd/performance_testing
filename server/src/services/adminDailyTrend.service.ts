@@ -12,7 +12,7 @@ import { getLatestFirmwareVersion } from '../controllers/firmwareConfig.controll
  */
 export async function updateAdminDailyTrend(
   date: Date, 
-  metric: 'HR' | 'SPO2' | 'Sleep' | 'Calories' | 'Steps' = 'HR',
+  metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity' = 'HR',
   latestFirmwareOnly: boolean = true
 ) {
   // Normalize to midnight UTC

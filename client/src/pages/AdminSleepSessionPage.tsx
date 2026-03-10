@@ -119,12 +119,12 @@ export const AdminSleepSessionPage: React.FC = () => {
             <SleepMetricCard
               title="Deep Bias"
               value={`${(sessionData.metrics.deepBias / 60).toFixed(1)} min`}
-              subtitle="Luna - Benchmark"
+              subtitle="Falcon - Benchmark"
             />
             <SleepMetricCard
               title="REM Bias"
               value={`${(sessionData.metrics.remBias / 60).toFixed(1)} min`}
-              subtitle="Luna - Benchmark"
+              subtitle="Falcon - Benchmark"
             />
           </div>
         </div>
@@ -216,7 +216,7 @@ export const AdminSleepSessionPage: React.FC = () => {
         <div className="bg-white p-6 rounded-lg shadow">
           <h2 className="text-xl font-semibold mb-4">Confusion Matrix</h2>
           <p className="text-sm text-gray-600 mb-4">
-            Shows how Luna's predictions align with benchmark device readings.
+            Shows how Falcon's predictions align with benchmark device readings.
           </p>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">

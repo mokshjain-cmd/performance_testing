@@ -2,7 +2,7 @@ import { Schema, model, Document } from "mongoose";
 
 export interface IBenchmarkComparisonSummary extends Document {
   benchmarkDeviceType: string;
-  metric: 'HR' | 'SPO2' | 'Sleep' | 'Calories' | 'Steps';
+  metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity';
 
   totalSessions: number;
 
@@ -24,18 +24,24 @@ export interface IBenchmarkComparisonSummary extends Document {
 
   activityStats?: {
     steps?: {
-      avgAccuracy?: number;
-      avgMAE?: number;
-      avgMAPE?: number;
-      avgBias?: number;
+      avgAccuracyPercent?: number;
+      avgDifference?: number;
     };
     distance?: {
-      avgAccuracy?: number;
-      avgMAPE?: number;
+      avgAccuracyPercent?: number;
+      avgDifference?: number;
     };
     calories?: {
-      avgAccuracy?: number;
-      avgMAPE?: number;
+      avgAccuracyPercent?: number;
+      avgDifference?: number;
+    };
+    activeCalories?: {
+      avgAccuracyPercent?: number;
+      avgDifference?: number;
+    };
+    basalCalories?: {
+      avgAccuracyPercent?: number;
+      avgDifference?: number;
     };
   };
 
@@ -47,7 +53,7 @@ const BenchmarkComparisonSummarySchema =
     benchmarkDeviceType: { type: String, required: true, index: true },
     metric: { 
       type: String, 
-      enum: ['HR', 'SPO2', 'Sleep', 'Calories', 'Steps'],
+      enum: ['HR', 'SPO2', 'Sleep', 'Activity'],
       required: true,
       index: true 
     },
@@ -72,18 +78,24 @@ const BenchmarkComparisonSummarySchema =
 
     activityStats: {
       steps: {
-        avgAccuracy: Number,
-        avgMAE: Number,
-        avgMAPE: Number,
-        avgBias: Number,
+        avgAccuracyPercent: Number,
+        avgDifference: Number,
       },
       distance: {
-        avgAccuracy: Number,
-        avgMAPE: Number,
+        avgAccuracyPercent: Number,
+        avgDifference: Number,
       },
       calories: {
-        avgAccuracy: Number,
-        avgMAPE: Number,
+        avgAccuracyPercent: Number,
+        avgDifference: Number,
+      },
+      activeCalories: {
+        avgAccuracyPercent: Number,
+        avgDifference: Number,
+      },
+      basalCalories: {
+        avgAccuracyPercent: Number,
+        avgDifference: Number,
       },
     },
 

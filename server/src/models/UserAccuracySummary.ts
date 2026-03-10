@@ -2,7 +2,7 @@ import { Schema, model, Document, Types } from "mongoose";
 
 export interface IUserAccuracySummary extends Document {
   userId: Types.ObjectId;
-  metric: 'HR' | 'SPO2' | 'Sleep' | 'Calories' | 'Steps';
+  metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity';
   totalSessions: number;
   overallAccuracy?: {
     avgMAE?: number;
@@ -20,25 +20,28 @@ export interface IUserAccuracySummary extends Document {
     avgAgreementPercent?: number;
   };
   activityOverview?: {
+    avgDailySteps?: number;
+    avgDailyDistance?: number;
+    avgDailyCalories?: number;
     steps?: {
-      avgAccuracy?: number;
-      avgMAE?: number;
-      avgMAPE?: number;
-      avgBias?: number;
+      avgAccuracyPercent?: number;
+      avgDifference?: number;
     };
     distance?: {
-      avgAccuracy?: number;
-      avgMAPE?: number;
+      avgAccuracyPercent?: number;
+      avgDifference?: number;
     };
     calories?: {
-      avgAccuracy?: number;
-      avgMAPE?: number;
+      avgAccuracyPercent?: number;
+      avgDifference?: number;
     };
     activeCalories?: {
-      avgAccuracy?: number;
+      avgAccuracyPercent?: number;
+      avgDifference?: number;
     };
     basalCalories?: {
-      avgAccuracy?: number;
+      avgAccuracyPercent?: number;
+      avgDifference?: number;
     };
   };
   bestSession?: {
@@ -75,7 +78,7 @@ const UserAccuracySummarySchema = new Schema<IUserAccuracySummary>({
   userId: { type: Schema.Types.ObjectId, ref: "User", index: true },
   metric: { 
     type: String, 
-    enum: ['HR', 'SPO2', 'Sleep', 'Calories', 'Steps'],
+    enum: ['HR', 'SPO2', 'Sleep', 'Activity'],
     required: true,
     index: true 
   },
@@ -96,25 +99,28 @@ const UserAccuracySummarySchema = new Schema<IUserAccuracySummary>({
     avgAgreementPercent: Number,
   },
   activityOverview: {
+    avgDailySteps: Number,
+    avgDailyDistance: Number,
+    avgDailyCalories: Number,
     steps: {
-      avgAccuracy: Number,
-      avgMAE: Number,
-      avgMAPE: Number,
-      avgBias: Number,
+      avgAccuracyPercent: Number,
+      avgDifference: Number,
     },
     distance: {
-      avgAccuracy: Number,
-      avgMAPE: Number,
+      avgAccuracyPercent: Number,
+      avgDifference: Number,
     },
     calories: {
-      avgAccuracy: Number,
-      avgMAPE: Number,
+      avgAccuracyPercent: Number,
+      avgDifference: Number,
     },
     activeCalories: {
-      avgAccuracy: Number,
+      avgAccuracyPercent: Number,
+      avgDifference: Number,
     },
     basalCalories: {
-      avgAccuracy: Number,
+      avgAccuracyPercent: Number,
+      avgDifference: Number,
     },
   },
   bestSession: {

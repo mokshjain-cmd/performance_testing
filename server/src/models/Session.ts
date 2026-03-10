@@ -10,8 +10,8 @@
     userId: Types.ObjectId;
     name?: string;
     activityType: string;
-metric: 'HR' | 'SPO2' | 'Sleep' | 'Calories' | 'Steps';
-startTime: Date;
+    metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity';
+    startTime: Date;
 endTime: Date;
 durationSec: number;
 bandPosition?: string;
@@ -30,7 +30,7 @@ const SessionSchema = new Schema<ISession>(
     activityType: { type: String, required: true, index: true },
     metric: { 
       type: String, 
-      enum: ['HR', 'SPO2', 'Sleep', 'Calories', 'Steps'],
+      enum: ['HR', 'SPO2', 'Sleep', 'Activity'],
       required: true,
       default: 'HR',
       index: true 

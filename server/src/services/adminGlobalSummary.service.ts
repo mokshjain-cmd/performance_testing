@@ -12,7 +12,7 @@ import { getLatestFirmwareVersion } from '../controllers/firmwareConfig.controll
  * @param latestFirmwareOnly - Whether to filter by latest firmware version only (default: true)
  */
 export async function updateAdminGlobalSummary(
-  metric: 'HR' | 'SPO2' | 'Sleep' | 'Calories' | 'Steps' = 'HR',
+  metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity' = 'HR',
   latestFirmwareOnly: boolean = true
 ) {
   console.log(`\n🔄 ========================================`);

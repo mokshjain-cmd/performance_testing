@@ -5,7 +5,7 @@ import { Button, Input, Select, Card } from '../components/common';
 import apiClient from '../services/api';
 
 const DEVICE_OPTIONS = [
-  { label: 'Luna', value: 'luna', always: true },
+  { label: 'Falcon', value: 'luna', always: true },
   { label: 'Polar', value: 'polar', hrOnly: true },
   { label: 'Masimo', value: 'masimo', spo2Only: true },
   { label: 'Apple', value: 'apple', sleepOnly: true },
@@ -72,7 +72,7 @@ export default function SessionFormPage() {
     benchmarkDeviceType: '',
     bandPosition: '',
     firmwareVersion: '',
-    mobileType: 'Android', // For Sleep/Activity with Luna: Android or iOS
+    mobileType: 'Android', // For Sleep/Activity with Falcon: Android or iOS
     devices: ['luna'],
   });
   const [deviceFiles, setDeviceFiles] = useState<{ [key: string]: File | null }>({ luna: null });
@@ -81,7 +81,7 @@ export default function SessionFormPage() {
   const [firmwareVersions, setFirmwareVersions] = useState<Array<{ value: string; label: string }>>([]);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
-  // Fetch firmware versions for Luna
+  // Fetch firmware versions for Falcon
   useEffect(() => {
     apiClient.get('/devices/firmware?deviceType=luna')
       .then(res => {
@@ -317,12 +317,13 @@ export default function SessionFormPage() {
     if (!startTimeValue) return '';
     try {
       const date = new Date(startTimeValue);
-      const day = String(date.getDate()).padStart(2, '0');
+      // Use UTC methods to avoid timezone shifts
+      const day = String(date.getUTCDate()).padStart(2, '0');
       const monthNames = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
-      const month = monthNames[date.getMonth()];
-      const year = String(date.getFullYear()).slice(-2);
-      const hours = String(date.getHours()).padStart(2, '0');
-      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const month = monthNames[date.getUTCMonth()];
+      const year = String(date.getUTCFullYear()).slice(-2);
+      const hours = String(date.getUTCHours()).padStart(2, '0');
+      const minutes = String(date.getUTCMinutes()).padStart(2, '0');
       return `${day}-${month}-${year} | ${hours}:${minutes}`;
     } catch (error) {
       return '';
@@ -380,11 +381,25 @@ export default function SessionFormPage() {
     }
     
     // Compute session name from start time
-    const sessionName = computeSessionName(startTime);
+    // For Activity sessions, use just the date without time
+    let sessionName: string;
+    if (formData.metric === 'Activity' && formData.activityDate) {
+      // Format: "02-mar-26" (date only, no time)
+      const date = new Date(formData.activityDate + 'T00:00:00'); // Parse as local date
+      const day = String(date.getDate()).padStart(2, '0');
+      const monthNames = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+      const month = monthNames[date.getMonth()];
+      const year = String(date.getFullYear()).slice(-2);
+      sessionName = `${day}-${month}-${year}`;
+    } else {
+      sessionName = computeSessionName(startTime);
+    }
+    
     // Attach session fields
     form.append('userId', userId);
     form.append('sessionName', sessionName);
-    form.append('activityType', formData.activity);
+    // For Activity metric, send 'daily' as default activity type
+    form.append('activityType', formData.metric === 'Activity' ? 'daily' : formData.activity);
     form.append('metric', formData.metric);
     
     // For Sleep sessions, send sleepDate instead of startTime/endTime
@@ -454,25 +469,29 @@ export default function SessionFormPage() {
             placeholder="Select metric type"
             required
           />
-          <Select
-            label="Activity"
-            name="activity"
-            value={formData.activity}
-            onChange={handleChange}
-            options={ACTIVITY_OPTIONS}
-            placeholder="Select activity type"
-            required
-            disabled={formData.metric === 'SPO2' || formData.metric === 'Sleep'}
-          />
-          {formData.metric === 'SPO2' && (
-            <p className="text-xs text-gray-500 -mt-4 ml-1">
-              SPO2 sessions are only for sitting activity
-            </p>
-          )}
-          {formData.metric === 'Sleep' && (
-            <p className="text-xs text-gray-500 -mt-4 ml-1">
-              Sleep sessions are fixed to sleeping activity
-            </p>
+          {formData.metric !== 'Activity' && (
+            <>
+              <Select
+                label="Activity"
+                name="activity"
+                value={formData.activity}
+                onChange={handleChange}
+                options={ACTIVITY_OPTIONS}
+                placeholder="Select activity type"
+                required
+                disabled={formData.metric === 'SPO2' || formData.metric === 'Sleep'}
+              />
+              {formData.metric === 'SPO2' && (
+                <p className="text-xs text-gray-500 -mt-4 ml-1">
+                  SPO2 sessions are only for sitting activity
+                </p>
+              )}
+              {formData.metric === 'Sleep' && (
+                <p className="text-xs text-gray-500 -mt-4 ml-1">
+                  Sleep sessions are fixed to sleeping activity
+                </p>
+              )}
+            </>
           )}
           
           {formData.metric === 'Sleep' ? (
@@ -559,7 +578,7 @@ export default function SessionFormPage() {
           />
 
           <Select
-            label="Luna Firmware Version"
+            label="Falcon Firmware Version"
             name="firmwareVersion"
             value={formData.firmwareVersion}
             onChange={handleChange}
@@ -570,7 +589,7 @@ export default function SessionFormPage() {
 
           {(formData.metric === 'Sleep' || formData.metric === 'Activity') && (
             <Select
-              label="Mobile Type (Luna Device)"
+              label="Mobile Type (Falcon Device)"
               name="mobileType"
               value={formData.mobileType}
               onChange={handleChange}
@@ -584,7 +603,7 @@ export default function SessionFormPage() {
             <label className="block text-sm font-medium text-gray-700 mb-3">Select Devices</label>
             <div className="flex gap-6">
               {DEVICE_OPTIONS.filter((opt) => {
-                // Always show Luna
+                // Always show Falcon
                 if (opt.always) return true;
                 // For SPO2, only show SPO2-compatible devices
                 if (formData.metric === 'SPO2') return opt.spo2Only;

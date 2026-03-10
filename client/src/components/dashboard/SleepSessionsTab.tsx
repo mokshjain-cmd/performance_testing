@@ -114,7 +114,7 @@ const SleepSessionsTab: React.FC<SleepSessionsTabProps> = ({ sessionId }) => {
               {formatDateTime(luna.sleepOnsetTime)} - {formatDateTime(luna.finalWakeTime)}
             </p>
             <p className="text-xs text-gray-500 mt-1">
-              Sleep onset to final wake time (Luna measured)
+              Sleep onset to final wake time (Falcon measured)
             </p>
             {hasBenchmark && (
               <p className="text-sm text-green-600 mt-2">
@@ -131,13 +131,13 @@ const SleepSessionsTab: React.FC<SleepSessionsTabProps> = ({ sessionId }) => {
         <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.06)] border border-gray-100/50 p-4 transition-all duration-300 hover:shadow-[0_12px_48px_rgba(0,0,0,0.08)]">
           <h2 className="mb-3 text-xl font-semibold text-gray-800">Sleep Statistics</h2>
           <div className="space-y-3">
-            {/* Luna Sleep Stats */}
+            {/* Falcon Sleep Stats */}
             <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl p-5 border border-purple-200 shadow-sm">
               <div className="flex items-center justify-between gap-8">
                 {/* Device Name */}
                 <div className="flex items-center gap-2 min-w-[140px]">
                   <Moon className="w-5 h-5 text-purple-600" />
-                  <span className="font-semibold text-gray-800 text-base">Luna</span>
+                  <span className="font-semibold text-gray-800 text-base">Falcon</span>
                 </div>
                 
                 {/* Stats spread across full width */}
@@ -340,7 +340,7 @@ const SleepSessionsTab: React.FC<SleepSessionsTabProps> = ({ sessionId }) => {
               {/* Device Name */}
               <div className="flex items-center gap-2 min-w-[140px]">
                 <Moon className="w-5 h-5 text-purple-600" />
-                <span className="font-semibold text-gray-800 text-base">Luna</span>
+                <span className="font-semibold text-gray-800 text-base">Falcon</span>
               </div>
               
               {/* Stats spread across full width */}
@@ -401,7 +401,7 @@ const SleepSessionsTab: React.FC<SleepSessionsTabProps> = ({ sessionId }) => {
       {hasBenchmark && benchmark && sessionData.comparison && (
         <div className="bg-white p-6 rounded-lg border border-gray-200">
           <h3 className="text-lg font-semibold mb-2">Validation Metrics</h3>
-          <p className="text-sm text-gray-600 mb-4">Statistical measures of Luna's accuracy against {benchmark.deviceType}</p>
+          <p className="text-sm text-gray-600 mb-4">Statistical measures of Falcon's accuracy against {benchmark.deviceType}</p>
           
           {/* Accuracy and Kappa */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -459,7 +459,7 @@ const SleepSessionsTab: React.FC<SleepSessionsTabProps> = ({ sessionId }) => {
 
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-gray-700">
             <p className="font-semibold mb-2">📊 Understanding these metrics:</p>
-            <p className="mb-2"><strong>Accuracy</strong>: Percentage of 30-second epochs where Luna and {benchmark.deviceType} agree on the sleep stage.</p>
+            <p className="mb-2"><strong>Accuracy</strong>: Percentage of 30-second epochs where Falcon and {benchmark.deviceType} agree on the sleep stage.</p>
             <p><strong>Cohen's Kappa</strong>: Statistical measure that accounts for agreement occurring by chance. Values closer to 1.0 indicate better reliability between devices.</p>
           </div>
         </div>

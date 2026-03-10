@@ -138,9 +138,12 @@ export class AppleHealthActivityParser {
             try {
               const record = this.parseRecordLine(line, type);
 
-              // Filter by date range if provided (based on session date)
-              if (startDate && record.startDate < startDate) continue;
-              if (endDate && record.endDate > endDate) continue;
+              // Filter by date if provided (compare date portion only)
+              if (startDate && endDate) {
+                const targetDateStr = startDate.toISOString().split('T')[0];
+                const recordDateStr = record.date; // Already in YYYY-MM-DD format
+                if (recordDateStr !== targetDateStr) continue;
+              }
 
               dataPoints.push(record);
             } catch (error) {

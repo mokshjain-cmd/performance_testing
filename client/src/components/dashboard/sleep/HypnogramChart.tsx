@@ -68,7 +68,7 @@ export const HypnogramChart: React.FC<HypnogramChartProps> = ({
         <div className="bg-white p-3 border border-gray-300 rounded shadow-lg">
           <p className="font-semibold">{payload[0].payload.time}</p>
           <p className="text-blue-600">
-            Luna: {payload[0].payload.lunaStage}
+            Falcon: {payload[0].payload.lunaStage}
           </p>
           {showComparison && payload[0].payload.benchmarkStage && (
             <p className="text-green-600">
@@ -106,7 +106,7 @@ export const HypnogramChart: React.FC<HypnogramChartProps> = ({
             stroke="#3b82f6"
             strokeWidth={2}
             dot={false}
-            name="Luna"
+            name="Falcon"
           />
           {showComparison && benchmarkEpochs && (
             <Line

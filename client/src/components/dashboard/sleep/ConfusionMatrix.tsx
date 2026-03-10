@@ -45,7 +45,7 @@ export const ConfusionMatrix: React.FC<ConfusionMatrixProps> = ({ matrix }) => {
             <strong>Rows:</strong> Actual Stage (Benchmark)
           </p>
           <p className="text-sm text-gray-600">
-            <strong>Columns:</strong> Predicted Stage (Luna)
+            <strong>Columns:</strong> Predicted Stage (Falcon)
           </p>
         </div>
         <table className="w-full border-collapse">

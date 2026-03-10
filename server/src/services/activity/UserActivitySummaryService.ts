@@ -2,6 +2,7 @@ import { Types } from "mongoose";
 import Session from "../../models/Session";
 import SessionAnalysis from "../../models/SessionAnalysis";
 import ActivityDailyReading from "../../models/ActivityDailyReading";
+import UserAccuracySummary from "../../models/UserAccuracySummary";
 
 interface IUserActivityOverview {
   totalSessions: number;
@@ -15,21 +16,23 @@ interface IUserActivityOverview {
   comparison?: {
     steps: {
       avgAccuracyPercent: number;
-      avgBias: number;
-      avgMae: number;
-      avgMape: number;
+      avgDifference: number;
     };
     distance: {
       avgAccuracyPercent: number;
-      avgBias: number;
-      avgMae: number;
-      avgMape: number;
+      avgDifference: number;
     };
     calories: {
       avgAccuracyPercent: number;
-      avgBias: number;
-      avgMae: number;
-      avgMape: number;
+      avgDifference: number;
+    };
+    activeCalories?: {
+      avgAccuracyPercent: number;
+      avgDifference: number;
+    };
+    basalCalories?: {
+      avgAccuracyPercent: number;
+      avgDifference: number;
     };
   };
 }
@@ -88,6 +91,22 @@ interface ISingleActivitySessionView {
       rmse: number;
       ratio: number;
     };
+    activeCalories?: {
+      accuracyPercent: number;
+      bias: number;
+      mae: number;
+      mape: number;
+      rmse: number;
+      ratio: number;
+    };
+    basalCalories?: {
+      accuracyPercent: number;
+      bias: number;
+      mae: number;
+      mape: number;
+      rmse: number;
+      ratio: number;
+    };
   };
   
   // Daily data (if requested)
@@ -110,11 +129,24 @@ interface IActivityTrendData {
   date: Date;
   lunaSteps: number;
   benchmarkSteps?: number;
-  accuracyPercent?: number;
+  stepsBias?: number;
+  stepsAccuracyPercent?: number;
   lunaDistance: number;
   benchmarkDistance?: number;
+  distanceBias?: number;
+  distanceAccuracyPercent?: number;
   lunaCalories: number;
   benchmarkCalories?: number;
+  caloriesBias?: number;
+  caloriesAccuracyPercent?: number;
+  lunaCaloriesActive?: number;
+  benchmarkCaloriesActive?: number;
+  activeCaloriesBias?: number;
+  activeCaloriesAccuracyPercent?: number;
+  lunaCaloriesBasal?: number;
+  benchmarkCaloriesBasal?: number;
+  basalCaloriesBias?: number;
+  basalCaloriesAccuracyPercent?: number;
 }
 
 /**
@@ -127,14 +159,14 @@ export class UserActivitySummaryService {
    */
   static async getUserActivityOverview(userId: Types.ObjectId | string): Promise<IUserActivityOverview> {
     try {
-      // Fetch all activity sessions for this user
-      const sessions = await Session.find({
+      // Fetch from cache first
+      const summary = await UserAccuracySummary.findOne({
         userId,
-        metric: { $in: ["Steps", "Calories"] },
-        isValid: true,
+        metric: "Activity",
       });
 
-      if (sessions.length === 0) {
+      // If no summary exists, return empty data
+      if (!summary || !summary.activityOverview) {
         return {
           totalSessions: 0,
           avgTotalSteps: 0,
@@ -143,94 +175,41 @@ export class UserActivitySummaryService {
         };
       }
 
-      const sessionIds = sessions.map((s) => s._id);
+      const activityOverview = summary.activityOverview;
 
-      // Fetch activity analyses
-      const analyses = await SessionAnalysis.find({
-        sessionId: { $in: sessionIds },
-        activityStats: { $exists: true },
-      });
-
-      // Fetch Luna daily readings to get totals
-      const lunaDailyReadings = await ActivityDailyReading.find({
-        sessionId: { $in: sessionIds },
-        deviceType: "luna",
-      });
-
-      // Calculate averages
-      let totalStepsSum = 0;
-      let totalDistanceSum = 0;
-      let totalCaloriesSum = 0;
-
-      lunaDailyReadings.forEach((reading: any) => {
-        totalStepsSum += reading.totals.steps || 0;
-        totalDistanceSum += reading.totals.distanceMeters || 0;
-        totalCaloriesSum += reading.totals.caloriesTotal || 0;
-      });
-
-      const sessionCount = sessions.length;
-
-      // Calculate comparison metrics if analyses available
+      // Build comparison from cached data
       let comparison = undefined;
-
-      if (analyses.length > 0) {
-        let stepsAccSum = 0, stepsBiasSum = 0, stepsMaeSum = 0, stepsMapeSum = 0;
-        let distanceAccSum = 0, distanceBiasSum = 0, distanceMaeSum = 0, distanceMapeSum = 0;
-        let caloriesAccSum = 0, caloriesBiasSum = 0, caloriesMaeSum = 0, caloriesMapeSum = 0;
-
-        analyses.forEach((analysis: any) => {
-          const stats = analysis.activityStats;
-          if (stats) {
-            if (stats.steps) {
-              stepsAccSum += stats.steps.accuracyPercent || 0;
-              stepsBiasSum += stats.steps.bias || 0;
-              stepsMaeSum += stats.steps.mae || 0;
-              stepsMapeSum += stats.steps.mape || 0;
-            }
-            if (stats.distance) {
-              distanceAccSum += stats.distance.accuracyPercent || 0;
-              distanceBiasSum += stats.distance.bias || 0;
-              distanceMaeSum += stats.distance.mae || 0;
-              distanceMapeSum += stats.distance.mape || 0;
-            }
-            if (stats.calories) {
-              caloriesAccSum += stats.calories.accuracyPercent || 0;
-              caloriesBiasSum += stats.calories.bias || 0;
-              caloriesMaeSum += stats.calories.mae || 0;
-              caloriesMapeSum += stats.calories.mape || 0;
-            }
-          }
-        });
-
-        const count = analyses.length;
-
+      
+      if (activityOverview.steps || activityOverview.distance || activityOverview.calories) {
         comparison = {
           steps: {
-            avgAccuracyPercent: parseFloat((stepsAccSum / count).toFixed(2)),
-            avgBias: parseFloat((stepsBiasSum / count).toFixed(2)),
-            avgMae: parseFloat((stepsMaeSum / count).toFixed(2)),
-            avgMape: parseFloat((stepsMapeSum / count).toFixed(2)),
+            avgAccuracyPercent: activityOverview.steps?.avgAccuracyPercent || 0,
+            avgDifference: activityOverview.steps?.avgDifference || 0,
           },
           distance: {
-            avgAccuracyPercent: parseFloat((distanceAccSum / count).toFixed(2)),
-            avgBias: parseFloat((distanceBiasSum / count).toFixed(2)),
-            avgMae: parseFloat((distanceMaeSum / count).toFixed(2)),
-            avgMape: parseFloat((distanceMapeSum / count).toFixed(2)),
+            avgAccuracyPercent: activityOverview.distance?.avgAccuracyPercent || 0,
+            avgDifference: activityOverview.distance?.avgDifference || 0,
           },
           calories: {
-            avgAccuracyPercent: parseFloat((caloriesAccSum / count).toFixed(2)),
-            avgBias: parseFloat((caloriesBiasSum / count).toFixed(2)),
-            avgMae: parseFloat((caloriesMaeSum / count).toFixed(2)),
-            avgMape: parseFloat((caloriesMapeSum / count).toFixed(2)),
+            avgAccuracyPercent: activityOverview.calories?.avgAccuracyPercent || 0,
+            avgDifference: activityOverview.calories?.avgDifference || 0,
           },
+          activeCalories: activityOverview.activeCalories ? {
+            avgAccuracyPercent: activityOverview.activeCalories.avgAccuracyPercent || 0,
+            avgDifference: activityOverview.activeCalories.avgDifference || 0,
+          } : undefined,
+          basalCalories: activityOverview.basalCalories ? {
+            avgAccuracyPercent: activityOverview.basalCalories.avgAccuracyPercent || 0,
+            avgDifference: activityOverview.basalCalories.avgDifference || 0,
+          } : undefined,
         };
       }
 
       return {
-        totalSessions: sessionCount,
-        avgTotalSteps: parseFloat((totalStepsSum / sessionCount).toFixed(0)),
-        avgTotalDistance: parseFloat((totalDistanceSum / sessionCount).toFixed(2)),
-        avgTotalCalories: parseFloat((totalCaloriesSum / sessionCount).toFixed(2)),
+        totalSessions: summary.totalSessions || 0,
+        avgTotalSteps: activityOverview.avgDailySteps || 0,
+        avgTotalDistance: activityOverview.avgDailyDistance || 0,
+        avgTotalCalories: activityOverview.avgDailyCalories || 0,
         comparison,
       };
     } catch (error) {
@@ -253,93 +232,134 @@ export class UserActivitySummaryService {
         throw new Error("Activity session not found");
       }
 
-      const analysis = await SessionAnalysis.findOne({ sessionId });
-
-      // Get daily readings for Luna and Benchmark
-      const lunaReadings = await ActivityDailyReading.find({
-        sessionId,
-        deviceType: "luna",
-      }).sort({ "meta.date": 1 });
-
-      const benchmarkDevice = session.devices.find((d: any) => d.deviceType !== "luna");
-      let benchmarkReadings = null;
-
-      if (benchmarkDevice) {
-        benchmarkReadings = await ActivityDailyReading.find({
-          sessionId,
-          deviceType: benchmarkDevice.deviceType,
-        }).sort({ "meta.date": 1 });
+      if (session.metric !== "Activity") {
+        throw new Error("Not an activity session");
       }
 
-      // Calculate totals for Luna
-      const lunaSteps = lunaReadings.reduce((sum: number, r: any) => sum + r.totals.steps, 0);
-      const lunaDistance = lunaReadings.reduce((sum: number, r: any) => sum + r.totals.distanceMeters, 0);
-      const lunaCalories = lunaReadings.reduce((sum: number, r: any) => sum + r.totals.caloriesTotal, 0);
-      const lunaCaloriesActive = lunaReadings.reduce((sum: number, r: any) => sum + (r.totals.caloriesActive || 0), 0);
-      const lunaCaloriesBasal = lunaReadings.reduce((sum: number, r: any) => sum + (r.totals.caloriesBasal || 0), 0);
+      const analysis = await SessionAnalysis.findOne({ sessionId });
 
+      if (!analysis || !analysis.activityStats) {
+        throw new Error("Activity analysis not available for this session");
+      }
+
+      const activityStats = analysis.activityStats;
+
+      // Build Luna data from analysis
       const result: ISingleActivitySessionView = {
         session: {
           _id: session._id.toString(),
           name: session.name,
           startTime: session.startTime,
           endTime: session.endTime,
-          date: session.createdAt,
+          date: session.startTime,
         },
         luna: {
-          totalSteps: lunaSteps,
-          totalDistance: lunaDistance,
-          totalCalories: lunaCalories,
-          caloriesActive: lunaCaloriesActive,
-          caloriesBasal: lunaCaloriesBasal,
+          totalSteps: activityStats.steps?.lunaTotal || 0,
+          totalDistance: activityStats.distance?.lunaMeters || 0,
+          totalCalories: activityStats.calories?.lunaTotal || 0,
+          caloriesActive: activityStats.activeCalories?.lunaActive || 0,
+          caloriesBasal: activityStats.basalCalories?.lunaBasal || 0,
         },
       };
 
       // Add benchmark data if available
-      if (benchmarkReadings && benchmarkReadings.length > 0 && benchmarkDevice) {
-        const benchmarkSteps = benchmarkReadings.reduce((sum: number, r: any) => sum + r.totals.steps, 0);
-        const benchmarkDistance = benchmarkReadings.reduce((sum: number, r: any) => sum + r.totals.distanceMeters, 0);
-        const benchmarkCalories = benchmarkReadings.reduce((sum: number, r: any) => sum + r.totals.caloriesTotal, 0);
-        const benchmarkCaloriesActive = benchmarkReadings.reduce((sum: number, r: any) => sum + (r.totals.caloriesActive || 0), 0);
-        const benchmarkCaloriesBasal = benchmarkReadings.reduce((sum: number, r: any) => sum + (r.totals.caloriesBasal || 0), 0);
-
+      if (activityStats.steps?.benchmarkTotal !== undefined) {
         result.benchmark = {
-          deviceType: benchmarkDevice.deviceType,
-          totalSteps: benchmarkSteps,
-          totalDistance: benchmarkDistance,
-          totalCalories: benchmarkCalories,
-          caloriesActive: benchmarkCaloriesActive,
-          caloriesBasal: benchmarkCaloriesBasal,
+          deviceType: session.benchmarkDeviceType || 'unknown',
+          totalSteps: activityStats.steps.benchmarkTotal,
+          totalDistance: activityStats.distance?.benchmarkMeters || 0,
+          totalCalories: activityStats.calories?.benchmarkTotal || 0,
+          caloriesActive: activityStats.activeCalories?.benchmarkActive || 0,
+          caloriesBasal: activityStats.basalCalories?.benchmarkBasal || 0,
         };
 
-        // Add comparison if analysis exists
-        if (analysis && (analysis as any).activityStats) {
-          result.comparison = (analysis as any).activityStats;
+        // Build comparison object with just the metrics (not luna/benchmark totals)
+        result.comparison = {
+          steps: {
+            accuracyPercent: activityStats.steps.accuracyPercent || 0,
+            bias: activityStats.steps.bias || 0,
+            mae: activityStats.steps.mae || 0,
+            mape: activityStats.steps.mape || 0,
+            rmse: activityStats.steps.rmse || 0,
+            ratio: activityStats.steps.ratio || 0,
+          },
+          distance: {
+            accuracyPercent: activityStats.distance?.accuracyPercent || 0,
+            bias: activityStats.distance?.bias || 0,
+            mae: activityStats.distance?.mae || 0,
+            mape: activityStats.distance?.mape || 0,
+            rmse: 0, // Not calculated for distance
+            ratio: 0, // Not calculated for distance
+          },
+          calories: {
+            accuracyPercent: activityStats.calories?.accuracyPercent || 0,
+            bias: activityStats.calories?.bias || 0,
+            mae: activityStats.calories?.mae || 0,
+            mape: activityStats.calories?.mape || 0,
+            rmse: 0, // Not calculated for calories
+            ratio: 0, // Not calculated for calories
+          },
+        };
+
+        // Add active calories comparison if available
+        if (activityStats.activeCalories) {
+          result.comparison.activeCalories = {
+            accuracyPercent: activityStats.activeCalories.accuracyPercent || 0,
+            bias: activityStats.activeCalories.bias || 0,
+            mae: activityStats.activeCalories.mae || 0,
+            mape: activityStats.activeCalories.mape || 0,
+            rmse: 0,
+            ratio: 0,
+          };
+        }
+
+        // Add basal calories comparison if available
+        if (activityStats.basalCalories) {
+          result.comparison.basalCalories = {
+            accuracyPercent: activityStats.basalCalories.accuracyPercent || 0,
+            bias: activityStats.basalCalories.bias || 0,
+            mae: activityStats.basalCalories.mae || 0,
+            mape: activityStats.basalCalories.mape || 0,
+            rmse: 0,
+            ratio: 0,
+          };
         }
       }
 
       // Add daily data if requested
       if (includeDailyData) {
+        const lunaReadings = await ActivityDailyReading.find({
+          "meta.sessionId": sessionId,
+          "meta.deviceType": "luna",
+        }).sort({ "meta.date": 1 });
+
         result.dailyData = {
           luna: lunaReadings.map((r: any) => ({
             date: r.meta.date,
-            steps: r.totals.steps,
-            distanceMeters: r.totals.distanceMeters,
-            caloriesTotal: r.totals.caloriesTotal,
-            caloriesActive: r.totals.caloriesActive,
-            caloriesBasal: r.totals.caloriesBasal,
+            steps: r.totals.steps || 0,
+            distanceMeters: r.totals.distanceMeters || 0,
+            caloriesTotal: r.totals.caloriesTotal || 0,
+            caloriesActive: r.totals.caloriesActive || 0,
+            caloriesBasal: r.totals.caloriesBasal || 0,
           })),
         };
 
-        if (benchmarkReadings && benchmarkReadings.length > 0) {
-          result.dailyData.benchmark = benchmarkReadings.map((r: any) => ({
-            date: r.meta.date,
-            steps: r.totals.steps,
-            distanceMeters: r.totals.distanceMeters,
-            caloriesTotal: r.totals.caloriesTotal,
-            caloriesActive: r.totals.caloriesActive,
-            caloriesBasal: r.totals.caloriesBasal,
-          }));
+        if (session.benchmarkDeviceType) {
+          const benchmarkReadings = await ActivityDailyReading.find({
+            "meta.sessionId": sessionId,
+            "meta.deviceType": session.benchmarkDeviceType,
+          }).sort({ "meta.date": 1 });
+
+          if (benchmarkReadings.length > 0) {
+            result.dailyData.benchmark = benchmarkReadings.map((r: any) => ({
+              date: r.meta.date,
+              steps: r.totals.steps || 0,
+              distanceMeters: r.totals.distanceMeters || 0,
+              caloriesTotal: r.totals.caloriesTotal || 0,
+              caloriesActive: r.totals.caloriesActive || 0,
+              caloriesBasal: r.totals.caloriesBasal || 0,
+            }));
+          }
         }
       }
 
@@ -357,7 +377,7 @@ export class UserActivitySummaryService {
     try {
       const sessions = await Session.find({
         userId,
-        metric: { $in: ["Steps", "Calories"] },
+        metric: "Activity",
         isValid: true,
       }).sort({ date: 1 });
 
@@ -369,7 +389,7 @@ export class UserActivitySummaryService {
 
       // Get all daily readings
       const allReadings = await ActivityDailyReading.find({
-        sessionId: { $in: sessionIds },
+        "meta.sessionId": { $in: sessionIds },
       }).sort({ "meta.date": 1 });
 
       // Get analyses for accuracy data
@@ -383,27 +403,31 @@ export class UserActivitySummaryService {
 
       allReadings.forEach((reading: any) => {
         const dateKey = reading.meta.date.toISOString().split("T")[0];
-        const sessionKey = `${dateKey}-${reading.sessionId.toString()}`;
+        const sessionKey = `${dateKey}-${reading.meta.sessionId.toString()}`;
 
         if (!trendMap.has(sessionKey)) {
           trendMap.set(sessionKey, {
             date: reading.meta.date,
-            sessionId: reading.sessionId.toString(),
-            luna: { steps: 0, distance: 0, calories: 0 },
-            benchmark: { steps: 0, distance: 0, calories: 0 },
+            sessionId: reading.meta.sessionId.toString(),
+            luna: { steps: 0, distance: 0, calories: 0, caloriesActive: 0, caloriesBasal: 0 },
+            benchmark: { steps: 0, distance: 0, calories: 0, caloriesActive: 0, caloriesBasal: 0 },
           });
         }
 
         const entry = trendMap.get(sessionKey);
 
-        if (reading.deviceType === "luna") {
-          entry.luna.steps += reading.totals.steps;
-          entry.luna.distance += reading.totals.distanceMeters;
-          entry.luna.calories += reading.totals.caloriesTotal;
+        if (reading.meta.deviceType === "luna") {
+          entry.luna.steps += reading.totals.steps || 0;
+          entry.luna.distance += reading.totals.distanceMeters || 0;
+          entry.luna.calories += reading.totals.caloriesTotal || 0;
+          entry.luna.caloriesActive += reading.totals.caloriesActive || 0;
+          entry.luna.caloriesBasal += reading.totals.caloriesBasal || 0;
         } else {
-          entry.benchmark.steps += reading.totals.steps;
-          entry.benchmark.distance += reading.totals.distanceMeters;
-          entry.benchmark.calories += reading.totals.caloriesTotal;
+          entry.benchmark.steps += reading.totals.steps || 0;
+          entry.benchmark.distance += reading.totals.distanceMeters || 0;
+          entry.benchmark.calories += reading.totals.caloriesTotal || 0;
+          entry.benchmark.caloriesActive += reading.totals.caloriesActive || 0;
+          entry.benchmark.caloriesBasal += reading.totals.caloriesBasal || 0;
         }
       });
 
@@ -413,15 +437,46 @@ export class UserActivitySummaryService {
       for (const [key, entry] of trendMap.entries()) {
         const analysis = analyses.find((a: any) => a.sessionId.toString() === entry.sessionId);
 
+        // Calculate bias and accuracy for each metric
+        const hasBenchmark = entry.benchmark.steps > 0 || entry.benchmark.distance > 0 || entry.benchmark.calories > 0;
+        
+        const stepsBias = hasBenchmark && entry.benchmark.steps > 0 ? entry.luna.steps - entry.benchmark.steps : undefined;
+        const stepsAccuracyPercent = analysis?.activityStats?.steps?.accuracyPercent;
+        
+        const distanceBias = hasBenchmark && entry.benchmark.distance > 0 ? entry.luna.distance - entry.benchmark.distance : undefined;
+        const distanceAccuracyPercent = analysis?.activityStats?.distance?.accuracyPercent;
+        
+        const caloriesBias = hasBenchmark && entry.benchmark.calories > 0 ? entry.luna.calories - entry.benchmark.calories : undefined;
+        const caloriesAccuracyPercent = analysis?.activityStats?.calories?.accuracyPercent;
+        
+        const activeCaloriesBias = hasBenchmark && entry.benchmark.caloriesActive > 0 ? entry.luna.caloriesActive - entry.benchmark.caloriesActive : undefined;
+        const activeCaloriesAccuracyPercent = analysis?.activityStats?.activeCalories?.accuracyPercent;
+        
+        const basalCaloriesBias = hasBenchmark && entry.benchmark.caloriesBasal > 0 ? entry.luna.caloriesBasal - entry.benchmark.caloriesBasal : undefined;
+        const basalCaloriesAccuracyPercent = analysis?.activityStats?.basalCalories?.accuracyPercent;
+
         trendData.push({
           date: entry.date,
           lunaSteps: entry.luna.steps,
           benchmarkSteps: entry.benchmark.steps > 0 ? entry.benchmark.steps : undefined,
-          accuracyPercent: analysis?.activityStats?.steps?.accuracyPercent,
+          stepsBias,
+          stepsAccuracyPercent,
           lunaDistance: entry.luna.distance,
           benchmarkDistance: entry.benchmark.distance > 0 ? entry.benchmark.distance : undefined,
+          distanceBias,
+          distanceAccuracyPercent,
           lunaCalories: entry.luna.calories,
           benchmarkCalories: entry.benchmark.calories > 0 ? entry.benchmark.calories : undefined,
+          caloriesBias,
+          caloriesAccuracyPercent,
+          lunaCaloriesActive: entry.luna.caloriesActive > 0 ? entry.luna.caloriesActive : undefined,
+          benchmarkCaloriesActive: entry.benchmark.caloriesActive > 0 ? entry.benchmark.caloriesActive : undefined,
+          activeCaloriesBias,
+          activeCaloriesAccuracyPercent,
+          lunaCaloriesBasal: entry.luna.caloriesBasal > 0 ? entry.luna.caloriesBasal : undefined,
+          benchmarkCaloriesBasal: entry.benchmark.caloriesBasal > 0 ? entry.benchmark.caloriesBasal : undefined,
+          basalCaloriesBias,
+          basalCaloriesAccuracyPercent,
         });
       }
 

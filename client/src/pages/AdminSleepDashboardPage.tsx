@@ -132,12 +132,12 @@ export const AdminSleepDashboardPage: React.FC = () => {
           <SleepMetricCard
             title="Deep Sleep Bias"
             value={`${(summary.avgDeepBiasSec / 60).toFixed(1)} min`}
-            subtitle="Luna vs Benchmark"
+            subtitle="Falcon vs Benchmark"
           />
           <SleepMetricCard
             title="REM Sleep Bias"
             value={`${(summary.avgRemBiasSec / 60).toFixed(1)} min`}
-            subtitle="Luna vs Benchmark"
+            subtitle="Falcon vs Benchmark"
           />
         </div>
       </div>

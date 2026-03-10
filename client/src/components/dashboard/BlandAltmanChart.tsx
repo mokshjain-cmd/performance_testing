@@ -53,8 +53,7 @@ const BlandAltmanChart: React.FC<BlandAltmanChartProps> = ({
   const getUnit = (metric: string) => {
     if (metric === 'HR') return 'BPM';
     if (metric === 'SPO2') return '%';
-    if (metric === 'Steps') return 'steps';
-    if (metric === 'Calories') return 'cal';
+    if (metric === 'Activity') return 'steps';
     return '';
   };
   const unit = getUnit(metric);

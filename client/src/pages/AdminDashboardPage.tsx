@@ -44,6 +44,7 @@ const AdminDashboardPage: React.FC = () => {
 
   // Reset to overview and clear sessions when metric changes
   useEffect(() => {
+    console.log('[Admin Dashboard] 🔄 Metric changed to:', selectedMetric);
     // Clear all sessions
     setUsers(prev => prev.map(user => ({ ...user, sessions: [] })));
     // Reset view to overview
@@ -78,13 +79,17 @@ const AdminDashboardPage: React.FC = () => {
   // Fetch sessions for a specific user
   const fetchUserSessions = async (userId: string) => {
     try {
-      // Convert metric to backend format (hr -> HR, spo2 -> SPO2, sleep -> Sleep)
+      // Convert metric to backend format (hr -> HR, spo2 -> SPO2, sleep -> Sleep, activity -> Activity)
       let metricParam = selectedMetric.toUpperCase();
       if (selectedMetric === 'sleep') {
         metricParam = 'Sleep';
+      } else if (selectedMetric === 'activity') {
+        metricParam = 'Activity';
       }
+      console.log('[Admin Dashboard] 🔍 Fetching sessions for user:', userId, 'metric:', metricParam);
       const res = await apiClient.get(`/sessions/user/${userId}/ids?metric=${metricParam}`);
       const sessions = res.data.data || [];
+      console.log('[Admin Dashboard] ✅ Received sessions:', sessions);
       
       // Update the user's sessions in the users array
       setUsers(prev => prev.map(user => 
@@ -93,24 +98,28 @@ const AdminDashboardPage: React.FC = () => {
           : user
       ));
     } catch (err) {
+      console.error('[Admin Dashboard] ❌ Error fetching user sessions:', err);
       console.error('Error fetching user sessions:', err);
     }
   };
 
   // Handlers
   const handleSelectOverview = () => {
+    console.log('[Admin Dashboard] 📊 Selecting overview view');
     setSelectedView('overview');
     setSelectedUserId(null);
     setSelectedSessionId(null);
   };
 
   const handleSelectUser = (userId: string) => {
+    console.log('[Admin Dashboard] 👤 Selecting user view, userId:', userId);
     setSelectedView('user');
     setSelectedUserId(userId);
     setSelectedSessionId(null);
   };
 
   const handleSelectSession = (sessionId: string, userId: string) => {
+    console.log('[Admin Dashboard] 📋 Selecting session view, sessionId:', sessionId, 'userId:', userId);
     setSelectedView('session');
     setSelectedUserId(userId);
     setSelectedSessionId(sessionId);

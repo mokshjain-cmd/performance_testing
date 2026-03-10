@@ -118,7 +118,7 @@ export const AdminActivityDashboardPage: React.FC = () => {
               </p>
               <div className="flex items-center gap-2">
                 <TrendingUp className="w-4 h-4 text-gray-400" />
-                <p className="text-xs text-gray-500">Luna vs Benchmark</p>
+                <p className="text-xs text-gray-500">Falcon vs Benchmark</p>
               </div>
             </div>
           </Card>
@@ -143,21 +143,10 @@ export const AdminActivityDashboardPage: React.FC = () => {
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Bias</span>
+                <span className="text-sm text-gray-600">Difference</span>
                 <span className="font-semibold text-gray-700">
-                  {summary.activityStats.steps.avgBias.toFixed(0)} steps
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">MAE</span>
-                <span className="font-semibold text-gray-700">
-                  {summary.activityStats.steps.avgMae.toFixed(0)}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">MAPE</span>
-                <span className="font-semibold text-gray-700">
-                  {summary.activityStats.steps.avgMape.toFixed(1)}%
+                  {summary.activityStats.steps.avgDifference > 0 ? '+' : ''}
+                  {summary.activityStats.steps.avgDifference.toFixed(0)} steps
                 </span>
               </div>
             </div>
@@ -177,21 +166,10 @@ export const AdminActivityDashboardPage: React.FC = () => {
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Bias</span>
+                <span className="text-sm text-gray-600">Difference</span>
                 <span className="font-semibold text-gray-700">
-                  {summary.activityStats.distance.avgBias.toFixed(0)}m
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">MAE</span>
-                <span className="font-semibold text-gray-700">
-                  {summary.activityStats.distance.avgMae.toFixed(0)}m
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">MAPE</span>
-                <span className="font-semibold text-gray-700">
-                  {summary.activityStats.distance.avgMape.toFixed(1)}%
+                  {summary.activityStats.distance.avgDifference > 0 ? '+' : ''}
+                  {summary.activityStats.distance.avgDifference.toFixed(0)}m
                 </span>
               </div>
             </div>
@@ -211,21 +189,10 @@ export const AdminActivityDashboardPage: React.FC = () => {
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Bias</span>
+                <span className="text-sm text-gray-600">Difference</span>
                 <span className="font-semibold text-gray-700">
-                  {summary.activityStats.calories.avgBias.toFixed(0)} kcal
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">MAE</span>
-                <span className="font-semibold text-gray-700">
-                  {summary.activityStats.calories.avgMae.toFixed(0)} kcal
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">MAPE</span>
-                <span className="font-semibold text-gray-700">
-                  {summary.activityStats.calories.avgMape.toFixed(1)}%
+                  {summary.activityStats.calories.avgDifference > 0 ? '+' : ''}
+                  {summary.activityStats.calories.avgDifference.toFixed(0)} kcal
                 </span>
               </div>
             </div>

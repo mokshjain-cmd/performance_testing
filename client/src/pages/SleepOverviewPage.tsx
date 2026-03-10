@@ -164,7 +164,7 @@ export const SleepOverviewPage: React.FC = () => {
         <div>
           <h2 className="text-xl font-semibold mb-4">Tracking Accuracy</h2>
           <p className="text-sm text-gray-600 mb-4">
-            Luna's accuracy compared to benchmark sleep tracking devices
+            Falcon's accuracy compared to benchmark sleep tracking devices
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className={`p-4 rounded-lg border-2 ${getAccuracyColor(overview.comparison.avgAccuracyPercent)}`}>

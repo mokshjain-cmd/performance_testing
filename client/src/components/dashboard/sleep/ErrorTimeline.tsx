@@ -45,7 +45,7 @@ export const ErrorTimeline: React.FC<ErrorTimelineProps> = ({ epochs }) => {
         <div className="bg-white p-3 border border-gray-300 rounded shadow-lg">
           <p className="font-semibold">{data.timeDisplay}</p>
           <p className="text-sm">
-            <span className="text-red-600">Luna:</span> {data.lunaStage}
+            <span className="text-red-600">Falcon:</span> {data.lunaStage}
           </p>
           <p className="text-sm">
             <span className="text-green-600">Benchmark:</span> {data.benchmarkStage}
@@ -68,7 +68,7 @@ export const ErrorTimeline: React.FC<ErrorTimelineProps> = ({ epochs }) => {
     <div className="w-full">
       <h3 className="text-lg font-semibold mb-2">Disagreement Timeline</h3>
       <p className="text-sm text-gray-600 mb-4">
-        {errors.length} epochs with disagreement between Luna and benchmark
+        {errors.length} epochs with disagreement between Falcon and benchmark
       </p>
       <div className="h-80">
         <ResponsiveContainer width="100%" height="100%">

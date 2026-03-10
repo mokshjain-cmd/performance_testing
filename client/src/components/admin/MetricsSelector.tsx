@@ -1,7 +1,7 @@
 import React from 'react';
-import { Activity, Droplet, Moon, ChevronDown } from 'lucide-react';
+import { Activity, Droplet, Moon, ChevronDown, TrendingUp } from 'lucide-react';
 
-type Metric = 'hr' | 'spo2' | 'sleep';
+type Metric = 'hr' | 'spo2' | 'sleep' | 'activity';
 
 interface MetricsSelectorProps {
   selectedMetric: Metric;
@@ -12,6 +12,7 @@ const METRICS = [
   { value: 'hr' as Metric, label: 'Heart Rate', icon: Activity, color: 'text-red-500' },
   { value: 'spo2' as Metric, label: 'SpO₂', icon: Droplet, color: 'text-blue-500' },
   { value: 'sleep' as Metric, label: 'Sleep', icon: Moon, color: 'text-indigo-500' },
+  { value: 'activity' as Metric, label: 'Activity', icon: TrendingUp, color: 'text-green-500' },
 ];
 
 const MetricsSelector: React.FC<MetricsSelectorProps> = ({

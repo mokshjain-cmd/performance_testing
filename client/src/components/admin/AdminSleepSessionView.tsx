@@ -126,8 +126,9 @@ const AdminSleepSessionView: React.FC<AdminSleepSessionViewProps> = ({ sessionId
   };
 
   const getSensitivityColor = (value: number) => {
-    if (value >= 0.8) return 'bg-green-100 text-green-800';
-    if (value >= 0.6) return 'bg-yellow-100 text-yellow-800';
+    // Values are percentages (0-100), not decimals
+    if (value >= 80) return 'bg-green-100 text-green-800';
+    if (value >= 60) return 'bg-yellow-100 text-yellow-800';
     return 'bg-red-100 text-red-800';
   };
 
@@ -232,9 +233,9 @@ const AdminSleepSessionView: React.FC<AdminSleepSessionViewProps> = ({ sessionId
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-900">
             <p className="font-semibold mb-2">💡 Understanding These Metrics:</p>
             <ul className="space-y-1 ml-4 list-disc">
-              <li><strong>Accuracy:</strong> Percentage of 30-second epochs where Luna and benchmark agree on sleep stage</li>
+              <li><strong>Accuracy:</strong> Percentage of 30-second epochs where Falcon and benchmark agree on sleep stage</li>
               <li><strong>Cohen's Kappa:</strong> Agreement metric that accounts for chance. More reliable than simple accuracy</li>
-              <li><strong>Bias:</strong> Systematic over/underestimation. Positive means Luna detects more sleep</li>
+              <li><strong>Bias:</strong> Systematic over/underestimation. Positive means Falcon detects more sleep</li>
             </ul>
           </div>
         </Card>
@@ -243,16 +244,16 @@ const AdminSleepSessionView: React.FC<AdminSleepSessionViewProps> = ({ sessionId
       {/* Sleep Metrics Comparison - Horizontal Cards */}
       <Card>
         <h3 className="text-lg font-semibold mb-2">Sleep Metrics Comparison</h3>
-        <p className="text-sm text-gray-600 mb-4">Side-by-side comparison of Luna vs {sessionSummary.benchmarkDeviceType || 'Benchmark'}</p>
+        <p className="text-sm text-gray-600 mb-4">Side-by-side comparison of Falcon vs {sessionSummary.benchmarkDeviceType || 'Benchmark'}</p>
         
         {sessionSummary.benchmark ? (
           <div className="space-y-3">
-            {/* Luna Sleep Stats */}
+            {/* Falcon Sleep Stats */}
             <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl p-5 border border-purple-200 shadow-sm">
               <div className="flex items-center gap-8">
                 {/* Device Name */}
                 <div className="flex items-center gap-2 min-w-[100px]">
-                  <span className="font-semibold text-gray-800 text-base">Luna</span>
+                  <span className="font-semibold text-gray-800 text-base">Falcon</span>
                 </div>
                 
                 {/* Stats spread across full width */}
@@ -514,7 +515,7 @@ const AdminSleepSessionView: React.FC<AdminSleepSessionViewProps> = ({ sessionId
       <Card>
         <h3 className="text-lg font-semibold mb-4">Stage Sensitivity (True Positive Rate)</h3>
         <p className="text-sm text-gray-600 mb-4">
-          How well Luna detects each sleep stage when it's actually present
+          How well Falcon detects each sleep stage when it's actually present
         </p>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
           {Object.entries(sessionSummary.stageSensitivity).map(([stage, value]) => (
@@ -528,10 +529,10 @@ const AdminSleepSessionView: React.FC<AdminSleepSessionViewProps> = ({ sessionId
           ))}
         </div>
 
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-sm text-green-900">
+        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 text-sm text-green-900">
           <p className="font-semibold mb-2">💡 Understanding Sensitivity:</p>
           <ul className="space-y-1 ml-4 list-disc">
-            <li><strong>What it measures:</strong> Of all the times the benchmark detected a stage, what % did Luna correctly identify?</li>
+            <li><strong>What it measures:</strong> Of all the times the benchmark detected a stage, what % did Falcon correctly identify?</li>
             <li><strong>&gt;80%</strong> (Green): Excellent detection</li>
             <li><strong>60-80%</strong> (Yellow): Moderate detection</li>
             <li><strong>&lt;60%</strong> (Red): Poor detection, missing many occurrences</li>
@@ -543,7 +544,7 @@ const AdminSleepSessionView: React.FC<AdminSleepSessionViewProps> = ({ sessionId
       <Card>
         <h3 className="text-lg font-semibold mb-4">Stage Specificity (True Negative Rate)</h3>
         <p className="text-sm text-gray-600 mb-4">
-          How well Luna avoids false positives for each sleep stage
+          How well Falcon avoids false positives for each sleep stage
         </p>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
           {Object.entries(sessionSummary.stageSpecificity).map(([stage, value]) => (
@@ -560,7 +561,7 @@ const AdminSleepSessionView: React.FC<AdminSleepSessionViewProps> = ({ sessionId
         <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 text-sm text-purple-900">
           <p className="font-semibold mb-2">💡 Understanding Specificity:</p>
           <ul className="space-y-1 ml-4 list-disc">
-            <li><strong>What it measures:</strong> Of all the times benchmark did NOT detect a stage, what % did Luna correctly NOT identify?</li>
+            <li><strong>What it measures:</strong> Of all the times benchmark did NOT detect a stage, what % did Falcon correctly NOT identify?</li>
             <li><strong>&gt;80%</strong>: Excellent - avoids false alarms</li>
             <li><strong>60-80%</strong>: Moderate - some false detections</li>
             <li><strong>&lt;60%</strong>: Poor - too many false positives</li>
@@ -572,14 +573,14 @@ const AdminSleepSessionView: React.FC<AdminSleepSessionViewProps> = ({ sessionId
       <Card>
         <h3 className="text-lg font-semibold mb-4">Confusion Matrix</h3>
         <p className="text-sm text-gray-600 mb-4">
-          Rows: {sessionSummary.benchmarkDeviceType || 'Benchmark'} (Ground Truth) | Columns: Luna (Predictions)
+          Rows: {sessionSummary.benchmarkDeviceType || 'Benchmark'} (Ground Truth) | Columns: Falcon (Predictions)
         </p>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                  {sessionSummary.benchmarkDeviceType || 'Benchmark'} \ Luna
+                  {sessionSummary.benchmarkDeviceType || 'Benchmark'} \ Falcon
                 </th>
                 <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">AWAKE</th>
                 <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">LIGHT</th>
@@ -614,9 +615,9 @@ const AdminSleepSessionView: React.FC<AdminSleepSessionViewProps> = ({ sessionId
         <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-900">
           <p className="font-semibold mb-2">📊 How to Read the Confusion Matrix:</p>
           <ul className="space-y-1 ml-4 list-disc">
-            <li><span className="bg-green-100 px-1 rounded font-semibold">Green diagonal</span> = Correct predictions (Luna and {sessionSummary.benchmarkDeviceType || 'benchmark'} agree)</li>
+            <li><span className="bg-green-100 px-1 rounded font-semibold">Green diagonal</span> = Correct predictions (Falcon and {sessionSummary.benchmarkDeviceType || 'benchmark'} agree)</li>
             <li><strong>Off-diagonal values</strong> = Misclassifications (disagreements between devices)</li>
-            <li><strong>Row reading:</strong> When {sessionSummary.benchmarkDeviceType || 'benchmark'} says "DEEP", how does Luna classify those epochs?</li>
+            <li><strong>Row reading:</strong> When {sessionSummary.benchmarkDeviceType || 'benchmark'} says "DEEP", how does Falcon classify those epochs?</li>
             <li><strong>Common patterns:</strong> Light ↔ Deep confusion is typical, Awake ↔ REM suggests sensor issues</li>
           </ul>
         </div>

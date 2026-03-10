@@ -189,4 +189,27 @@ export class AdminActivityController {
       });
     }
   }
+
+  /**
+   * GET /api/activity/admin/user/:userId/trend
+   * Get activity trend for specific user
+   */
+  static async getUserActivityTrend(req: Request, res: Response): Promise<void> {
+    try {
+      const { userId } = req.params;
+
+      const trend = await AdminActivitySummaryService.getUserActivityTrend(userId);
+      
+      res.json({
+        success: true,
+        data: trend,
+      });
+    } catch (error: any) {
+      console.error("[AdminActivityController] Error getting user activity trend:", error);
+      res.status(500).json({
+        success: false,
+        error: error.message || "Failed to get user activity trend",
+      });
+    }
+  }
 }

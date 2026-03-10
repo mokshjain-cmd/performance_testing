@@ -6,6 +6,8 @@ import OverviewTab from '../components/dashboard/OverviewTab';
 import SessionsTab from '../components/dashboard/SessionsTab';
 import SleepOverviewTab from '../components/dashboard/SleepOverviewTab';
 import SleepSessionsTab from '../components/dashboard/SleepSessionsTab';
+import { ActivityOverviewPage } from './ActivityOverviewPage';
+import { ActivitySessionPage } from './ActivitySessionPage';
 import type { Session, SessionFullDetails, UserSummary } from '../types';
 
 const DashboardPage: React.FC = () => {
@@ -94,8 +96,7 @@ const DashboardPage: React.FC = () => {
               <option value="HR">Heart Rate (HR)</option>
               <option value="SPO2">Blood Oxygen (SPO2)</option>
               <option value="Sleep">Sleep</option>
-              <option value="Calories">Calories</option>
-              <option value="Steps">Steps</option>
+              <option value="Activity">Activity</option>
             </select>
           </div>
 
@@ -116,8 +117,15 @@ const DashboardPage: React.FC = () => {
         ) : (
           <SleepSessionsTab sessionId={selectedSessionId} />
         )
+      ) : selectedMetric === 'Activity' ? (
+        // Activity-specific dashboard
+        activeTab === 'overview' ? (
+          <ActivityOverviewPage />
+        ) : (
+          <ActivitySessionPage sessionId={selectedSessionId} />
+        )
       ) : (
-        // Standard tabs for HR/SPO2/etc
+        // Standard tabs for HR/SPO2
         activeTab === 'overview' ? (
           <OverviewTab
             userSummary={userSummary}

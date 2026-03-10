@@ -67,10 +67,20 @@ export const createSession = async (
       mobileType // For Sleep/Activity with Luna: Android or iOS
     } = req.body;
 
-    if (!userId || !activityType || !metric) {
+    // For Activity metric, activityType is optional (tracks daily totals)
+    // For other metrics, activityType is required
+    if (!userId || !metric) {
       res.status(400).json({
         success: false,
-        message: "Missing required fields: userId, activityType, metric"
+        message: "Missing required fields: userId, metric"
+      });
+      return;
+    }
+
+    if (metric !== 'Activity' && !activityType) {
+      res.status(400).json({
+        success: false,
+        message: "activityType is required for non-Activity sessions"
       });
       return;
     }

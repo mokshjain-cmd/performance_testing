@@ -23,12 +23,14 @@ export class ActivitySummaryService {
       // Fetch all activity sessions for this user
       const sessions = await Session.find({
         userId,
-        metric: { $in: ["Steps", "Calories"] },
+        metric: { $in: ["Activity"] },
         isValid: true,
       });
 
+      // If no sessions remain, delete the UserAccuracySummary document for Activity metric
       if (sessions.length === 0) {
-        console.log(`[ActivitySummaryService] No activity sessions found for user ${userId}`);
+        await UserAccuracySummary.deleteOne({ userId, metric: "Activity" });
+        console.log(`[ActivitySummaryService] ✅ Deleted user activity summary for user ${userId} (no sessions remaining)`);
         return;
       }
 
@@ -41,30 +43,44 @@ export class ActivitySummaryService {
         activityStats: { $exists: true },
       });
 
+      // If no analyses found, update with basic session count only
       if (analyses.length === 0) {
-        console.log(`[ActivitySummaryService] No activity analyses found for user ${userId}`);
+        await UserAccuracySummary.findOneAndUpdate(
+          { userId, metric: "Activity" },
+          {
+            userId,
+            metric: "Activity",
+            totalSessions: sessions.length,
+            lastUpdated: new Date(),
+          },
+          { upsert: true, new: true }
+        );
+        console.log(`[ActivitySummaryService] ✅ Updated user activity summary for user ${userId} (sessions exist but no analyses yet)`);
         return;
       }
 
       // Calculate aggregates
       let stepsAccuracySum = 0;
-      let stepsMAESum = 0;
-      let stepsMAPESum = 0;
       let stepsBiasSum = 0;
       let stepsCount = 0;
+      let lunaStepsSum = 0;
 
       let distanceAccuracySum = 0;
-      let distanceMAPESum = 0;
+      let distanceBiasSum = 0;
       let distanceCount = 0;
+      let lunaDistanceSum = 0;
 
       let caloriesAccuracySum = 0;
-      let caloriesMAPESum = 0;
+      let caloriesBiasSum = 0;
       let caloriesCount = 0;
+      let lunaCaloriesSum = 0;
 
       let activeCaloriesAccuracySum = 0;
+      let activeCaloriesBiasSum = 0;
       let activeCaloriesCount = 0;
 
       let basalCaloriesAccuracySum = 0;
+      let basalCaloriesBiasSum = 0;
       let basalCaloriesCount = 0;
 
       let bestSession: any = null;
@@ -77,9 +93,8 @@ export class ActivitySummaryService {
         // Steps stats
         if (activityStats.steps) {
           stepsAccuracySum += activityStats.steps.accuracyPercent || 0;
-          stepsMAESum += activityStats.steps.mae || 0;
-          stepsMAPESum += activityStats.steps.mape || 0;
           stepsBiasSum += activityStats.steps.bias || 0;
+          lunaStepsSum += activityStats.steps.lunaTotal || 0;
           stepsCount++;
 
           // Track best/worst by steps accuracy
@@ -103,74 +118,82 @@ export class ActivitySummaryService {
         // Distance stats
         if (activityStats.distance) {
           distanceAccuracySum += activityStats.distance.accuracyPercent || 0;
-          distanceMAPESum += activityStats.distance.mape || 0;
+          distanceBiasSum += activityStats.distance.bias || 0;
+          lunaDistanceSum += activityStats.distance.lunaMeters || 0;
           distanceCount++;
         }
 
         // Calories stats
         if (activityStats.calories) {
           caloriesAccuracySum += activityStats.calories.accuracyPercent || 0;
-          caloriesMAPESum += activityStats.calories.mape || 0;
+          caloriesBiasSum += activityStats.calories.bias || 0;
+          lunaCaloriesSum += activityStats.calories.lunaTotal || 0;
           caloriesCount++;
         }
 
         // Active calories stats
         if (activityStats.activeCalories) {
           activeCaloriesAccuracySum += activityStats.activeCalories.accuracyPercent || 0;
+          activeCaloriesBiasSum += activityStats.activeCalories.bias || 0;
           activeCaloriesCount++;
         }
 
         // Basal calories stats
         if (activityStats.basalCalories) {
           basalCaloriesAccuracySum += activityStats.basalCalories.accuracyPercent || 0;
+          basalCaloriesBiasSum += activityStats.basalCalories.bias || 0;
           basalCaloriesCount++;
         }
       });
 
       // Build activityOverview object
-      const activityOverview: any = {};
+      const activityOverview: any = {
+        avgDailySteps: stepsCount > 0 ? Math.round(lunaStepsSum / stepsCount) : 0,
+        avgDailyDistance: distanceCount > 0 ? Math.round(lunaDistanceSum / distanceCount) : 0,
+        avgDailyCalories: caloriesCount > 0 ? Math.round(lunaCaloriesSum / caloriesCount) : 0,
+      };
 
       if (stepsCount > 0) {
         activityOverview.steps = {
-          avgAccuracy: Math.round((stepsAccuracySum / stepsCount) * 100) / 100,
-          avgMAE: Math.round(stepsMAESum / stepsCount),
-          avgMAPE: Math.round((stepsMAPESum / stepsCount) * 100) / 100,
-          avgBias: Math.round(stepsBiasSum / stepsCount),
+          avgAccuracyPercent: Math.round((stepsAccuracySum / stepsCount) * 100) / 100,
+          avgDifference: Math.round(stepsBiasSum / stepsCount),
         };
       }
 
       if (distanceCount > 0) {
         activityOverview.distance = {
-          avgAccuracy: Math.round((distanceAccuracySum / distanceCount) * 100) / 100,
-          avgMAPE: Math.round((distanceMAPESum / distanceCount) * 100) / 100,
+          avgAccuracyPercent: Math.round((distanceAccuracySum / distanceCount) * 100) / 100,
+          avgDifference: Math.round(distanceBiasSum / distanceCount),
         };
       }
 
       if (caloriesCount > 0) {
         activityOverview.calories = {
-          avgAccuracy: Math.round((caloriesAccuracySum / caloriesCount) * 100) / 100,
-          avgMAPE: Math.round((caloriesMAPESum / caloriesCount) * 100) / 100,
+          avgAccuracyPercent: Math.round((caloriesAccuracySum / caloriesCount) * 100) / 100,
+          avgDifference: Math.round(caloriesBiasSum / caloriesCount),
         };
       }
 
       if (activeCaloriesCount > 0) {
         activityOverview.activeCalories = {
-          avgAccuracy: Math.round((activeCaloriesAccuracySum / activeCaloriesCount) * 100) / 100,
+          avgAccuracyPercent: Math.round((activeCaloriesAccuracySum / activeCaloriesCount) * 100) / 100,
+          avgDifference: Math.round(activeCaloriesBiasSum / activeCaloriesCount),
         };
       }
 
       if (basalCaloriesCount > 0) {
         activityOverview.basalCalories = {
-          avgAccuracy: Math.round((basalCaloriesAccuracySum / basalCaloriesCount) * 100) / 100,
+          avgAccuracyPercent: Math.round((basalCaloriesAccuracySum / basalCaloriesCount) * 100) / 100,
+          avgDifference: Math.round(basalCaloriesBiasSum / basalCaloriesCount),
         };
       }
 
-      // Update UserAccuracySummary for Steps metric
+      // Update UserAccuracySummary for Activity metric
       await UserAccuracySummary.findOneAndUpdate(
-        { userId, metric: "Steps" },
+        { userId, metric: "Activity" },
         {
           userId,
-          metric: "Steps",
+          metric: "Activity",
           totalSessions: analyses.length,
           activityOverview,
           bestSession,
@@ -199,7 +222,7 @@ export class ActivitySummaryService {
 
       // Fetch all activity session analyses with this benchmark device
       const analyses = await SessionAnalysis.find({
-        metric: { $in: ["Steps", "Calories"] },
+        metric: "Activity",
         isValid: true,
         activityStats: { $exists: true },
       }).populate({
@@ -210,25 +233,33 @@ export class ActivitySummaryService {
       // Filter out null sessionIds (from populate match)
       const validAnalyses = analyses.filter((a) => a.sessionId != null);
 
+      // If no analyses remain, delete the BenchmarkComparisonSummary document
       if (validAnalyses.length === 0) {
-        console.log(`[ActivitySummaryService] No activity analyses found for benchmark ${benchmarkDeviceType}`);
+        await BenchmarkComparisonSummary.deleteOne({ benchmarkDeviceType, metric: "Activity" });
+        console.log(`[ActivitySummaryService] ✅ Deleted benchmark comparison summary for ${benchmarkDeviceType} (no sessions remaining)`);
         return;
       }
 
       // Calculate aggregates
       let stepsAccuracySum = 0;
-      let stepsMAESum = 0;
-      let stepsMAPESum = 0;
       let stepsBiasSum = 0;
       let stepsCount = 0;
 
       let distanceAccuracySum = 0;
-      let distanceMAPESum = 0;
+      let distanceBiasSum = 0;
       let distanceCount = 0;
 
       let caloriesAccuracySum = 0;
-      let caloriesMAPESum = 0;
+      let caloriesBiasSum = 0;
       let caloriesCount = 0;
+
+      let activeCaloriesAccuracySum = 0;
+      let activeCaloriesBiasSum = 0;
+      let activeCaloriesCount = 0;
+
+      let basalCaloriesAccuracySum = 0;
+      let basalCaloriesBiasSum = 0;
+      let basalCaloriesCount = 0;
 
       validAnalyses.forEach((analysis) => {
         const activityStats = analysis.activityStats;
@@ -236,22 +267,32 @@ export class ActivitySummaryService {
 
         if (activityStats.steps) {
           stepsAccuracySum += activityStats.steps.accuracyPercent || 0;
-          stepsMAESum += activityStats.steps.mae || 0;
-          stepsMAPESum += activityStats.steps.mape || 0;
           stepsBiasSum += activityStats.steps.bias || 0;
           stepsCount++;
         }
 
         if (activityStats.distance) {
           distanceAccuracySum += activityStats.distance.accuracyPercent || 0;
-          distanceMAPESum += activityStats.distance.mape || 0;
+          distanceBiasSum += activityStats.distance.bias || 0;
           distanceCount++;
         }
 
         if (activityStats.calories) {
           caloriesAccuracySum += activityStats.calories.accuracyPercent || 0;
-          caloriesMAPESum += activityStats.calories.mape || 0;
+          caloriesBiasSum += activityStats.calories.bias || 0;
           caloriesCount++;
+        }
+
+        if (activityStats.activeCalories) {
+          activeCaloriesAccuracySum += activityStats.activeCalories.accuracyPercent || 0;
+          activeCaloriesBiasSum += activityStats.activeCalories.bias || 0;
+          activeCaloriesCount++;
+        }
+
+        if (activityStats.basalCalories) {
+          basalCaloriesAccuracySum += activityStats.basalCalories.accuracyPercent || 0;
+          basalCaloriesBiasSum += activityStats.basalCalories.bias || 0;
+          basalCaloriesCount++;
         }
       });
 
@@ -260,33 +301,45 @@ export class ActivitySummaryService {
 
       if (stepsCount > 0) {
         activityStats.steps = {
-          avgAccuracy: Math.round((stepsAccuracySum / stepsCount) * 100) / 100,
-          avgMAE: Math.round(stepsMAESum / stepsCount),
-          avgMAPE: Math.round((stepsMAPESum / stepsCount) * 100) / 100,
-          avgBias: Math.round(stepsBiasSum / stepsCount),
+          avgAccuracyPercent: Math.round((stepsAccuracySum / stepsCount) * 100) / 100,
+          avgDifference: Math.round(stepsBiasSum / stepsCount),
         };
       }
 
       if (distanceCount > 0) {
         activityStats.distance = {
-          avgAccuracy: Math.round((distanceAccuracySum / distanceCount) * 100) / 100,
-          avgMAPE: Math.round((distanceMAPESum / distanceCount) * 100) / 100,
+          avgAccuracyPercent: Math.round((distanceAccuracySum / distanceCount) * 100) / 100,
+          avgDifference: Math.round(distanceBiasSum / distanceCount),
         };
       }
 
       if (caloriesCount > 0) {
         activityStats.calories = {
-          avgAccuracy: Math.round((caloriesAccuracySum / caloriesCount) * 100) / 100,
-          avgMAPE: Math.round((caloriesMAPESum / caloriesCount) * 100) / 100,
+          avgAccuracyPercent: Math.round((caloriesAccuracySum / caloriesCount) * 100) / 100,
+          avgDifference: Math.round(caloriesBiasSum / caloriesCount),
         };
       }
 
-      // Update BenchmarkComparisonSummary for Steps metric
+      if (activeCaloriesCount > 0) {
+        activityStats.activeCalories = {
+          avgAccuracyPercent: Math.round((activeCaloriesAccuracySum / activeCaloriesCount) * 100) / 100,
+          avgDifference: Math.round(activeCaloriesBiasSum / activeCaloriesCount),
+        };
+      }
+
+      if (basalCaloriesCount > 0) {
+        activityStats.basalCalories = {
+          avgAccuracyPercent: Math.round((basalCaloriesAccuracySum / basalCaloriesCount) * 100) / 100,
+          avgDifference: Math.round(basalCaloriesBiasSum / basalCaloriesCount),
+        };
+      }
+
+      // Update BenchmarkComparisonSummary for Activity metric
       await BenchmarkComparisonSummary.findOneAndUpdate(
-        { benchmarkDeviceType, metric: "Steps" },
+        { benchmarkDeviceType, metric: "Activity" },
         {
           benchmarkDeviceType,
-          metric: "Steps",
+          metric: "Activity",
           totalSessions: validAnalyses.length,
           activityStats,
           lastUpdated: new Date(),
@@ -311,29 +364,38 @@ export class ActivitySummaryService {
 
       // Fetch all activity session analyses
       const analyses = await SessionAnalysis.find({
-        metric: { $in: ["Steps", "Calories"] },
+        metric: "Activity",
         isValid: true,
         activityStats: { $exists: true },
       });
 
+      // If no analyses remain, delete the AdminGlobalSummary document
       if (analyses.length === 0) {
-        console.log(`[ActivitySummaryService] No activity analyses found`);
+        await AdminGlobalSummary.deleteOne({ metric: "Activity" });
+        console.log(`[ActivitySummaryService] ✅ Deleted admin global summary for activity (no sessions remaining)`);
         return;
       }
 
       // Calculate aggregates
       let stepsAccuracySum = 0;
-      let distanceAccuracySum = 0;
-      let calorieAccuracySum = 0;
-      let stepMAESum = 0;
-      let stepMAPESum = 0;
       let stepBiasSum = 0;
-      let distanceMAPESum = 0;
-      let calorieMAPESum = 0;
-
       let stepsCount = 0;
+
+      let distanceAccuracySum = 0;
+      let distanceBiasSum = 0;
       let distanceCount = 0;
+
+      let calorieAccuracySum = 0;
+      let calorieBiasSum = 0;
       let caloriesCount = 0;
+
+      let activeCaloriesAccuracySum = 0;
+      let activeCaloriesBiasSum = 0;
+      let activeCaloriesCount = 0;
+
+      let basalCaloriesAccuracySum = 0;
+      let basalCaloriesBiasSum = 0;
+      let basalCaloriesCount = 0;
 
       analyses.forEach((analysis) => {
         const activityStats = analysis.activityStats;
@@ -341,22 +403,32 @@ export class ActivitySummaryService {
 
         if (activityStats.steps) {
           stepsAccuracySum += activityStats.steps.accuracyPercent || 0;
-          stepMAESum += activityStats.steps.mae || 0;
-          stepMAPESum += activityStats.steps.mape || 0;
           stepBiasSum += activityStats.steps.bias || 0;
           stepsCount++;
         }
 
         if (activityStats.distance) {
           distanceAccuracySum += activityStats.distance.accuracyPercent || 0;
-          distanceMAPESum += activityStats.distance.mape || 0;
+          distanceBiasSum += activityStats.distance.bias || 0;
           distanceCount++;
         }
 
         if (activityStats.calories) {
           calorieAccuracySum += activityStats.calories.accuracyPercent || 0;
-          calorieMAPESum += activityStats.calories.mape || 0;
+          calorieBiasSum += activityStats.calories.bias || 0;
           caloriesCount++;
+        }
+
+        if (activityStats.activeCalories) {
+          activeCaloriesAccuracySum += activityStats.activeCalories.accuracyPercent || 0;
+          activeCaloriesBiasSum += activityStats.activeCalories.bias || 0;
+          activeCaloriesCount++;
+        }
+
+        if (activityStats.basalCalories) {
+          basalCaloriesAccuracySum += activityStats.basalCalories.accuracyPercent || 0;
+          basalCaloriesBiasSum += activityStats.basalCalories.bias || 0;
+          basalCaloriesCount++;
         }
       });
 
@@ -364,31 +436,49 @@ export class ActivitySummaryService {
       const activityStats: any = {};
 
       if (stepsCount > 0) {
-        activityStats.stepsAccuracy = Math.round((stepsAccuracySum / stepsCount) * 100) / 100;
-        activityStats.avgStepMAE = Math.round(stepMAESum / stepsCount);
-        activityStats.avgStepMAPE = Math.round((stepMAPESum / stepsCount) * 100) / 100;
-        activityStats.avgStepBias = Math.round(stepBiasSum / stepsCount);
+        activityStats.steps = {
+          avgAccuracyPercent: Math.round((stepsAccuracySum / stepsCount) * 100) / 100,
+          avgDifference: Math.round(stepBiasSum / stepsCount),
+        };
       }
 
       if (distanceCount > 0) {
-        activityStats.distanceAccuracy = Math.round((distanceAccuracySum / distanceCount) * 100) / 100;
-        activityStats.avgDistanceMAPE = Math.round((distanceMAPESum / distanceCount) * 100) / 100;
+        activityStats.distance = {
+          avgAccuracyPercent: Math.round((distanceAccuracySum / distanceCount) * 100) / 100,
+          avgDifference: Math.round(distanceBiasSum / distanceCount),
+        };
       }
 
       if (caloriesCount > 0) {
-        activityStats.calorieAccuracy = Math.round((calorieAccuracySum / caloriesCount) * 100) / 100;
-        activityStats.avgCalorieMAPE = Math.round((calorieMAPESum / caloriesCount) * 100) / 100;
+        activityStats.calories = {
+          avgAccuracyPercent: Math.round((calorieAccuracySum / caloriesCount) * 100) / 100,
+          avgDifference: Math.round(calorieBiasSum / caloriesCount),
+        };
+      }
+
+      if (activeCaloriesCount > 0) {
+        activityStats.activeCalories = {
+          avgAccuracyPercent: Math.round((activeCaloriesAccuracySum / activeCaloriesCount) * 100) / 100,
+          avgDifference: Math.round(activeCaloriesBiasSum / activeCaloriesCount),
+        };
+      }
+
+      if (basalCaloriesCount > 0) {
+        activityStats.basalCalories = {
+          avgAccuracyPercent: Math.round((basalCaloriesAccuracySum / basalCaloriesCount) * 100) / 100,
+          avgDifference: Math.round(basalCaloriesBiasSum / basalCaloriesCount),
+        };
       }
 
       // Get unique user count
       const uniqueUserIds = new Set(analyses.map((a) => a.userId.toString()));
       const totalUsers = uniqueUserIds.size;
 
-      // Update AdminGlobalSummary for Steps metric
+      // Update AdminGlobalSummary for Activity metric
       await AdminGlobalSummary.findOneAndUpdate(
-        { metric: "Steps" },
+        { metric: "Activity" },
         {
-          metric: "Steps",
+          metric: "Activity",
           totalUsers,
           totalSessions: analyses.length,
           totalReadings: 0, // Activity doesn't have individual readings
@@ -419,17 +509,12 @@ export class ActivitySummaryService {
       const endOfDay = new Date(date);
       endOfDay.setHours(23, 59, 59, 999);
 
-      // Fetch activity sessions created on this date
+      // Fetch activity sessions that occurred on this date (by startTime)
       const sessions = await Session.find({
-        metric: { $in: ["Steps", "Calories"] },
+        metric: "Activity",
         isValid: true,
-        createdAt: { $gte: startOfDay, $lte: endOfDay },
+        startTime: { $gte: startOfDay, $lte: endOfDay },
       });
-
-      if (sessions.length === 0) {
-        console.log(`[ActivitySummaryService] No activity sessions found for ${date}`);
-        return;
-      }
 
       const sessionIds = sessions.map((s) => s._id);
 
@@ -440,21 +525,33 @@ export class ActivitySummaryService {
         activityStats: { $exists: true },
       });
 
+      // If no analyses remain, delete the AdminDailyTrend document for this date
       if (analyses.length === 0) {
-        console.log(`[ActivitySummaryService] No activity analyses found for ${date}`);
+        await AdminDailyTrend.deleteOne({ date: startOfDay, metric: "Activity" });
+        console.log(`[ActivitySummaryService] ✅ Deleted admin daily trend for activity on ${date} (no sessions remaining)`);
         return;
       }
 
       // Calculate aggregates
       let stepsAccuracySum = 0;
-      let distanceAccuracySum = 0;
-      let calorieAccuracySum = 0;
-      let stepMAESum = 0;
-      let distanceMAESum = 0;
-
+      let stepBiasSum = 0;
       let stepsCount = 0;
+
+      let distanceAccuracySum = 0;
+      let distanceBiasSum = 0;
       let distanceCount = 0;
+
+      let calorieAccuracySum = 0;
+      let calorieBiasSum = 0;
       let caloriesCount = 0;
+
+      let activeCaloriesAccuracySum = 0;
+      let activeCaloriesBiasSum = 0;
+      let activeCaloriesCount = 0;
+
+      let basalCaloriesAccuracySum = 0;
+      let basalCaloriesBiasSum = 0;
+      let basalCaloriesCount = 0;
 
       analyses.forEach((analysis) => {
         const activityStats = analysis.activityStats;
@@ -462,19 +559,32 @@ export class ActivitySummaryService {
 
         if (activityStats.steps) {
           stepsAccuracySum += activityStats.steps.accuracyPercent || 0;
-          stepMAESum += activityStats.steps.mae || 0;
+          stepBiasSum += activityStats.steps.bias || 0;
           stepsCount++;
         }
 
         if (activityStats.distance) {
           distanceAccuracySum += activityStats.distance.accuracyPercent || 0;
-          distanceMAESum += Math.abs(activityStats.distance.errorMeters || 0);
+          distanceBiasSum += activityStats.distance.bias || 0;
           distanceCount++;
         }
 
         if (activityStats.calories) {
           calorieAccuracySum += activityStats.calories.accuracyPercent || 0;
+          calorieBiasSum += activityStats.calories.bias || 0;
           caloriesCount++;
+        }
+
+        if (activityStats.activeCalories) {
+          activeCaloriesAccuracySum += activityStats.activeCalories.accuracyPercent || 0;
+          activeCaloriesBiasSum += activityStats.activeCalories.bias || 0;
+          activeCaloriesCount++;
+        }
+
+        if (activityStats.basalCalories) {
+          basalCaloriesAccuracySum += activityStats.basalCalories.accuracyPercent || 0;
+          basalCaloriesBiasSum += activityStats.basalCalories.bias || 0;
+          basalCaloriesCount++;
         }
       });
 
@@ -482,29 +592,50 @@ export class ActivitySummaryService {
       const activityStats: any = {};
 
       if (stepsCount > 0) {
-        activityStats.stepsAccuracy = Math.round((stepsAccuracySum / stepsCount) * 100) / 100;
-        activityStats.stepMAE = Math.round(stepMAESum / stepsCount);
+        activityStats.steps = {
+          avgAccuracyPercent: Math.round((stepsAccuracySum / stepsCount) * 100) / 100,
+          avgDifference: Math.round(stepBiasSum / stepsCount),
+        };
       }
 
       if (distanceCount > 0) {
-        activityStats.distanceAccuracy = Math.round((distanceAccuracySum / distanceCount) * 100) / 100;
-        activityStats.distanceMAE = Math.round(distanceMAESum / distanceCount);
+        activityStats.distance = {
+          avgAccuracyPercent: Math.round((distanceAccuracySum / distanceCount) * 100) / 100,
+          avgDifference: Math.round(distanceBiasSum / distanceCount),
+        };
       }
 
       if (caloriesCount > 0) {
-        activityStats.calorieAccuracy = Math.round((calorieAccuracySum / caloriesCount) * 100) / 100;
+        activityStats.calories = {
+          avgAccuracyPercent: Math.round((calorieAccuracySum / caloriesCount) * 100) / 100,
+          avgDifference: Math.round(calorieBiasSum / caloriesCount),
+        };
+      }
+
+      if (activeCaloriesCount > 0) {
+        activityStats.activeCalories = {
+          avgAccuracyPercent: Math.round((activeCaloriesAccuracySum / activeCaloriesCount) * 100) / 100,
+          avgDifference: Math.round(activeCaloriesBiasSum / activeCaloriesCount),
+        };
+      }
+
+      if (basalCaloriesCount > 0) {
+        activityStats.basalCalories = {
+          avgAccuracyPercent: Math.round((basalCaloriesAccuracySum / basalCaloriesCount) * 100) / 100,
+          avgDifference: Math.round(basalCaloriesBiasSum / basalCaloriesCount),
+        };
       }
 
       // Get unique user count
       const uniqueUserIds = new Set(analyses.map((a) => a.userId.toString()));
       const totalUsers = uniqueUserIds.size;
 
-      // Update AdminDailyTrend for Steps metric
+      // Update AdminDailyTrend for Activity metric
       await AdminDailyTrend.findOneAndUpdate(
-        { date: startOfDay, metric: "Steps" },
+        { date: startOfDay, metric: "Activity" },
         {
           date: startOfDay,
-          metric: "Steps",
+          metric: "Activity",
           totalSessions: analyses.length,
           totalUsers,
           activityStats,
@@ -530,16 +661,11 @@ export class ActivitySummaryService {
 
       // Fetch all activity sessions with this firmware version
       const sessions = await Session.find({
-        metric: { $in: ["Steps", "Calories"] },
+        metric: "Activity",
         isValid: true,
         "devices.firmwareVersion": firmwareVersion,
         "devices.deviceType": "luna",
       });
-
-      if (sessions.length === 0) {
-        console.log(`[ActivitySummaryService] No activity sessions found for firmware ${firmwareVersion}`);
-        return;
-      }
 
       const sessionIds = sessions.map((s) => s._id);
 
@@ -550,21 +676,33 @@ export class ActivitySummaryService {
         activityStats: { $exists: true },
       });
 
+      // If no analyses remain, delete the FirmwarePerformance document for this firmware
       if (analyses.length === 0) {
-        console.log(`[ActivitySummaryService] No activity analyses found for firmware ${firmwareVersion}`);
+        await FirmwarePerformance.deleteOne({ firmwareVersion, metric: "Activity" });
+        console.log(`[ActivitySummaryService] ✅ Deleted firmware performance for ${firmwareVersion} (no sessions remaining)`);
         return;
       }
 
       // Calculate aggregates
       let stepsAccuracySum = 0;
-      let distanceAccuracySum = 0;
-      let calorieAccuracySum = 0;
-      let stepMAPESum = 0;
-      let stepMAESum = 0;
-
+      let stepBiasSum = 0;
       let stepsCount = 0;
+
+      let distanceAccuracySum = 0;
+      let distanceBiasSum = 0;
       let distanceCount = 0;
+
+      let calorieAccuracySum = 0;
+      let calorieBiasSum = 0;
       let caloriesCount = 0;
+
+      let activeCaloriesAccuracySum = 0;
+      let activeCaloriesBiasSum = 0;
+      let activeCaloriesCount = 0;
+
+      let basalCaloriesAccuracySum = 0;
+      let basalCaloriesBiasSum = 0;
+      let basalCaloriesCount = 0;
 
       analyses.forEach((analysis) => {
         const activityStats = analysis.activityStats;
@@ -572,19 +710,32 @@ export class ActivitySummaryService {
 
         if (activityStats.steps) {
           stepsAccuracySum += activityStats.steps.accuracyPercent || 0;
-          stepMAPESum += activityStats.steps.mape || 0;
-          stepMAESum += activityStats.steps.mae || 0;
+          stepBiasSum += activityStats.steps.bias || 0;
           stepsCount++;
         }
 
         if (activityStats.distance) {
           distanceAccuracySum += activityStats.distance.accuracyPercent || 0;
+          distanceBiasSum += activityStats.distance.bias || 0;
           distanceCount++;
         }
 
         if (activityStats.calories) {
           calorieAccuracySum += activityStats.calories.accuracyPercent || 0;
+          calorieBiasSum += activityStats.calories.bias || 0;
           caloriesCount++;
+        }
+
+        if (activityStats.activeCalories) {
+          activeCaloriesAccuracySum += activityStats.activeCalories.accuracyPercent || 0;
+          activeCaloriesBiasSum += activityStats.activeCalories.bias || 0;
+          activeCaloriesCount++;
+        }
+
+        if (activityStats.basalCalories) {
+          basalCaloriesAccuracySum += activityStats.basalCalories.accuracyPercent || 0;
+          basalCaloriesBiasSum += activityStats.basalCalories.bias || 0;
+          basalCaloriesCount++;
         }
       });
 
@@ -592,30 +743,50 @@ export class ActivitySummaryService {
       const activityStats: any = {};
 
       if (stepsCount > 0) {
-        activityStats.stepsAccuracy = Math.round((stepsAccuracySum / stepsCount) * 100) / 100;
-        activityStats.avgStepMAPE = Math.round((stepMAPESum / stepsCount) * 100) / 100;
-        activityStats.avgStepMAE = Math.round(stepMAESum / stepsCount);
-        activityStats.totalSessions = analyses.length;
+        activityStats.steps = {
+          avgAccuracyPercent: Math.round((stepsAccuracySum / stepsCount) * 100) / 100,
+          avgDifference: Math.round(stepBiasSum / stepsCount),
+        };
       }
 
       if (distanceCount > 0) {
-        activityStats.distanceAccuracy = Math.round((distanceAccuracySum / distanceCount) * 100) / 100;
+        activityStats.distance = {
+          avgAccuracyPercent: Math.round((distanceAccuracySum / distanceCount) * 100) / 100,
+          avgDifference: Math.round(distanceBiasSum / distanceCount),
+        };
       }
 
       if (caloriesCount > 0) {
-        activityStats.calorieAccuracy = Math.round((calorieAccuracySum / caloriesCount) * 100) / 100;
+        activityStats.calories = {
+          avgAccuracyPercent: Math.round((calorieAccuracySum / caloriesCount) * 100) / 100,
+          avgDifference: Math.round(calorieBiasSum / caloriesCount),
+        };
+      }
+
+      if (activeCaloriesCount > 0) {
+        activityStats.activeCalories = {
+          avgAccuracyPercent: Math.round((activeCaloriesAccuracySum / activeCaloriesCount) * 100) / 100,
+          avgDifference: Math.round(activeCaloriesBiasSum / activeCaloriesCount),
+        };
+      }
+
+      if (basalCaloriesCount > 0) {
+        activityStats.basalCalories = {
+          avgAccuracyPercent: Math.round((basalCaloriesAccuracySum / basalCaloriesCount) * 100) / 100,
+          avgDifference: Math.round(basalCaloriesBiasSum / basalCaloriesCount),
+        };
       }
 
       // Get unique user count
       const uniqueUserIds = new Set(analyses.map((a) => a.userId.toString()));
       const totalUsers = uniqueUserIds.size;
 
-      // Update FirmwarePerformance for Steps metric
+      // Update FirmwarePerformance for Activity metric
       await FirmwarePerformance.findOneAndUpdate(
-        { firmwareVersion, metric: "Steps" },
+        { firmwareVersion, metric: "Activity" },
         {
           firmwareVersion,
-          metric: "Steps",
+          metric: "Activity",
           totalSessions: analyses.length,
           totalUsers,
           activityStats,

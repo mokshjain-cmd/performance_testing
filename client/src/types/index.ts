@@ -33,7 +33,7 @@ export interface Session {
   _id: string;
   userId: User;
   activityType: string;
-  metric: 'HR' | 'SPO2' | 'Sleep' | 'Calories' | 'Steps';
+  metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity';
   startTime: string;
   endTime: string;
   durationSec: number;
@@ -121,11 +121,46 @@ export interface Analysis {
   sessionId: string;
   userId: string;
   activityType: string;
-  metric?: 'HR' | 'SPO2' | 'Sleep' | 'Calories' | 'Steps';
+  metric?: 'HR' | 'SPO2' | 'Sleep' | 'Activity';
   startTime: string;
   endTime: string;
   deviceStats: DeviceStats[];
   pairwiseComparisons: PairwiseComparison[];
+  activityStats?: {
+    steps?: {
+      lunaTotal?: number;
+      benchmarkTotal?: number;
+      error?: number;
+      accuracyPercent?: number;
+      bias?: number;
+    };
+    distance?: {
+      lunaMeters?: number;
+      benchmarkMeters?: number;
+      errorMeters?: number;
+      accuracyPercent?: number;
+      bias?: number;
+    };
+    calories?: {
+      lunaTotal?: number;
+      benchmarkTotal?: number;
+      error?: number;
+      accuracyPercent?: number;
+      bias?: number;
+    };
+    activeCalories?: {
+      lunaActive?: number;
+      benchmarkActive?: number;
+      accuracyPercent?: number;
+      bias?: number;
+    };
+    basalCalories?: {
+      lunaBasal?: number;
+      benchmarkBasal?: number;
+      accuracyPercent?: number;
+      bias?: number;
+    };
+  };
   isValid: boolean;
   computedAt: string;
 }

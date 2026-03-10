@@ -127,7 +127,7 @@ export const SleepSessionPage: React.FC = () => {
                   Event
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Luna
+                  Falcon
                 </th>
                 {hasBenchmark && benchmark && (
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -187,9 +187,9 @@ export const SleepSessionPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Luna Metrics */}
+      {/* Falcon Metrics */}
       <div>
-        <h2 className="text-xl font-semibold mb-4">Luna Sleep Metrics</h2>
+        <h2 className="text-xl font-semibold mb-4">Falcon Sleep Metrics</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <SleepMetricCard
             title="Total Sleep Time"
@@ -261,19 +261,19 @@ export const SleepSessionPage: React.FC = () => {
               value={formatTime(Math.abs(sessionData.comparison.totalSleepDifferenceSec))}
               subtitle={
                 sessionData.comparison.totalSleepDifferenceSec >= 0
-                  ? 'Luna overestimated'
-                  : 'Luna underestimated'
+                  ? 'Falcon overestimated'
+                  : 'Falcon underestimated'
               }
             />
             <SleepMetricCard
               title="Deep Sleep Diff"
               value={formatTime(Math.abs(sessionData.comparison.deepDifferenceSec))}
-              subtitle={sessionData.comparison.deepDifferenceSec >= 0 ? 'Luna overestimated' : 'Luna underestimated'}
+              subtitle={sessionData.comparison.deepDifferenceSec >= 0 ? 'Falcon overestimated' : 'Falcon underestimated'}
             />
             <SleepMetricCard
               title="REM Sleep Diff"
               value={formatTime(Math.abs(sessionData.comparison.remDifferenceSec))}
-              subtitle={sessionData.comparison.remDifferenceSec >= 0 ? 'Luna overestimated' : 'Luna underestimated'}
+              subtitle={sessionData.comparison.remDifferenceSec >= 0 ? 'Falcon overestimated' : 'Falcon underestimated'}
             />
           </div>
         </div>

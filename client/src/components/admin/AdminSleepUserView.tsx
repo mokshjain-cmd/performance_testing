@@ -187,11 +187,11 @@ const AdminSleepUserView: React.FC<AdminSleepUserViewProps> = ({ userId }) => {
 
       {/* Average Sleep Metrics - Horizontal Card */}
       <Card>
-        <h3 className="text-lg font-semibold mb-4">Average Sleep Metrics (Luna)</h3>
+        <h3 className="text-lg font-semibold mb-4">Average Sleep Metrics (Falcon)</h3>
         <div className="bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 rounded-lg p-4">
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-[100px] pr-4 border-r border-purple-300">
-              <p className="text-sm font-semibold text-purple-700 uppercase">Luna Ring</p>
+              <p className="text-sm font-semibold text-purple-700 uppercase">Falcon </p>
               <p className="text-xs text-purple-600">Avg per session</p>
             </div>
             <div className="flex-1 grid grid-cols-3 gap-4">
@@ -292,7 +292,7 @@ const AdminSleepUserView: React.FC<AdminSleepUserViewProps> = ({ userId }) => {
           </summary>
           <div className="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-4">
             <div className="text-sm text-blue-900 space-y-2">
-              <p><strong>Epoch Accuracy:</strong> Percentage of 30-second epochs where Luna agrees with the benchmark device. Target: &gt;85% for clinical-grade accuracy.</p>
+              <p><strong>Epoch Accuracy:</strong> Percentage of 30-second epochs where Falcon agrees with the benchmark device. Target: &gt;85% for clinical-grade accuracy.</p>
               <p><strong>Cohen's Kappa:</strong> Statistical measure of agreement beyond chance. &gt;0.8 = Excellent, 0.6-0.8 = Good, 0.4-0.6 = Moderate, &lt;0.4 = Poor.</p>
             </div>
           </div>
@@ -301,7 +301,7 @@ const AdminSleepUserView: React.FC<AdminSleepUserViewProps> = ({ userId }) => {
 
       {/* Stage Bias Analysis */}
       <Card>
-        <h3 className="text-lg font-semibold mb-4">Stage Bias Analysis (Luna vs Benchmark)</h3>
+        <h3 className="text-lg font-semibold mb-4">Stage Bias Analysis (Falcon vs Benchmark)</h3>
         
         {/* Interpretation Guide */}
         <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-6">
@@ -314,7 +314,7 @@ const AdminSleepUserView: React.FC<AdminSleepUserViewProps> = ({ userId }) => {
             <div className="ml-3 flex-1">
               <h4 className="text-sm font-semibold text-purple-900 mb-2">Understanding Bias</h4>
               <div className="text-sm text-purple-800 space-y-1">
-                <p><strong>Bias Direction:</strong> Up arrow (↑) means Luna overestimates (detects more of that stage). Down arrow (↓) means Luna underestimates (detects less).</p>
+                <p><strong>Bias Direction:</strong> Up arrow (↑) means Falcon overestimates (detects more of that stage). Down arrow (↓) means Falcon underestimates (detects less).</p>
                 <p><strong>Magnitude:</strong> Larger time differences indicate systematic bias. Small differences (&lt;10 min) are typically acceptable.</p>
               </div>
             </div>
@@ -440,7 +440,7 @@ const AdminSleepUserView: React.FC<AdminSleepUserViewProps> = ({ userId }) => {
         <Card>
           <h3 className="text-lg font-semibold mb-4">Firmware Version Performance</h3>
           <p className="text-sm text-gray-600 mb-4">
-            Comparing Luna's performance across different firmware versions helps track improvements and identify optimal configurations for this user.
+            Comparing Falcon's performance across different firmware versions helps track improvements and identify optimal configurations for this user.
           </p>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
@@ -498,7 +498,7 @@ const AdminSleepUserView: React.FC<AdminSleepUserViewProps> = ({ userId }) => {
         <Card>
           <h3 className="text-lg font-semibold mb-4">Benchmark Device Comparison</h3>
           <p className="text-sm text-gray-600 mb-4">
-            Performance metrics when Luna is compared against different benchmark devices. Variations may indicate device-specific compatibility or user physiology factors.
+            Performance metrics when Falcon is compared against different benchmark devices. Variations may indicate device-specific compatibility or user physiology factors.
           </p>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">

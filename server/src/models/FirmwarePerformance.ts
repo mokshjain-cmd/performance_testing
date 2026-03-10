@@ -2,7 +2,7 @@ import { Schema, model, Document } from "mongoose";
 
 export interface IFirmwarePerformance extends Document {
   firmwareVersion: string;
-  metric: 'HR' | 'SPO2' | 'Sleep' | 'Calories' | 'Steps';
+  metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity';
   totalSessions: number;
   totalUsers: number;
   overallAccuracy?: {
@@ -24,12 +24,26 @@ export interface IFirmwarePerformance extends Document {
     avgRemBiasSec?: number;
   };
   activityStats?: {
-    stepsAccuracy?: number;
-    distanceAccuracy?: number;
-    calorieAccuracy?: number;
-    avgStepMAPE?: number;
-    avgStepMAE?: number;
-    totalSessions?: number;
+    steps?: {
+      avgAccuracyPercent?: number;
+      avgDifference?: number;
+    };
+    distance?: {
+      avgAccuracyPercent?: number;
+      avgDifference?: number;
+    };
+    calories?: {
+      avgAccuracyPercent?: number;
+      avgDifference?: number;
+    };
+    activeCalories?: {
+      avgAccuracyPercent?: number;
+      avgDifference?: number;
+    };
+    basalCalories?: {
+      avgAccuracyPercent?: number;
+      avgDifference?: number;
+    };
   };
   computedAt: Date;
 }
@@ -38,7 +52,7 @@ const FirmwarePerformanceSchema = new Schema<IFirmwarePerformance>({
   firmwareVersion: { type: String, index: true },
   metric: { 
     type: String, 
-    enum: ['HR', 'SPO2', 'Sleep', 'Calories', 'Steps'],
+    enum: ['HR', 'SPO2', 'Sleep', 'Activity'],
     required: true,
     index: true 
   },
@@ -65,12 +79,26 @@ const FirmwarePerformanceSchema = new Schema<IFirmwarePerformance>({
     avgRemBiasSec: Number,
   },
   activityStats: {
-    stepsAccuracy: Number,
-    distanceAccuracy: Number,
-    calorieAccuracy: Number,
-    avgStepMAPE: Number,
-    avgStepMAE: Number,
-    totalSessions: Number,
+    steps: {
+      avgAccuracyPercent: Number,
+      avgDifference: Number,
+    },
+    distance: {
+      avgAccuracyPercent: Number,
+      avgDifference: Number,
+    },
+    calories: {
+      avgAccuracyPercent: Number,
+      avgDifference: Number,
+    },
+    activeCalories: {
+      avgAccuracyPercent: Number,
+      avgDifference: Number,
+    },
+    basalCalories: {
+      avgAccuracyPercent: Number,
+      avgDifference: Number,
+    },
   },
   computedAt: { type: Date, default: Date.now },
 });
