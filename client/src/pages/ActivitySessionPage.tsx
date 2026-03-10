@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Card } from '../components/common';
 import { activityService } from '../services/activity.service';
 import type { UserSingleActivitySessionView } from '../types/activity.types';
-import { Footprints, Activity, TrendingUp, Calendar, Zap } from 'lucide-react';
+import { Footprints, Activity, Calendar, Zap } from 'lucide-react';
 import {
   BarChart,
   Bar,
