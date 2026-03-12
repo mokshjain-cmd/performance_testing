@@ -315,17 +315,20 @@ export default function SessionFormPage() {
   // Helper to compute session name from start time: "19-feb-26 | 17:45"
   const computeSessionName = (startTimeValue: string) => {
     if (!startTimeValue) return '';
+
     try {
       const date = new Date(startTimeValue);
-      // Use UTC methods to avoid timezone shifts
-      const day = String(date.getUTCDate()).padStart(2, '0');
-      const monthNames = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
-      const month = monthNames[date.getUTCMonth()];
-      const year = String(date.getUTCFullYear()).slice(-2);
-      const hours = String(date.getUTCHours()).padStart(2, '0');
-      const minutes = String(date.getUTCMinutes()).padStart(2, '0');
+
+      const day = String(date.getDate()).padStart(2, '0');
+      const monthNames = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+      const month = monthNames[date.getMonth()];
+      const year = String(date.getFullYear()).slice(-2);
+
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+
       return `${day}-${month}-${year} | ${hours}:${minutes}`;
-    } catch (error) {
+    } catch {
       return '';
     }
   };
