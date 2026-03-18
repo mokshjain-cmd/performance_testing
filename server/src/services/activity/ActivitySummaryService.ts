@@ -6,6 +6,7 @@ import AdminGlobalSummary from "../../models/AdminGlobalSummary";
 import AdminDailyTrend from "../../models/AdminDailyTrend";
 import FirmwarePerformance from "../../models/FirmwarePerformance";
 import Session from "../../models/Session";
+import { getLatestFirmwareVersion } from "../../controllers/firmwareConfig.controller";
 
 /**
  * ActivitySummaryService
@@ -474,6 +475,9 @@ export class ActivitySummaryService {
       const uniqueUserIds = new Set(analyses.map((a) => a.userId.toString()));
       const totalUsers = uniqueUserIds.size;
 
+      // Get latest firmware version
+      const latestFirmware = await getLatestFirmwareVersion("Activity");
+
       // Update AdminGlobalSummary for Activity metric
       await AdminGlobalSummary.findOneAndUpdate(
         { metric: "Activity" },
@@ -483,6 +487,7 @@ export class ActivitySummaryService {
           totalSessions: analyses.length,
           totalReadings: 0, // Activity doesn't have individual readings
           activityStats,
+          latestFirmwareVersion: latestFirmware || undefined,
           computedAt: new Date(),
         },
         { upsert: true, new: true }

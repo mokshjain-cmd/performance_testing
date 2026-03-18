@@ -330,6 +330,7 @@ export const createSession = async (
         await ActivitySummaryService.updateAdminDailyTrend(session.startTime);
         if (lunaFirmware) {
           await ActivitySummaryService.updateFirmwarePerformance(lunaFirmware);
+        
         }
         
         console.log(`✅ Activity summary collections updated for session ${session._id}`);

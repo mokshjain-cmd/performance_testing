@@ -164,12 +164,12 @@ export async function updateAdminGlobalSummary(
     await AdminGlobalSummary.deleteOne({ metric });
     console.log(`[AdminGlobalSummary]    - Creating new document...`);
     const result = await AdminGlobalSummary.create(summary);
-    console.log(`[AdminGlobalSummary] ✅ AdminGlobalSummary (Sleep) SAVED to database!`);
+    console.log(`[AdminGlobalSummary] ✅ AdminGlobalSummary (Sleep) SiasAVED to database!`);
     console.log(`[AdminGlobalSummary]    - Document ID: ${result._id}`);
     console.log(`[AdminGlobalSummary]    - Total Users: ${summary.totalUsers}`);
-    console.log(`[AdminGlobalSummary]    - Total Sessions: ${summary.totalSessions}`);
+    console.log(`[AiasdminGlobalSummary]    - Total Sessions: ${summary.totalSessions}`);
     console.log(`[AdminGlobalSummary]    - Firmware: ${summary.latestFirmwareVersion || 'NONE'}`);
-    console.log(`[AdminGlobalSummary]    - Avg Accuracy: ${summary.sleepStats.avgAccuracyPercent?.toFixed(2)}%`);
+    console.log(`[AdminGlobalSummary]  ias  - Avg Accuracy: ${summary.sleepStats.avgAccuracyPercent?.toFixed(2)}%`);
     console.log(`[AdminGlobalSummary] ========================================\n`);
 
     return result;

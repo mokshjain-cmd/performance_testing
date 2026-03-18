@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Analysis } from '../../types';
 import BlandAltmanChart from './BlandAltmanChart';
+import { getDeviceDisplayName } from '../../utils/deviceNames';
 
 interface Props {
   analysis: Analysis;
@@ -27,7 +28,7 @@ const AnalysisSection: React.FC<Props> = ({ analysis, isAdmin = false }) => {
                   {/* Device Comparison Title */}
                   <div className="flex items-center gap-2 min-w-[140px]">
                     <span className="font-semibold text-gray-800 text-base">
-                      {pair.d1} <span className="text-gray-500 font-normal mx-1">vs</span> {pair.d2}
+                      {getDeviceDisplayName(pair.d1)} <span className="text-gray-500 font-normal mx-1">vs</span> {getDeviceDisplayName(pair.d2)}
                     </span>
                   </div>
                   

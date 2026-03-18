@@ -4,6 +4,7 @@ import type { Metric } from './MetricsSelector';
 import type { SubTab } from './SubTabBar';
 import apiClient from '../../services/api';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { Info } from 'lucide-react';
 import ActivityAnalysisTab from './ActivityAnalysisTab';
 import BenchmarkComparisonTab from './BenchmarkComparisonTab';
 import FirmwarePerformanceTab from './FirmwarePerformanceTab';
@@ -70,6 +71,10 @@ const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({ metric, subTab }) =
   const [selectedTimeRange, setSelectedTimeRange] = useState<10 | 30>(10);
 
   useEffect(() => {
+    // Clear previous data when metric changes to prevent showing stale data
+    setGlobalSummary(null);
+    setDailyTrends([]);
+    
     // Convert metric to backend format (HR, SPO2)
     const metricParam = metric === 'hr' ? 'HR' : 'SPO2';
     
@@ -111,9 +116,9 @@ const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({ metric, subTab }) =
 
   const getMetricLabel = (metric: ChartMetric) => {
     switch (metric) {
-      case 'avgMAE': return 'Mean Absolute Error';
-      case 'avgRMSE': return 'Root Mean Square Error';
-      case 'avgPearson': return 'Pearson Correlation';
+      case 'avgMAE': return 'Avg Mean Absolute Error (BPM)';
+      case 'avgRMSE': return 'Avg Root Mean Square Error (BPM)';
+      case 'avgPearson': return 'Avg Pearson Correlation';
     }
   };
 
@@ -325,7 +330,7 @@ const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({ metric, subTab }) =
             {dailyTrends.length > 0 ? (
               <div className="h-96">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={getChartData()} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+                  <LineChart data={getChartData()} margin={{ top: 20, right: 30, left: 80, bottom: 20 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                     <XAxis 
                       dataKey="date" 
@@ -335,7 +340,12 @@ const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({ metric, subTab }) =
                     <YAxis 
                       stroke="#6b7280"
                       style={{ fontSize: '12px' }}
-                      label={{ value: getMetricLabel(selectedChartMetric), angle: -90, position: 'insideLeft', style: { fontSize: '12px' } }}
+                      label={{ 
+                        value: getMetricLabel(selectedChartMetric), 
+                        angle: -90, 
+                        position: 'insideLeft', 
+                        style: { fontSize: '11px', textAnchor: 'middle' } 
+                      }}
                     />
                     <Tooltip
                       contentStyle={{
@@ -381,6 +391,44 @@ const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({ metric, subTab }) =
                 <p className="text-sm mt-2">Data will appear as sessions are recorded</p>
               </div>
             )}
+
+            {/* How to Interpret Section */}
+            <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="flex items-center gap-2 mb-3">
+                <Info className="w-4 h-4 text-blue-500" />
+                <h4 className="text-sm font-semibold text-gray-700">How to Interpret This Graph</h4>
+              </div>
+              
+              <p className="text-xs text-gray-600 mb-3">
+                This graph tracks Falcon device accuracy compared to medical-grade reference devices over time.
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="bg-white p-3 rounded border border-gray-200">
+                  <div className="font-semibold text-xs text-gray-800 mb-1">MAE (Mean Absolute Error)</div>
+                  <div className="text-xs text-gray-600 leading-relaxed">
+                    Average of MAE across all sessions and all users.
+                    <span className="block mt-1 text-green-600 font-medium">✓ Target: &lt;5 BPM</span>
+                  </div>
+                </div>
+
+                <div className="bg-white p-3 rounded border border-gray-200">
+                  <div className="font-semibold text-xs text-gray-800 mb-1">RMSE (Root Mean Square Error)</div>
+                  <div className="text-xs text-gray-600 leading-relaxed">
+                    Average of RMSE across all sessions and all users.
+                    <span className="block mt-1 text-green-600 font-medium">✓ Target: &lt;7 BPM</span>
+                  </div>
+                </div>
+
+                <div className="bg-white p-3 rounded border border-gray-200">
+                  <div className="font-semibold text-xs text-gray-800 mb-1">Pearson R (Correlation)</div>
+                  <div className="text-xs text-gray-600 leading-relaxed">
+                    Average correlation across all sessions and all users.
+                    <span className="block mt-1 text-green-600 font-medium">✓ Target: &gt;0.90</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </Card>
       )}

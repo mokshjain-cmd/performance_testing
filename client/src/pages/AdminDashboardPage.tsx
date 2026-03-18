@@ -41,6 +41,7 @@ const AdminDashboardPage: React.FC = () => {
   // Metric and tab state
   const [selectedMetric, setSelectedMetric] = useState<Metric>('hr');
   const [selectedSubTab, setSelectedSubTab] = useState<SubTab>('overview');
+  const [latestFirmware, setLatestFirmware] = useState<string>('');
 
   // Reset to overview and clear sessions when metric changes
   useEffect(() => {
@@ -51,6 +52,26 @@ const AdminDashboardPage: React.FC = () => {
     setSelectedView('overview');
     setSelectedUserId(null);
     setSelectedSessionId(null);
+  }, [selectedMetric]);
+
+  // Fetch latest firmware version for the selected metric
+  useEffect(() => {
+    const fetchFirmwareVersion = async () => {
+      try {
+        const metricParam = selectedMetric === 'hr' ? 'HR' : 
+                           selectedMetric === 'spo2' ? 'SPO2' : 
+                           selectedMetric === 'sleep' ? 'Sleep' : 'Activity';
+        
+        const res = await apiClient.get(`/admin/global-summary?metric=${metricParam}`);
+        const firmware = res.data.data?.latestFirmwareVersion;
+        setLatestFirmware(firmware || '');
+      } catch (err) {
+        console.error('Error fetching firmware version:', err);
+        setLatestFirmware('');
+      }
+    };
+
+    fetchFirmwareVersion();
   }, [selectedMetric]);
 
   // Fetch all users
@@ -178,20 +199,27 @@ const AdminDashboardPage: React.FC = () => {
           <div className="flex items-start justify-between gap-4">
             <div>
               <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Admin Dashboard
-              </h1>
-              <p className="text-gray-600 mt-2">
                 {selectedView === 'overview' && 'Global Overview & Analytics'}
                 {selectedView === 'user' && 'User Performance Analysis'}
                 {selectedView === 'session' && 'Session Details'}
-              </p>
+              </h1>
             </div>
             <div className="flex items-center gap-4">
               {/* Metrics Selector */}
-              <MetricsSelector
-                selectedMetric={selectedMetric}
-                onSelectMetric={setSelectedMetric}
-              />
+              <div className="flex items-end gap-3">
+                <MetricsSelector
+                  selectedMetric={selectedMetric}
+                  onSelectMetric={setSelectedMetric}
+                />
+                {latestFirmware && (
+                  <div className="flex flex-col items-start pb-2">
+                    <span className="text-xs text-gray-500 mb-1">Latest Falcon Firmware</span>
+                    <span className="inline-flex items-center px-3 py-1 rounded-lg text-xs font-semibold bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 border border-blue-200">
+                      v{latestFirmware}
+                    </span>
+                  </div>
+                )}
+              </div>
               
             </div>
           </div>

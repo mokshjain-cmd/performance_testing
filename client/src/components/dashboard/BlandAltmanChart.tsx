@@ -1,5 +1,6 @@
 import React from 'react';
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, ResponsiveContainer, Label } from 'recharts';
+import { getDeviceDisplayName } from '../../utils/deviceNames';
 
 interface BlandAltmanData {
   differences: number[];
@@ -72,7 +73,7 @@ const BlandAltmanChart: React.FC<BlandAltmanChartProps> = ({
         <div>
           <h4 className="text-lg font-semibold text-gray-800">Bland-Altman Plot</h4>
           <p className="text-sm text-gray-600">
-            Agreement Analysis: {device1} vs {device2} for {metric}
+            Agreement Analysis: {getDeviceDisplayName(device1)} vs {getDeviceDisplayName(device2)} for {metric}
           </p>
           <p className="text-xs text-gray-500 mt-1">
             Assesses the agreement between two measurement methods by plotting the difference against the average
@@ -116,7 +117,7 @@ const BlandAltmanChart: React.FC<BlandAltmanChartProps> = ({
             style={{ fontSize: '12px' }}
           >
             <Label 
-              value={`Average of Both Measurements: (${device1} + ${device2}) / 2`} 
+              value={`Average of Both Measurements: (${getDeviceDisplayName(device1)} + ${getDeviceDisplayName(device2)}) / 2`} 
               position="bottom" 
               offset={40}
               style={{ fontSize: '12px', fill: '#6b7280' }}
@@ -131,7 +132,7 @@ const BlandAltmanChart: React.FC<BlandAltmanChartProps> = ({
             style={{ fontSize: '12px' }}
           >
             <Label 
-              value={`Difference Between Measurements: ${device1} - ${device2}`} 
+              value={`Difference Between Measurements: ${getDeviceDisplayName(device1)} - ${getDeviceDisplayName(device2)}`} 
               angle={-90} 
               position="left"
               offset={40}
@@ -213,7 +214,7 @@ const BlandAltmanChart: React.FC<BlandAltmanChartProps> = ({
             <span className="font-semibold">X-axis (Average):</span> The mean of the two measurements. Shows the magnitude of the readings.
           </div>
           <div>
-            <span className="font-semibold">Y-axis (Difference):</span> How much {device1} differs from {device2}. Zero means perfect agreement.
+            <span className="font-semibold">Y-axis (Difference):</span> How much {getDeviceDisplayName(device1)} differs from {getDeviceDisplayName(device2)}. Zero means perfect agreement.
           </div>
           <div>
             <span className="font-semibold">Blue horizontal line:</span> Mean difference (bias) between devices. Indicates systematic over/under-estimation.

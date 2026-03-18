@@ -4,6 +4,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, Ca
 import { splitDateTime } from '../../utils/dateTime';
 import { HeartPulse } from 'lucide-react';
 import type { Analysis } from '../../types';
+import { getDeviceDisplayName } from '../../utils/deviceNames';
 
 interface Props {
   points: Record<string, any[]>;
@@ -110,7 +111,7 @@ const HeartRateChart: React.FC<Props> = ({ points, analysis, metric = 'HR' }) =>
                 <div className="flex items-center justify-between gap-6">
                   {/* Device Name and Version */}
                   <div className="flex items-center gap-2 min-w-fit">
-                    <span className="font-semibold text-gray-800 text-base">{stat.deviceType}</span>
+                    <span className="font-semibold text-gray-800 text-base">{getDeviceDisplayName(stat.deviceType)}</span>
                     <span className="text-xs bg-indigo-100 px-2 py-0.5 rounded-full text-indigo-700 font-medium">
                       {stat.firmwareVersion}
                     </span>
@@ -265,7 +266,7 @@ const HeartRateChart: React.FC<Props> = ({ points, analysis, metric = 'HR' }) =>
                 className="font-medium text-sm"
                 style={{ color: isVisible ? color : '#6b7280' }}
               >
-                {dt}
+                {getDeviceDisplayName(dt)}
               </span>
             </label>
           );
