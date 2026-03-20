@@ -8,10 +8,11 @@ const DEVICE_OPTIONS = [
   { label: 'Falcon', value: 'luna', always: true },
   { label: 'Polar', value: 'polar', hrOnly: true },
   { label: 'Masimo', value: 'masimo', spo2Only: true },
-  { label: 'Apple', value: 'apple', sleepOnly: true },
+  { label: 'Apple', value: 'apple', hrCompatible: true, sleepCompatible: true, activityCompatible: true, spo2DailyCompatible: true },
 ];
 
 const ACTIVITY_OPTIONS = [
+  { value: 'daily', label: 'Daily (Continuous Monitoring)' },
   { value: 'sitting', label: 'Sitting' },
   { value: 'strength training', label: 'Strength Training' },
   { value: 'walk', label: 'Walk' },
@@ -37,10 +38,16 @@ const METRIC_OPTIONS = [
 
 const BENCHMARK_DEVICE_OPTIONS_HR = [
   { value: 'polar', label: 'Polar' },
+  { value: 'apple', label: 'Apple' },
 ];
 
 const BENCHMARK_DEVICE_OPTIONS_SPO2 = [
   { value: 'masimo', label: 'Masimo' },
+];
+
+const BENCHMARK_DEVICE_OPTIONS_SPO2_DAILY = [
+  { value: 'masimo', label: 'Masimo' },
+  { value: 'apple', label: 'Apple' },
 ];
 
 const BENCHMARK_DEVICE_OPTIONS_SLEEP = [
@@ -69,6 +76,7 @@ export default function SessionFormPage() {
     endTime: '',
     sleepDate: '', // For Sleep sessions: the morning date (night before -> this morning)
     activityDate: '', // For Activity sessions: the date of the activity
+    dailyDate: '', // For HR/SPO2 daily sessions: the date for continuous monitoring
     benchmarkDeviceType: '',
     bandPosition: '',
     firmwareVersion: '',
@@ -150,7 +158,7 @@ export default function SessionFormPage() {
       }
       setDeviceFiles(newDeviceFiles);
     }
-    // If metric changed to SPO2, force activity to 'sitting' and remove incompatible devices
+    // If metric changed to SPO2, remove incompatible devices
     else if (name === 'metric' && value === 'SPO2') {
       const compatibleDevices = formData.devices.filter(d => d === 'luna' || d === 'masimo');
       // Ensure masimo is in devices since it's the benchmark for SPO2
@@ -160,7 +168,6 @@ export default function SessionFormPage() {
       setFormData({
         ...formData,
         metric: value,
-        activity: 'sitting',
         benchmarkDeviceType: 'masimo',
         devices: updatedDevices.length > 0 ? updatedDevices : ['luna', 'masimo'],
       });
@@ -176,6 +183,39 @@ export default function SessionFormPage() {
         newDeviceFiles.masimo = null;
       }
       setDeviceFiles(newDeviceFiles);
+    }
+    // If activity type changed to/from 'daily' for SPO2 or HR, handle Apple device
+    else if (name === 'activity' && (formData.metric === 'SPO2' || formData.metric === 'HR')) {
+      if (value === 'daily') {
+        // Add Apple as option for daily activity
+        const updatedDevices = formData.devices;
+        setFormData({
+          ...formData,
+          activity: value,
+        });
+      } else {
+        // Remove Apple when switching away from daily (for SPO2 only, keep for HR)
+        const updatedDevices = formData.metric === 'SPO2' 
+          ? formData.devices.filter(d => d !== 'apple')
+          : formData.devices;
+        const newBenchmark = formData.benchmarkDeviceType === 'apple' && formData.metric === 'SPO2'
+          ? 'masimo'
+          : formData.benchmarkDeviceType === 'apple' && formData.metric === 'HR'
+          ? 'polar'
+          : formData.benchmarkDeviceType;
+        setFormData({
+          ...formData,
+          activity: value,
+          devices: updatedDevices,
+          benchmarkDeviceType: newBenchmark,
+        });
+        // Remove Apple files if present and metric is SPO2
+        if (formData.metric === 'SPO2') {
+          const newDeviceFiles = { ...deviceFiles };
+          delete newDeviceFiles.apple;
+          setDeviceFiles(newDeviceFiles);
+        }
+      }
     }
     // If metric changed FROM Activity to something else, remove activity-only devices
     else if (name === 'metric' && formData.metric === 'Activity' && value !== 'Activity') {
@@ -203,9 +243,15 @@ export default function SessionFormPage() {
       }
       setDeviceFiles(newDeviceFiles);
     }
-    // If metric changed FROM Sleep to something else, remove sleep-only devices
+    // If metric changed FROM Sleep to something else, keep Apple if switching to HR, remove otherwise
     else if (name === 'metric' && formData.metric === 'Sleep' && value !== 'Sleep') {
-      const compatibleDevices = formData.devices.filter(d => d !== 'apple');
+      let compatibleDevices = formData.devices;
+      
+      // Keep Apple for HR, remove for other metrics
+      if (value !== 'HR' && value !== 'Activity') {
+        compatibleDevices = compatibleDevices.filter(d => d !== 'apple');
+      }
+      
       // If switching to HR, ensure polar is added as benchmark device
       const updatedDevices = value === 'HR' && !compatibleDevices.includes('polar')
         ? [...compatibleDevices, 'polar']
@@ -218,9 +264,11 @@ export default function SessionFormPage() {
         benchmarkDeviceType: value === 'HR' ? 'polar' : value === 'SPO2' ? 'masimo' : '',
         devices: updatedDevices.length > 0 ? updatedDevices : ['luna'],
       });
-      // Remove apple files if present
+      // Remove apple files if switching to SPO2 or other non-compatible metrics
       const newDeviceFiles = { ...deviceFiles };
-      delete newDeviceFiles.apple;
+      if (value !== 'HR' && value !== 'Activity') {
+        delete newDeviceFiles.apple;
+      }
       // Initialize benchmark device file input if needed
       if (value === 'HR' && !newDeviceFiles.polar) {
         newDeviceFiles.polar = null;
@@ -357,6 +405,7 @@ export default function SessionFormPage() {
     // For Sleep sessions, compute startTime/endTime from sleepDate
     // sleepDate represents the morning date, so sleep session is from previous night (10 PM) to morning (8 AM)
     // For Activity sessions, use activityDate to compute a default time range
+    // For HR/SPO2 daily sessions, use dailyDate for full day (00:00 to 23:59)
     let startTime, endTime;
     if (formData.metric === 'Sleep' && formData.sleepDate) {
       const morningDate = new Date(formData.sleepDate);
@@ -378,17 +427,34 @@ export default function SessionFormPage() {
       endDate.setHours(23, 59, 59, 0);
       startTime = startDate.toISOString().slice(0, 19);
       endTime = endDate.toISOString().slice(0, 19);
+    } else if ((formData.metric === 'HR' || formData.metric === 'SPO2') && formData.activity === 'daily' && formData.dailyDate) {
+      // For HR/SPO2 daily monitoring, use the full day (00:00 to 23:59)
+      const dailyDay = new Date(formData.dailyDate);
+      const startDate = new Date(dailyDay);
+      startDate.setHours(0, 0, 0, 0);
+      const endDate = new Date(dailyDay);
+      endDate.setHours(23, 59, 59, 0);
+      startTime = startDate.toISOString().slice(0, 19);
+      endTime = endDate.toISOString().slice(0, 19);
     } else {
       startTime = ensureSeconds(formData.startTime);
       endTime = ensureSeconds(formData.endTime);
     }
     
     // Compute session name from start time
-    // For Activity sessions, use just the date without time
+    // For Activity sessions and HR/SPO2 daily sessions, use just the date without time
     let sessionName: string;
     if (formData.metric === 'Activity' && formData.activityDate) {
       // Format: "02-mar-26" (date only, no time)
       const date = new Date(formData.activityDate + 'T00:00:00'); // Parse as local date
+      const day = String(date.getDate()).padStart(2, '0');
+      const monthNames = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+      const month = monthNames[date.getMonth()];
+      const year = String(date.getFullYear()).slice(-2);
+      sessionName = `${day}-${month}-${year}`;
+    } else if ((formData.metric === 'HR' || formData.metric === 'SPO2') && formData.activity === 'daily' && formData.dailyDate) {
+      // Format: "02-mar-26" (date only, no time)
+      const date = new Date(formData.dailyDate + 'T00:00:00'); // Parse as local date
       const day = String(date.getDate()).padStart(2, '0');
       const monthNames = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
       const month = monthNames[date.getMonth()];
@@ -407,10 +473,13 @@ export default function SessionFormPage() {
     
     // For Sleep sessions, send sleepDate instead of startTime/endTime
     // For Activity sessions, send activityDate instead of startTime/endTime
+    // For HR/SPO2 daily sessions, send dailyDate instead of startTime/endTime
     if (formData.metric === 'Sleep' && formData.sleepDate) {
       form.append('sleepDate', formData.sleepDate);
     } else if (formData.metric === 'Activity' && formData.activityDate) {
       form.append('activityDate', formData.activityDate);
+    } else if ((formData.metric === 'HR' || formData.metric === 'SPO2') && formData.activity === 'daily' && formData.dailyDate) {
+      form.append('dailyDate', formData.dailyDate);
     } else {
       form.append('startTime', startTime);
       form.append('endTime', endTime);
@@ -445,6 +514,7 @@ export default function SessionFormPage() {
         endTime: '',
         sleepDate: '',
         activityDate: '',
+        dailyDate: '',
         benchmarkDeviceType: '',
         bandPosition: '',
         firmwareVersion: '',
@@ -482,13 +552,8 @@ export default function SessionFormPage() {
                 options={ACTIVITY_OPTIONS}
                 placeholder="Select activity type"
                 required
-                disabled={formData.metric === 'SPO2' || formData.metric === 'Sleep'}
+                disabled={formData.metric === 'Sleep'}
               />
-              {formData.metric === 'SPO2' && (
-                <p className="text-xs text-gray-500 -mt-4 ml-1">
-                  SPO2 sessions are only for sitting activity
-                </p>
-              )}
               {formData.metric === 'Sleep' && (
                 <p className="text-xs text-gray-500 -mt-4 ml-1">
                   Sleep sessions are fixed to sleeping activity
@@ -525,6 +590,20 @@ export default function SessionFormPage() {
                 ℹ️ Enter the date for which you want to track activity data (steps, calories, distance).
               </p>
             </div>
+          ) : (formData.metric === 'HR' || formData.metric === 'SPO2') && formData.activity === 'daily' ? (
+            <div>
+              <Input
+                type="date"
+                label="Daily Monitoring Date"
+                name="dailyDate"
+                value={formData.dailyDate}
+                onChange={handleChange}
+                required
+              />
+              <p className="text-xs text-gray-500 mt-1 ml-1">
+                ℹ️ Enter the date for continuous {formData.metric} monitoring (00:00:00 - 23:59:59).
+              </p>
+            </div>
           ) : (
             <>
               <Input
@@ -550,7 +629,15 @@ export default function SessionFormPage() {
             name="benchmarkDeviceType"
             value={formData.benchmarkDeviceType}
             onChange={handleChange}
-            options={formData.metric === 'SPO2' ? BENCHMARK_DEVICE_OPTIONS_SPO2 : formData.metric === 'Sleep' ? BENCHMARK_DEVICE_OPTIONS_SLEEP : formData.metric === 'Activity' ? BENCHMARK_DEVICE_OPTIONS_ACTIVITY : BENCHMARK_DEVICE_OPTIONS_HR}
+            options={
+              formData.metric === 'SPO2' 
+                ? (formData.activity === 'daily' ? BENCHMARK_DEVICE_OPTIONS_SPO2_DAILY : BENCHMARK_DEVICE_OPTIONS_SPO2)
+                : formData.metric === 'Sleep' 
+                ? BENCHMARK_DEVICE_OPTIONS_SLEEP 
+                : formData.metric === 'Activity' 
+                ? BENCHMARK_DEVICE_OPTIONS_ACTIVITY 
+                : (formData.activity === 'daily' ? [...BENCHMARK_DEVICE_OPTIONS_HR] : BENCHMARK_DEVICE_OPTIONS_HR)
+            }
             placeholder="Select benchmark device"
             required
           />
@@ -590,7 +677,7 @@ export default function SessionFormPage() {
             required
           />
 
-          {(formData.metric === 'Sleep' || formData.metric === 'Activity') && (
+          {(formData.metric === 'Sleep' || formData.metric === 'Activity' || ((formData.metric === 'HR' || formData.metric === 'SPO2') && formData.activity === 'daily')) && (
             <Select
               label="Mobile Type (Falcon Device)"
               name="mobileType"
@@ -608,16 +695,24 @@ export default function SessionFormPage() {
               {DEVICE_OPTIONS.filter((opt) => {
                 // Always show Falcon
                 if (opt.always) return true;
-                // For SPO2, only show SPO2-compatible devices
-                if (formData.metric === 'SPO2') return opt.spo2Only;
+                // For SPO2, show masimo always, and Apple only for daily activity
+                if (formData.metric === 'SPO2') {
+                  if (opt.spo2Only) return true;
+                  if (opt.spo2DailyCompatible && formData.activity === 'daily') return true;
+                  return false;
+                }
                 // For Sleep, only show Sleep-compatible devices
-                if (formData.metric === 'Sleep') return opt.sleepOnly;
+                if (formData.metric === 'Sleep') return opt.sleepCompatible;
                 // For Activity, only show Activity-compatible devices (Apple for benchmark)
-                if (formData.metric === 'Activity') return opt.value === 'apple';
-                // For HR, only show HR-compatible devices
-                if (formData.metric === 'HR') return opt.hrOnly;
+                if (formData.metric === 'Activity') return opt.activityCompatible;
+                // For HR, show polar always, and Apple only for daily activity
+                if (formData.metric === 'HR') {
+                  if (opt.hrOnly) return true;
+                  if (opt.hrCompatible && formData.activity === 'daily') return true;
+                  return false;
+                }
                 // For other metrics, hide device-specific devices
-                return !opt.hrOnly && !opt.spo2Only && !opt.sleepOnly;
+                return !opt.hrOnly && !opt.spo2Only && !opt.sleepCompatible;
               }).map((opt) => {
                 const isBenchmark = opt.value === formData.benchmarkDeviceType;
                 const isDisabled = !!opt.always || isBenchmark;
@@ -645,9 +740,11 @@ export default function SessionFormPage() {
 
           {/* Per-device file upload */}
           {formData.devices.map((device) => {
-            // For Apple Health sleep/activity data, accept ZIP files. Otherwise, accept CSV/TXT
-            const acceptedFormats = (device === 'apple' && (formData.metric === 'Sleep' || formData.metric === 'Activity'))
-              ? ".csv,.CSV,.txt,.TXT,.zip,.ZIP"
+            // For Apple Health data, accept ZIP files (contains export.xml) or XML files
+            // For HR: XML or ZIP containing export.xml
+            // For Sleep/Activity/SPO2: ZIP containing export.xml or CSV
+            const acceptedFormats = device === 'apple'
+              ? ".xml,.XML,.zip,.ZIP,.csv,.CSV"
               : ".csv,.CSV,.txt,.TXT";
             
             return (
@@ -655,8 +752,11 @@ export default function SessionFormPage() {
                 <label className="text-sm font-medium text-gray-700">
                   Upload {DEVICE_OPTIONS.find((d) => d.value === device)?.label} File
                   <span className="text-red-500 ml-1">*</span>
-                  {device === 'apple' && (formData.metric === 'Sleep' || formData.metric === 'Activity') && (
-                    <span className="text-xs text-gray-500 ml-2">(ZIP or CSV)</span>
+                  {device === 'apple' && (
+                    <span className="text-xs text-gray-500 ml-2">
+                      {formData.metric === 'HR' && '(ZIP with export.xml or XML file)'}
+                      {(formData.metric === 'Sleep' || formData.metric === 'Activity' || formData.metric === 'SPO2') && '(ZIP with export.xml or CSV)'}
+                    </span>
                   )}
                 </label>
                 <input
@@ -667,6 +767,16 @@ export default function SessionFormPage() {
                   required
                   className="block w-full text-sm text-gray-600 file:mr-4 file:py-2.5 file:px-5 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-gradient-to-r file:from-blue-500 file:to-blue-600 file:text-white hover:file:from-blue-600 hover:file:to-blue-700 file:cursor-pointer file:shadow-sm file:transition-all cursor-pointer border border-gray-200 rounded-xl p-3 bg-white/50 backdrop-blur-sm hover:border-gray-300 transition-all"
                 />
+                {device === 'apple' && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-2">
+                    <p className="text-xs text-blue-700">
+                      <strong>To export from iPhone:</strong> Health app → Profile → Export All Health Data
+                    </p>
+                    <p className="text-xs text-blue-600 mt-1">
+                      Upload the ZIP file directly or extract and upload the export.xml file
+                    </p>
+                  </div>
+                )}
                 {deviceFiles[device] && (
                   <span className="text-xs text-gray-500 ml-1">Selected: {deviceFiles[device]?.name}</span>
                 )}
