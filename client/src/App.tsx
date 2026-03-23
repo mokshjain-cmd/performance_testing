@@ -10,7 +10,8 @@ import {
   AdminSleepDashboardPage,
   AdminSleepSessionPage,
   ActivityOverviewPage,
-  AdminActivityDashboardPage
+  AdminActivityDashboardPage,
+  TestingPage
 } from './pages';
 import SignUpPage from './pages/SignUpPage';
 import FirmwareConfigPage from './pages/FirmwareConfigPage';
@@ -56,6 +57,13 @@ function App() {
         <Route path="/admin/firmware-config" element={
           <AdminRoute>
             <FirmwareConfigPage />
+          </AdminRoute>
+        } />
+        
+        {/* Admin Testing Page - Only accessible by admins */}
+        <Route path="/admin/testing" element={
+          <AdminRoute>
+            <TestingPage />
           </AdminRoute>
         } />
         

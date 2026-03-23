@@ -9,3 +9,4 @@ export { AdminSleepDashboardPage } from './AdminSleepDashboardPage';
 export { AdminSleepSessionPage } from './AdminSleepSessionPage';
 export { ActivityOverviewPage } from './ActivityOverviewPage';
 export { AdminActivityDashboardPage } from './AdminActivityDashboardPage';
+export { default as TestingPage } from './TestingPage';
