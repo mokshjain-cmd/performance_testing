@@ -191,8 +191,10 @@ export function calcPairwiseStats(
 
   const n = matched.length;
 
-  if (!n) {
-    return [{ d1, d2, metric: metricLower, matchedTimestamps: 0 }];
+  // Need at least 2 data points for statistical analysis (correlation requires variance)
+  if (n < 2) {
+    console.log(`⚠️ Insufficient overlapping data points between ${d1} and ${d2}: ${n} points (need at least 2)`);
+    return [{ d1, d2, metric: metricLower, matchedTimestamps: n }];
   }
 
   const arrA = matched.map(([a]) => a);

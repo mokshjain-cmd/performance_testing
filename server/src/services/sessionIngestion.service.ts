@@ -5,6 +5,8 @@ import User from '../models/Users';
 import NormalizedReading from '../models/NormalizedReadings';
 import { parseLunaCsv } from '../parsers/lunaParser';
 import { parsePolarCsv } from '../parsers/polarParser';
+import { LunaIOSHRParser } from '../parsers/lunaiosHRparser';
+import { parseAppleHR } from '../parsers/appleHRparser';
 import { analyzeSession } from './sessionAnalysis.service';
 import { updateUserAccuracySummary } from './userAccuracySummary.service';
 import { updateLunaFirmwarePerformanceForSession } from './lunaFirmwarePerformanceUpdate.service';
@@ -14,7 +16,9 @@ import { updateAdminDailyTrend } from './adminDailyTrend.service';
 import { updateAdminGlobalSummary } from './adminGlobalSummary.service';
 import { updateBenchmarkComparisonSummariesForSession } from './benchmarkComparisonSummary.service';
 import { mailService } from './mail.service';
+import { extractAppleHealthZip, deleteDirectory } from '../tools/zipExtractor';
 import fs from 'fs';
+import path from 'path';
 import { promisify } from 'util';
 
 const unlinkAsync = promisify(fs.unlink);
@@ -27,11 +31,13 @@ export async function ingestSessionFiles({
   startTime,
   endTime,
   files,
+  mobileType,
 }: any) {
     let userEmail: string | undefined;
     let userName: string | undefined;
     let sessionName: string | undefined;
     const metric = 'HR';
+    const extractedFolders: string[] = []; // Track extracted folders for cleanup
     
     try {
     // Fetch user details for email notification
@@ -82,10 +88,56 @@ export async function ingestSessionFiles({
       let readings: any[] = [];
 
       if (deviceType === "luna") {
-        // Convert .txt to .csv with header if needed
-        const csvFilePath = await convertLunaTxtToCsv(filePath);
-        readings = await parseLunaCsv(csvFilePath, meta, startTime, endTime);
-        console.log(`Parsed ${readings.length} readings from Luna file.`);
+        // Check if it's iOS daily activity - use iOS-specific parser
+        if (activityType === "daily" && mobileType === "iOS") {
+          console.log('Using Luna iOS HR parser for daily activity');
+          try {
+            readings = await LunaIOSHRParser.parse(filePath, meta, startTime, endTime);
+            console.log(`Parsed ${readings.length} readings from Luna iOS file.`);
+          } catch (iosParseError) {
+            console.error('❌ Luna iOS HR parser failed, falling back to standard parser:', iosParseError);
+            // Fallback to standard parser if iOS parser fails
+            const csvFilePath = await convertLunaTxtToCsv(filePath);
+            readings = await parseLunaCsv(csvFilePath, meta, startTime, endTime);
+            console.log(`Parsed ${readings.length} readings from Luna file (fallback).`);
+          }
+        } else {
+          // Use standard Luna parser for Android or non-daily activities
+          console.log('Using standard Luna HR parser');
+          const csvFilePath = await convertLunaTxtToCsv(filePath);
+          readings = await parseLunaCsv(csvFilePath, meta, startTime, endTime);
+          console.log(`Parsed ${readings.length} readings from Luna file.`);
+        }
+      }
+      if (deviceType === "apple") {
+        console.log('Parsing Apple HR file:', filePath);
+        let fileToProcess = filePath;
+        let extractedFolder: string | undefined;
+        
+        try {
+          // Check if the file is a ZIP (for Apple Health export)
+          const fileExtension = path.extname(filePath).toLowerCase();
+          if (fileExtension === '.zip') {
+            console.log('🍎 Detected Apple Health ZIP file, extracting...');
+            try {
+              const { exportXmlPath, extractedFolder: extracted } = await extractAppleHealthZip(filePath);
+              fileToProcess = exportXmlPath;
+              extractedFolder = extracted;
+              extractedFolders.push(extracted); // Track for cleanup
+              console.log(`🍎 Using export.xml from: ${exportXmlPath}`);
+            } catch (zipError) {
+              console.error('❌ Error extracting Apple Health ZIP:', zipError);
+              throw new Error(`Failed to extract Apple Health ZIP: ${zipError instanceof Error ? zipError.message : 'Unknown error'}`);
+            }
+          }
+          
+          // Parse the Apple HR file (either original file or extracted export.xml)
+          readings = await parseAppleHR(fileToProcess, meta, startTime, endTime);
+          console.log(`Parsed ${readings.length} readings from Apple file.`);
+        } catch (appleParseError) {
+          console.error('❌ Apple HR parser failed:', appleParseError);
+          throw appleParseError;
+        }
       }
       if (deviceType === "polar") { 
         console.log('Parsing Polar file:', filePath);
@@ -209,6 +261,25 @@ export async function ingestSessionFiles({
       }
     } catch (finalErr) {
       console.warn('⚠️ Error during final temp file cleanup:', finalErr);
+    }
+
+    // Clean up extracted folders (from ZIP files)
+    try {
+      if (extractedFolders.length > 0) {
+        console.log(`🗑️ Deleting ${extractedFolders.length} extracted folders after processing`);
+        await Promise.allSettled(
+          extractedFolders.map(async (folderPath: string) => {
+            try {
+              await deleteDirectory(folderPath);
+              console.log(`✅ Deleted extracted folder: ${folderPath}`);
+            } catch (deleteError) {
+              console.warn(`⚠️ Could not delete extracted folder ${folderPath}:`, deleteError);
+            }
+          })
+        );
+      }
+    } catch (finalErr) {
+      console.warn('⚠️ Error during extracted folder cleanup:', finalErr);
     }
   }
 }

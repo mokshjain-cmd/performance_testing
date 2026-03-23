@@ -61,6 +61,7 @@ export const createSession = async (
       endTime,
       sleepDate, // For sleep sessions: user provides just the date, we calculate the range
       activityDate, // For activity sessions: user provides just the date, we calculate the range
+      dailyDate, // For HR/SPO2 daily sessions: user provides just the date, we calculate the range
       benchmarkDeviceType,
       bandPosition,
       firmwareVersion,
@@ -132,6 +133,16 @@ export const createSession = async (
       start = new Date(Date.UTC(year, month - 1, day, 0, 0, 0));
       
       // End time: Activity day at 23:59:59
+      end = new Date(Date.UTC(year, month - 1, day, 23, 59, 59));
+    } else if ((metric === 'HR' || metric === 'SPO2') && activityType === 'daily' && dailyDate) {
+      // For HR/SPO2 daily monitoring sessions
+      // Parse the daily date (e.g., "2026-03-09")
+      const [year, month, day] = dailyDate.split("-").map(Number);
+      
+      // Start time: Daily monitoring day at 00:00 (midnight)
+      start = new Date(Date.UTC(year, month - 1, day, 0, 0, 0));
+      
+      // End time: Daily monitoring day at 23:59:59
       end = new Date(Date.UTC(year, month - 1, day, 23, 59, 59));
     } else {
       // For other metrics, require explicit startTime and endTime
@@ -271,6 +282,7 @@ export const createSession = async (
         startTime: start,
         endTime: end,
         files,
+        mobileType,
       });
     } else if (metric === 'HR') {
       // Default to HR ingestion for HR and other metrics
@@ -282,6 +294,7 @@ export const createSession = async (
         startTime: start,
         endTime: end,
         files,
+        mobileType,
       });
     } else if (metric === 'Sleep') {
       // Call sleep ingestion service

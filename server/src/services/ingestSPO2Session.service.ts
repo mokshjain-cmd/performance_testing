@@ -4,6 +4,9 @@ import User from '../models/Users';
 import NormalizedReading from '../models/NormalizedReadings';
 import { parseMasimoSpo2Csv } from '../parsers/masimoSpo2Parser';
 import { parseLunaSpo2Csv } from '../parsers/lunaSpo2Parser';
+import { parseLunaIosSpo2Csv } from '../parsers/lunaiosspo2parser';
+import { parseLunaAndroidSpo2Csv } from '../parsers/lunaandroidspo2parser';
+import { parseAppleSpo2 } from '../parsers/applespo2parser';
 import { analyzeSession } from './sessionAnalysis.service';
 import { updateUserAccuracySummary } from './userAccuracySummary.service';
 import { updateLunaFirmwarePerformanceForSession } from './lunaFirmwarePerformanceUpdate.service';
@@ -30,6 +33,7 @@ export async function ingestSPO2SessionFiles({
   startTime,
   endTime,
   files,
+  mobileType,
 }: {
   sessionId: any;
   userId: any;
@@ -38,6 +42,7 @@ export async function ingestSPO2SessionFiles({
   startTime: Date;
   endTime: Date;
   files: any[];
+  mobileType?: string;
 }) {
   let userEmail: string | undefined;
   let userName: string | undefined;
@@ -67,7 +72,8 @@ export async function ingestSPO2SessionFiles({
     console.log("📋 Session ID:", sessionId);
     console.log("👤 User ID:", userId);
     console.log("🏃 Activity Type:", activityType);
-    console.log("📍 Band Position:", bandPosition);
+    console.log("� Mobile Type:", mobileType || 'Not specified');
+    console.log("�📍 Band Position:", bandPosition);
     console.log("🕒 Time Range:", startTime.toISOString(), "to", endTime.toISOString());
     console.log("📁 Files Count:", files.length);
     console.log("===============================\n");
@@ -114,10 +120,37 @@ export async function ingestSPO2SessionFiles({
         console.log(`✅ Parsed ${readings.length} SPO2 readings from Masimo file.`);
       } else if (deviceType === "luna") {
         console.log("🩺 Parsing Luna SPO2 file...");
+        console.log(`📱 Mobile Type: ${mobileType}, Activity Type: ${activityType}`);
+        
         // Convert .txt to .csv with header if needed
         const csvFilePath = await convertLunaTxtToCsv(filePath);
-        readings = await parseLunaSpo2Csv(csvFilePath, meta, startTime, endTime);
+        
+        // Use different parsers based on mobileType and activityType
+        if (activityType === "daily" && mobileType?.toLowerCase() === "ios") {
+          console.log("🍎 Using Luna iOS SPO2 parser for daily activity...");
+          readings = await parseLunaIosSpo2Csv(csvFilePath, meta, startTime, endTime);
+        } else if (mobileType?.toLowerCase() === "android" || mobileType?.toLowerCase() === "spo2") {
+          console.log("🤖 Using Luna Android SPO2 parser...");
+          readings = await parseLunaAndroidSpo2Csv(csvFilePath, meta, startTime, endTime);
+        } else {
+          console.log("📊 Using standard Luna SPO2 parser...");
+          readings = await parseLunaSpo2Csv(csvFilePath, meta, startTime, endTime);
+        }
+        
         console.log(`✅ Parsed ${readings.length} SPO2 readings from Luna file.`);
+      } else if (deviceType === "apple") {
+        console.log("🍎 Parsing Apple SPO2 file...");
+        console.log(`📱 Activity Type: ${activityType}`);
+        
+        // Only process if activity type is "daily"
+        if (activityType === "daily") {
+          console.log("📊 Using Apple SPO2 parser for daily activity...");
+          readings = await parseAppleSpo2(filePath, meta, startTime, endTime);
+        } else {
+          console.warn(`⚠️ Apple SPO2 parser only supports "daily" activity type. Current activity type: ${activityType}`);
+        }
+        
+        console.log(`✅ Parsed ${readings.length} SPO2 readings from Apple file.`);
       } else {
         console.warn(`⚠️ Unknown device type for SPO2: ${deviceType}`);
       }
