@@ -5,7 +5,7 @@ import NormalizedReading from '../models/NormalizedReadings';
 import { parseMasimoSpo2Csv } from '../parsers/masimoSpo2Parser';
 import { parseLunaSpo2Csv } from '../parsers/lunaSpo2Parser';
 import { parseLunaIosSpo2Csv } from '../parsers/lunaiosspo2parser';
-import { parseLunaAndroidSpo2Csv } from '../parsers/lunaandroidspo2parser';
+// import { parseLunaAndroidSpo2Csv } from '../parsers/lunaandroidspo2parser';
 import { parseAppleSpo2 } from '../parsers/applespo2parser';
 import { analyzeSession } from './sessionAnalysis.service';
 import { updateUserAccuracySummary } from './userAccuracySummary.service';
@@ -131,7 +131,7 @@ export async function ingestSPO2SessionFiles({
           readings = await parseLunaIosSpo2Csv(csvFilePath, meta, startTime, endTime);
         } else if (mobileType?.toLowerCase() === "android" || mobileType?.toLowerCase() === "spo2") {
           console.log("🤖 Using Luna Android SPO2 parser...");
-          readings = await parseLunaAndroidSpo2Csv(csvFilePath, meta, startTime, endTime);
+          //readings = await parseLunaAndroidSpo2Csv(csvFilePath, meta, startTime, endTime);
         } else {
           console.log("📊 Using standard Luna SPO2 parser...");
           readings = await parseLunaSpo2Csv(csvFilePath, meta, startTime, endTime);
