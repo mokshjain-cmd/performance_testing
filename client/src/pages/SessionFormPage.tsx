@@ -188,7 +188,6 @@ export default function SessionFormPage() {
     else if (name === 'activity' && (formData.metric === 'SPO2' || formData.metric === 'HR')) {
       if (value === 'daily') {
         // Add Apple as option for daily activity
-        const updatedDevices = formData.devices;
         setFormData({
           ...formData,
           activity: value,
