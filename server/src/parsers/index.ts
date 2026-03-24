@@ -28,7 +28,7 @@ export { parseLunaCsv } from './lunaParser';
 export { parsePolarCsv } from './polarParser';
 export { parseMasimoSpo2Csv } from './masimoSpo2Parser';
 export { parseLunaSpo2Csv } from './lunaSpo2Parser';
-export { LunaIOSHRParser } from './lunaiosHRParser';
+export { LunaIOSHRParser } from './lunaiosHRparser';
 export { LunaIOSSPO2Parser, parseLunaIosSpo2Csv } from './lunaiosspo2parser';
 export { parseAppleHR } from './appleHRparser';
 
