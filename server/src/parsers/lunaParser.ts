@@ -162,8 +162,8 @@ export async function parseLunaCsv(
             qi = 0; // Default to 0 if QI is invalid
           }
 
-          // Mark as invalid if Hr_Qi == 0 AND Hrs == 255
-          if (qi === 0 && hr === 255) {
+          // Mark as invalid if HR == 255
+          if (hr === 255) {
             hr = null;
           }
 

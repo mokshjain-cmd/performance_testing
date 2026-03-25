@@ -166,8 +166,8 @@ export async function parseLunaSpo2Csv(
             qi = 0; // Default to 0 if QI is invalid
           }
 
-          // Mark as invalid if Spo2_Qi == 0, SPO2 is 0, or SPO2 is out of valid range (0-100)
-          if (qi === 0 || spo2 === 0 || spo2 < 0 || spo2 > 100) {
+          // Mark as invalid if SPO2 is out of valid range (0-100)
+          if (spo2 < 0 || spo2 > 100) {
             spo2 = null;
           }
 
