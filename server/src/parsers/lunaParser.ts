@@ -205,7 +205,7 @@ export async function parseLunaCsv(
           const readings = perSecondMapWithQI.get(epochSec)!;
           
           // Filter valid readings (where hr is not null)
-          const validReadings = readings.filter((r) => r.hr !== null && r.qi > 0);
+          const validReadings = readings.filter((r) => r.hr !== null);
           
           let avg: number | null = null;
           
