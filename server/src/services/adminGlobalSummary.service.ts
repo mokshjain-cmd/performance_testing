@@ -84,10 +84,16 @@ export async function updateAdminGlobalSummary(
   // Count unique users
   const uniqueUserIds = new Set(sessions.map(s => s.userId.toString()));
 
-  // Count total Luna readings
+  // Get session IDs from filtered sessions
+  const sessionIds = sessions.map(s => s._id);
+
+  // Count total Luna readings ONLY for filtered sessions
   const totalReadings = await NormalizedReading.countDocuments({
     'meta.deviceType': 'luna',
+    'meta.sessionId': { $in: sessionIds }
   });
+
+  console.log(`[AdminGlobalSummary] 📊 Total readings for filtered sessions: ${totalReadings}`);
 
   // Handle Sleep metric differently (uses sleepStats instead of pairwiseComparisons)
   if (metric === 'Sleep') {
