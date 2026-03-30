@@ -23,7 +23,7 @@ const Header: React.FC<Props> = ({ isLoggedIn, onLogin, onLogout, onNavigate }) 
           <div className="w-9 h-9 flex items-center justify-center">
             <img src="/n_logo.png" alt="Noise Logo" className="w-9 h-9 object-contain" />
           </div>
-          <span className="font-semibold text-gray-800 text-sm hidden sm:block">Noise-Benchmark & Performance</span>
+          <span className="font-semibold text-gray-800 text-sm hidden sm:block">Noise-Benchmarking Platform</span>
         </div>
         
         {isLoggedIn && (

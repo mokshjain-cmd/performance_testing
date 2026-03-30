@@ -68,6 +68,11 @@ const MOBILE_TYPE_OPTIONS = [
   { value: 'iOS', label: 'iOS' },
 ];
 
+const APP_PLATFORM_OPTIONS = [
+  { value: 'NoiseFit', label: 'NoiseFit (Legacy Format)' },
+  { value: 'Luna', label: 'Luna (App Logs)' },
+];
+
 export default function SessionFormPage() {
   const [formData, setFormData] = useState({
     activity: '',
@@ -81,6 +86,7 @@ export default function SessionFormPage() {
     bandPosition: '',
     firmwareVersion: '',
     mobileType: 'Android', // For Sleep/Activity with Falcon: Android or iOS
+    appPlatform: 'NoiseFit', // For Sleep/Activity with Falcon: NoiseFit or Luna
     devices: ['luna'],
   });
   const [deviceFiles, setDeviceFiles] = useState<{ [key: string]: File | null }>({ luna: null });
@@ -488,6 +494,7 @@ export default function SessionFormPage() {
     form.append('bandPosition', formData.bandPosition);
     form.append('firmwareVersion', formData.firmwareVersion);
     form.append('mobileType', formData.mobileType);
+    form.append('appPlatform', formData.appPlatform);
     // Attach files (fieldname = deviceType)
     formData.devices.forEach((device) => {
       if (deviceFiles[device]) {
@@ -518,6 +525,7 @@ export default function SessionFormPage() {
         bandPosition: '',
         firmwareVersion: '',
         mobileType: 'Android',
+        appPlatform: 'NoiseFit',
         devices: ['luna'],
       });
       setDeviceFiles({ luna: null });
@@ -676,7 +684,7 @@ export default function SessionFormPage() {
             required
           />
 
-          {(formData.metric === 'Sleep' || formData.metric === 'Activity' || ((formData.metric === 'HR' || formData.metric === 'SPO2') && formData.activity === 'daily')) && (
+          {(formData.metric === 'Sleep' || formData.metric === 'Activity' || ((formData.metric === 'HR' || formData.metric === 'SPO2') && formData.activity === 'daily'))&& (
             <Select
               label="Mobile Type (Falcon Device)"
               name="mobileType"
@@ -686,6 +694,24 @@ export default function SessionFormPage() {
               placeholder="Select mobile type"
               required
             />
+          )}
+
+          {(formData.metric === 'Sleep' || formData.metric === 'Activity') && (
+            <>
+              <Select
+                label="App Platform (Falcon Device)"
+                name="appPlatform"
+                value={formData.appPlatform}
+                onChange={handleChange}
+                options={APP_PLATFORM_OPTIONS}
+                placeholder="Select app platform"
+                required
+              />
+              <p className="text-xs text-gray-500 -mt-4 ml-1">
+                {formData.metric === 'Sleep' && 'ℹ️ NoiseFit: Standard sleep data format | Luna: App log format (onRingSleepResult)'}
+                {formData.metric === 'Activity' && 'ℹ️ NoiseFit: Standard activity data format | Luna: App log format (onDailyData)'}
+              </p>
+            </>
           )}
 
           <div>

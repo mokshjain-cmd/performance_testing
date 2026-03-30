@@ -35,6 +35,7 @@ export { parseAppleHR } from './appleHRparser';
 // Export sleep parsers
 export { LunaSleepParser } from './sleep/LunaSleepParser';
 export { LunaSleepParserIOS } from './sleep/LunaSleepParserIOS';
+export { FalconLunaAndroidParser } from './sleep/FalconLunaAndroidParser';
 export { AppleSleepParser } from './sleep/AppleSleepParser';
 export { AppleHealthSleepParser } from './sleep/AppleHealthSleepParser';
 

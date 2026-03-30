@@ -65,7 +65,8 @@ export const createSession = async (
       benchmarkDeviceType,
       bandPosition,
       firmwareVersion,
-      mobileType // For Sleep/Activity with Luna: Android or iOS
+      mobileType, // For Sleep/Activity with Luna: Android or iOS
+      appPlatform // For Sleep with Luna: NoiseFit or Luna
     } = req.body;
 
     // For Activity metric, activityType is optional (tracks daily totals)
@@ -298,7 +299,7 @@ export const createSession = async (
       });
     } else if (metric === 'Sleep') {
       // Call sleep ingestion service
-      IngestSleepService.ingestSleepSession(session._id, userId, files, benchmarkDeviceType, mobileType).then(() => {
+      IngestSleepService.ingestSleepSession(session._id, userId, files, benchmarkDeviceType, mobileType, appPlatform).then(() => {
         console.log(`✅ Sleep ingestion completed for session ${session._id}`);
         return SleepAnalysisService.analyzeSession(session._id);
       }).then(async () => {
@@ -323,7 +324,7 @@ export const createSession = async (
       });
     } else if (metric === 'Activity') {
       // Call activity ingestion service
-      IngestActivityService.ingestActivitySession(session._id, userId, files, benchmarkDeviceType, mobileType).then(() => {
+      IngestActivityService.ingestActivitySession(session._id, userId, files, benchmarkDeviceType, mobileType, appPlatform).then(() => {
         console.log(`✅ Activity ingestion completed for session ${session._id}`);
         return ActivityAnalysisService.analyzeSession(session._id);
       }).then(async () => {

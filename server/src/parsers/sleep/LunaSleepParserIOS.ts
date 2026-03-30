@@ -194,12 +194,14 @@ export class LunaSleepParserIOS {
    * @param filePath Local path to the iOS log file (from temp directory)
    * @param sessionId Session identifier
    * @param userId User identifier
+   * @param sleepDate Optional date for which to extract sleep data
    * @returns Parsed sleep data with epochs and metadata
    */
   public static async parse(
     filePath: string,
     sessionId: string,
-    userId: string
+    userId: string,
+    sleepDate?: Date
   ): Promise<ILunaSleepParseResult> {
     console.log(`📱 [LunaSleepParserIOS] Starting iOS Luna sleep data parsing for session ${sessionId}`);
     console.log(`📱 [LunaSleepParserIOS] Reading file from: ${filePath}`);

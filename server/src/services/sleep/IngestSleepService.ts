@@ -23,13 +23,15 @@ export class IngestSleepService {
    * @param files - Array of uploaded files from multer
    * @param benchmarkDeviceType - Optional benchmark device type (apple, garmin, etc.)
    * @param mobileType - Optional mobile type (Android/iOS) for Luna device to determine parser
+   * @param appPlatform - Optional app platform (NoiseFit/Luna) for Luna device to determine parser format
    */
   static async ingestSleepSession(
     sessionId: Types.ObjectId | string,
     userId: Types.ObjectId | string,
     files: Express.Multer.File[],
     benchmarkDeviceType?: string,
-    mobileType?: string
+    mobileType?: string,
+    appPlatform?: string
   ): Promise<void> {
     let userEmail: string | undefined;
     let userName: string | undefined;
@@ -38,10 +40,13 @@ export class IngestSleepService {
     const metric = 'Sleep';
     const extractedFolders: string[] = []; // Track extracted folders for cleanup
     
-    try {
+      try {
       console.log(`[IngestSleepService] Starting sleep ingestion for session: ${sessionId}`);
       if (mobileType) {
         console.log(`[IngestSleepService] Mobile type specified: ${mobileType}`);
+      }
+      if (appPlatform) {
+        console.log(`[IngestSleepService] App platform specified: ${appPlatform}`);
       }
 
       // Fetch user details for email notification
@@ -78,7 +83,9 @@ export class IngestSleepService {
             sessionId,
             userId,
             filePath,
-            mobileType
+            mobileType,
+            appPlatform,
+            sessionEndTime
           );
           if (epochsInserted > 0) anyInserted = true;
         } else if (benchmarkDeviceType && deviceType === benchmarkDeviceType) {
@@ -192,29 +199,41 @@ export class IngestSleepService {
    * Process Luna sleep data
    * Parse the file and store epochs in SleepStageEpoch collection
    * @param mobileType Optional mobile type (Android/iOS) to determine which parser to use
+   * @param appPlatform Optional app platform (NoiseFit/Luna) to determine parser format
+   * @param sleepDate Optional date for which to extract sleep data (session end time)
    * @returns Number of epochs inserted
    */
   private static async processLunaSleepData(
     sessionId: Types.ObjectId | string,
     userId: Types.ObjectId | string,
     filePath: string,
-    mobileType?: string
+    mobileType?: string,
+    appPlatform?: string,
+    sleepDate?: Date
   ): Promise<number> {
     try {
       console.log(`[IngestSleepService] Processing Luna sleep data from: ${filePath}`);
       console.log(`[IngestSleepService] Mobile type: ${mobileType || 'Android (default)'}`);
+      console.log(`[IngestSleepService] App platform: ${appPlatform || 'NoiseFit (default)'}`);
 
-      // Import iOS parser dynamically to avoid circular dependencies
+      // Import parsers dynamically to avoid circular dependencies
       let parseResult;
       
-      if (mobileType === 'iOS') {
-        console.log(`[IngestSleepService] Using iOS Luna parser`);
+      // Route to correct parser based on appPlatform and mobileType
+      if (appPlatform === 'Luna') {
+        // Use Falcon Luna Android parser for app logs
+        console.log(`[IngestSleepService] Using Falcon Luna Android parser (App Logs)`);
+        const { FalconLunaAndroidParser } = await import('../../parsers/sleep/FalconLunaAndroidParser');
+        parseResult = await FalconLunaAndroidParser.parse(filePath, sessionId.toString(), userId.toString(), sleepDate);
+      } else if (mobileType === 'iOS') {
+        // Use iOS Luna parser for iOS devices
+        console.log(`[IngestSleepService] Using iOS Luna parser (NoiseFit)`);
         const { LunaSleepParserIOS } = await import('../../parsers/sleep/LunaSleepParserIOS');
-        parseResult = await LunaSleepParserIOS.parse(filePath, sessionId.toString(), userId.toString());
+        parseResult = await LunaSleepParserIOS.parse(filePath, sessionId.toString(), userId.toString(), sleepDate);
       } else {
-        // Default to Android parser for backward compatibility
-        console.log(`[IngestSleepService] Using Android Luna parser`);
-        parseResult = await LunaSleepParser.parse(filePath, sessionId.toString(), userId.toString());
+        // Default to Android parser for NoiseFit or backward compatibility
+        console.log(`[IngestSleepService] Using Android Luna parser (NoiseFit)`);
+        parseResult = await LunaSleepParser.parse(filePath, sessionId.toString(), userId.toString(), sleepDate);
       }
 
       // Get firmware version from session devices

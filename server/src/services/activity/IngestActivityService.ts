@@ -2,6 +2,7 @@ import { Types } from "mongoose";
 import Session from "../../models/Session";
 import ActivityDailyReading from "../../models/ActivityDailyReading";
 import { LunaActivityParser } from "../../parsers/activity/LunaActivityParser";
+import { FalconLunaActivityParser } from "../../parsers/activity/FalconLunaActivityParser";
 import { AppleHealthActivityParser } from "../../parsers/activity/AppleHealthActivityParser";
 import User from "../../models/Users";
 import Device from "../../models/Devices";
@@ -23,13 +24,15 @@ export class IngestActivityService {
    * @param files - Array of uploaded files from multer
    * @param benchmarkDeviceType - Optional benchmark device type (apple, garmin, etc.)
    * @param mobileType - Optional mobile type (Android/iOS) for Luna device to determine parser
+   * @param appPlatform - Optional app platform (NoiseFit/Luna) for Luna device to determine parser format
    */
   static async ingestActivitySession(
     sessionId: Types.ObjectId | string,
     userId: Types.ObjectId | string,
     files: Express.Multer.File[],
     benchmarkDeviceType?: string,
-    mobileType?: string
+    mobileType?: string,
+    appPlatform?: string
   ): Promise<void> {
     let userEmail: string | undefined;
     let userName: string | undefined;
@@ -43,6 +46,9 @@ export class IngestActivityService {
       console.log(`[IngestActivityService] Starting activity ingestion for session: ${sessionId}`);
       if (mobileType) {
         console.log(`[IngestActivityService] Mobile type specified: ${mobileType}`);
+      }
+      if (appPlatform) {
+        console.log(`[IngestActivityService] App platform specified: ${appPlatform}`);
       }
 
       // Fetch user details for email notification
@@ -81,6 +87,7 @@ export class IngestActivityService {
             userId,
             filePath,
             mobileType,
+            appPlatform,
             sessionStartTime,
             sessionEndTime
           );
@@ -197,6 +204,7 @@ export class IngestActivityService {
    * Process Luna activity data
    * Parse the file and store daily totals in ActivityDailyReading collection
    * @param mobileType Optional mobile type (Android/iOS) to determine which parser to use
+   * @param appPlatform Optional app platform (NoiseFit/Luna) to determine parser format
    * @param startDate Optional start date to filter activity data
    * @param endDate Optional end date to filter activity data
    * @returns Number of records inserted
@@ -206,18 +214,26 @@ export class IngestActivityService {
     userId: Types.ObjectId | string,
     filePath: string,
     mobileType?: string,
+    appPlatform?: string,
     startDate?: Date,
     endDate?: Date
   ): Promise<number> {
     try {
       console.log(`[IngestActivityService] Processing Luna activity data from: ${filePath}`);
-      console.log(`[IngestActivityService] Mobile type: ${mobileType || 'Android (default)'}`);      if (startDate && endDate) {
+      console.log(`[IngestActivityService] Mobile type: ${mobileType || 'Android (default)'}`);      
+      console.log(`[IngestActivityService] App platform: ${appPlatform || 'NoiseFit (default)'}`);      
+      if (startDate && endDate) {
         console.log(`[IngestActivityService] 📅 Date range: ${startDate.toISOString().split('T')[0]} to ${endDate.toISOString().split('T')[0]}`);
       }
 
       let parseResult;
       
-      if (mobileType === 'iOS') {
+      // Route to correct parser based on appPlatform and mobileType
+      if (appPlatform === 'Luna') {
+        // Use Falcon Luna Android parser for app logs
+        console.log(`[IngestActivityService] Using Falcon Luna Activity parser (App Logs)`);
+        parseResult = await FalconLunaActivityParser.parseFalconLunaActivityFile(filePath, startDate, endDate);
+      } else if (mobileType === 'iOS') {
         console.log(`[IngestActivityService] Using iOS Luna parser`);
         parseResult = await LunaActivityParser.parseLunaActivityFileIOS(filePath, startDate, endDate);
       } else {
