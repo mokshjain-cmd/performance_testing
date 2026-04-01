@@ -14,6 +14,7 @@ import firmwarePerformanceRoutes from './firmwarePerformance.routes';
 import firmwareConfigRoutes from './firmwareConfig.routes';
 import cronRoutes from './cron.routes';
 import authRoutes from './auth.routes';
+import engagementRoutes from './engagement.routes';
 import { authenticateJWT, requireRole, verifyUserRole } from '../middleware/auth.middleware';
 
 const router = Router();
@@ -22,6 +23,7 @@ const router = Router();
 // Public routes (no authentication required)
 router.use('/auth', authRoutes);
 router.use('/health', healthRoutes);
+router.use('/engagement', engagementRoutes); // Public - for app team log uploads
 
 // Protected routes (authentication required)
 router.use('/sessions', authenticateJWT, sessionRoutes);

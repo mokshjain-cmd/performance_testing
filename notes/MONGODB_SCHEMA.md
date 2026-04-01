@@ -298,6 +298,150 @@
 }
 ```
 
+## dailyengagementmetrics
+**Enhanced with Time-Series Analytics** (see [server/TIMESERIES_SCHEMA_ENHANCEMENT.md](server/TIMESERIES_SCHEMA_ENHANCEMENT.md))
+
+```typescript
+{
+  _id: ObjectId,
+  userId: ObjectId,               // Ref: User
+  date: Date,                     // YYYY-MM-DD (start of day)
+  deviceType: 'luna' | 'polar' | 'apple',
+  
+  // Log metadata
+  logFileName: string,
+  uploadedAt: Date,
+  parsedAt: Date,
+  
+  // HR metrics
+  hr: {
+    hasData: boolean,
+    dataPoints: number,
+    avgHR?: number,               // Quick summary (60-85 bpm)
+    minHR?: number,               // Minimum (48-60 bpm)
+    maxHR?: number,               // Maximum (100-130 bpm)
+    wearTimeMinutes?: number,     // Device wear time
+    // NEW: Time-series data for detailed graphs
+    timeSeries?: [                // Up to 288 readings/day (5-min intervals)
+      {
+        timestamp: Date,          // Exact time of reading
+        value: number             // HR in bpm
+      }
+    ]
+  },
+  
+  // Sleep metrics
+  sleep: {
+    hasData: boolean,
+    sleepScore?: number,          // 0-100 sleep quality score
+    startTime?: Date,             // Sleep start time
+    endTime?: Date,               // Wake up time
+    totalSleepMinutes?: number,   // Total sleep duration
+    stages?: {                    // Stage duration summaries
+      awakeSec: number,           // Awake time in seconds
+      deepSec: number,            // Deep sleep in seconds
+      remSec: number,             // REM sleep in seconds
+      lightSec: number            // Light sleep in seconds
+    },
+    // NEW: Minute-by-minute sleep stages for hypnograph visualization
+    hypnograph?: [                // Up to 600 readings (minute-by-minute)
+      {
+        minute: number,           // 0-600 (minutes since sleep start)
+        stage: 'awake' | 'light' | 'deep' | 'rem'
+      }
+    ]
+  },
+  
+  // Activity metrics
+  activity: {
+    hasData: boolean,
+    steps?: number,               // Total daily steps
+    distanceMeters?: number,      // Total distance traveled
+    caloriesTotal?: number,       // Total calories burned
+    caloriesActive?: number,      // Active calories
+    caloriesBasal?: number,       // Resting metabolic rate
+    // NEW: Hourly step distribution for activity graphs
+    hourlySteps?: [               // 24 readings (one per hour)
+      {
+        hour: number,             // 0-23
+        steps: number             // Steps in that hour
+      }
+    ]
+  },
+  
+  // SpO2 metrics
+  spo2: {
+    hasData: boolean,
+    dataPoints: number,
+    avgSpO2?: number,             // Average (95-99%)
+    minSpO2?: number,             // Minimum (92-95%)
+    maxSpO2?: number,             // Maximum (98-100%)
+    // NEW: Time-series data for SpO2 trends
+    timeSeries?: [                // Up to 96 readings/day (15-min intervals)
+      {
+        timestamp: Date,          // Exact time of reading
+        value: number             // SpO2 percentage
+      }
+    ]
+  },
+  
+  // Workout events
+  workouts: [
+    {
+      type: string,               // 'running', 'cycling', 'walking', etc.
+      startTime: Date,
+      durationMinutes: number,
+      caloriesBurned?: number
+    }
+  ],
+  
+  // Engagement scoring
+  engagementScore: number,        // 0-100 (calculated from data completeness)
+  metricsCollected: [string],     // ['HR', 'Sleep', 'Activity', 'SpO2']
+  
+  createdAt: Date,
+  updatedAt: Date
+}
+```
+
+**Indexes:**
+```javascript
+{ userId: 1, date: -1 }                     // User timeline queries
+{ userId: 1, date: 1 }                      // Unique constraint (one record per user per day)
+{ engagementScore: 1 }                      // Find inactive users
+{ date: -1 }                                // Recent activity queries
+{ userId: 1, deviceType: 1, date: -1 }      // Device-specific filtering
+```
+
+**Document Size:** ~18-20 KB per day (includes all time-series data)
+
+**Key Features:**
+- **HR Time-Series:** 5-minute interval readings throughout the day (up to 288 data points)
+- **SpO2 Time-Series:** 15-minute interval readings, primarily during sleep (up to 96 data points)
+- **Sleep Hypnograph:** Minute-by-minute sleep stage tracking for professional visualization (up to 600 data points)
+- **Hourly Activity:** Step count distribution across 24 hours for pattern analysis
+
+**Use Cases:**
+- Dashboard summary cards (using aggregate metrics: avgHR, sleepScore, steps)
+- Detailed HR/SpO2 line graphs (using timeSeries arrays)
+- Professional sleep hypnograph visualization (using hypnograph array)
+- Activity pattern analysis (using hourlySteps array)
+
+**API Patterns:**
+```typescript
+// Fast summary query (exclude time-series)
+GET /api/engagement/summary?userId={id}&date={date}
+
+// Detailed analytics query (include time-series)
+GET /api/engagement/details?userId={id}&date={date}&metrics=hr,sleep
+```
+
+**See also:**
+- [server/TIMESERIES_SCHEMA_ENHANCEMENT.md](server/TIMESERIES_SCHEMA_ENHANCEMENT.md) - Full architecture guide
+- [server/TIMESERIES_API_GUIDE.md](server/TIMESERIES_API_GUIDE.md) - API developer reference
+- [server/TIMESERIES_ENHANCEMENT_SUMMARY.md](server/TIMESERIES_ENHANCEMENT_SUMMARY.md) - Quick start guide
+
+
 ## admindailytrends
 ```typescript
 {

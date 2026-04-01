@@ -194,7 +194,7 @@ const AdminSleepUserView: React.FC<AdminSleepUserViewProps> = ({ userId }) => {
               <p className="text-sm font-semibold text-purple-700 uppercase">Falcon </p>
               <p className="text-xs text-purple-600">Avg per session</p>
             </div>
-            <div className="flex-1 grid grid-cols-3 gap-4">
+            <div className="flex-1 grid grid-cols-2 gap-4">
               <div className="text-center">
                 <p className="text-xs text-gray-600 mb-1">Time in Bed</p>
                 <p className="text-lg font-bold text-gray-900">{formatTime(userSummary.avgTimeInBedSec)}</p>
@@ -202,10 +202,6 @@ const AdminSleepUserView: React.FC<AdminSleepUserViewProps> = ({ userId }) => {
               <div className="text-center">
                 <p className="text-xs text-gray-600 mb-1">Total Sleep</p>
                 <p className="text-lg font-bold text-gray-900">{formatTime(userSummary.avgTotalSleepTimeSec)}</p>
-              </div>
-              <div className="text-center">
-                <p className="text-xs text-gray-600 mb-1">Efficiency</p>
-                <p className="text-lg font-bold text-purple-700">{userSummary.avgSleepEfficiencyPercent.toFixed(1)}%</p>
               </div>
             </div>
           </div>

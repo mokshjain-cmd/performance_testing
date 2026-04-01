@@ -8,6 +8,7 @@ interface Session {
   activityType?: string;
   startTime?: string;
   metric?: string;
+  firmwareVersion?: string;
 }
 
 interface User {
@@ -149,9 +150,9 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
                                 <span className="truncate">{session.name || `Session ${session._id.slice(-8)}`}</span>
-                                {session.metric && (
-                                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium flex-shrink-0">
-                                    {session.metric}
+                                {session.firmwareVersion && (
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 font-medium flex-shrink-0">
+                                    v{session.firmwareVersion}
                                   </span>
                                 )}
                               </div>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LogIn, PlusCircle, LayoutDashboard, LogOut, Shield, Cpu, Settings } from 'lucide-react';
+import { LogIn, PlusCircle, LayoutDashboard, LogOut, Shield, Cpu, Settings, TrendingUp } from 'lucide-react';
 import { getUserRole } from '../../utils/auth';
 import DeviceManagement from '../admin/DeviceManagement';
 
@@ -64,6 +64,16 @@ const Header: React.FC<Props> = ({ isLoggedIn, onLogin, onLogout, onNavigate }) 
               >
                 <Settings size={16} />
                 <span className="hidden sm:inline">Firmware</span>
+              </button>
+            )}
+            {isAdmin && (
+              <button
+                className="px-3 py-1.5 rounded-lg text-sm font-medium text-green-700 hover:bg-green-50 hover:text-green-900 transition-all duration-200 flex items-center gap-1.5 border border-green-200"
+                onClick={() => onNavigate('admin/engagement')}
+                title="User Engagement Monitoring"
+              >
+                <TrendingUp size={16} />
+                <span className="hidden sm:inline">Performance Testing</span>
               </button>
             )}
           </>

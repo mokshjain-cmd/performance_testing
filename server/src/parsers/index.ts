@@ -42,3 +42,6 @@ export { AppleHealthSleepParser } from './sleep/AppleHealthSleepParser';
 // Export activity parsers
 export { LunaActivityParser } from './activity/LunaActivityParser';
 export { AppleHealthActivityParser } from './activity/AppleHealthActivityParser';
+
+// Export engagement parsers
+export { FalconEngagementLunaAppParser, falconEngagementLunaAppParser, EngagementData } from './engagementparser';

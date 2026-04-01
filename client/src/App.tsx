@@ -14,6 +14,7 @@ import {
 } from './pages';
 import SignUpPage from './pages/SignUpPage';
 import FirmwareConfigPage from './pages/FirmwareConfigPage';
+import UserEngagementDashboardPage from './pages/UserEngagementDashboardPage';
 import { ProtectedRoute, AdminRoute, TesterRoute } from './components/common';
 
 function App() {
@@ -56,6 +57,13 @@ function App() {
         <Route path="/admin/firmware-config" element={
           <AdminRoute>
             <FirmwareConfigPage />
+          </AdminRoute>
+        } />
+        
+        {/* Admin User Engagement Monitoring - Only accessible by admins */}
+        <Route path="/admin/engagement" element={
+          <AdminRoute>
+            <UserEngagementDashboardPage />
           </AdminRoute>
         } />
         

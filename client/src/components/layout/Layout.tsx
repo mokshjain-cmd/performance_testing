@@ -37,6 +37,8 @@ export default function Layout({ children, fullWidth = false }: LayoutProps) {
       navigate('/session/new');
     } else if (route === 'admin/firmware-config') {
       navigate('/admin/firmware-config');
+    } else if (route === 'admin/engagement') {
+      navigate('/admin/engagement');
     } else {
       navigate('/');
     }

@@ -257,7 +257,7 @@ const AdminSleepSessionView: React.FC<AdminSleepSessionViewProps> = ({ sessionId
                 </div>
                 
                 {/* Stats spread across full width */}
-                <div className="grid grid-cols-8 flex-1 gap-2 text-sm">
+                <div className="grid grid-cols-7 flex-1 gap-2 text-sm">
                   <div className="flex flex-col items-center gap-1">
                     <span className="text-gray-600 text-xs font-medium">Sleep Onset</span>
                     <span className="font-semibold text-gray-800 text-base">
@@ -296,12 +296,6 @@ const AdminSleepSessionView: React.FC<AdminSleepSessionViewProps> = ({ sessionId
                     <span className="text-gray-600 text-xs font-medium">Awake</span>
                     <span className="font-semibold text-gray-800 text-base">
                       {formatTime(sessionSummary.luna.awakeSec)} <span className="text-xs text-gray-500">({((sessionSummary.luna.awakeSec / sessionSummary.luna.timeInBedSec) * 100).toFixed(1)}%)</span>
-                    </span>
-                  </div>
-                  <div className="flex flex-col items-center gap-1">
-                    <span className="text-gray-600 text-xs font-medium">Efficiency</span>
-                    <span className="font-semibold text-gray-800 text-base">
-                      {sessionSummary.luna.sleepEfficiencyPercent.toFixed(1)}%
                     </span>
                   </div>
                 </div>

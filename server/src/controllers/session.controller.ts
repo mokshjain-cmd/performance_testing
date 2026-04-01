@@ -573,8 +573,22 @@ export const getSessionIdsByUserIdParam = async (
     if (metric) {
       query.metric = metric;
     }
-    const sessions = await Session.find(query, '_id name activityType startTime metric').exec();
-    res.status(200).json({ success: true, count: sessions.length, data: sessions });
+    const sessions = await Session.find(query, '_id name activityType startTime metric devices').exec();
+    
+    // Extract Luna firmware version for each session
+    const sessionsWithFirmware = sessions.map(session => {
+      const lunaDevice = session.devices.find((d: any) => d.deviceType?.toLowerCase() === 'luna');
+      return {
+        _id: session._id,
+        name: session.name,
+        activityType: session.activityType,
+        startTime: session.startTime,
+        metric: session.metric,
+        firmwareVersion: lunaDevice?.firmwareVersion || 'N/A'
+      };
+    });
+    
+    res.status(200).json({ success: true, count: sessionsWithFirmware.length, data: sessionsWithFirmware });
   } catch (error) {
     console.error('Error fetching session IDs:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch session IDs', error: error instanceof Error ? error.message : 'Unknown error' });
