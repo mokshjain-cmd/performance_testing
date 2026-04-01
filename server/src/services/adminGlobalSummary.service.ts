@@ -63,12 +63,38 @@ export async function updateAdminGlobalSummary(
       console.log(`[AdminGlobalSummary] ⚠️  No latest firmware configured for ${metric}, using all sessions`);
       sessions = await Session.find({ isValid: true, metric });
       console.log(`[AdminGlobalSummary] 📊 Total sessions (no filter): ${sessions.length}`);
+      
+      // Extract firmware from most recent session if no config exists
+      if (sessions.length > 0) {
+        const sortedSessions = [...sessions].sort((a, b) => 
+          new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
+        );
+        const mostRecentSession = sortedSessions[0];
+        const lunaDevice = mostRecentSession.devices.find((d: any) => d.deviceType === "luna");
+        if (lunaDevice?.firmwareVersion) {
+          latestFirmware = lunaDevice.firmwareVersion;
+          console.log(`[AdminGlobalSummary] 📱 Using firmware from most recent session: ${latestFirmware}`);
+        }
+      }
     }
   } else {
     // Get all valid sessions for this metric
     console.log(`[AdminGlobalSummary] 🔓 Firmware filtering disabled, fetching all sessions`);
     sessions = await Session.find({ isValid: true, metric });
     console.log(`[AdminGlobalSummary] 📊 Total sessions: ${sessions.length}`);
+    
+    // Extract firmware from most recent session
+    if (sessions.length > 0) {
+      const sortedSessions = [...sessions].sort((a, b) => 
+        new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
+      );
+      const mostRecentSession = sortedSessions[0];
+      const lunaDevice = mostRecentSession.devices.find((d: any) => d.deviceType === "luna");
+      if (lunaDevice?.firmwareVersion) {
+        latestFirmware = lunaDevice.firmwareVersion;
+        console.log(`[AdminGlobalSummary] 📱 Using firmware from most recent session: ${latestFirmware}`);
+      }
+    }
   }
 
   if (sessions.length === 0) {

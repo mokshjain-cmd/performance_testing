@@ -102,33 +102,7 @@ export const AdminSleepSessionPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Validation Metrics */}
-      {hasBenchmark && (
-        <div>
-          <h2 className="text-xl font-semibold mb-4">Validation Performance</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <SleepMetricCard
-              title="Accuracy"
-              value={sessionData.metrics.accuracy.toFixed(1)}
-              unit="%"
-            />
-            <SleepMetricCard
-              title="Cohen's Kappa"
-              value={sessionData.metrics.kappa.toFixed(3)}
-            />
-            <SleepMetricCard
-              title="Deep Bias"
-              value={`${(sessionData.metrics.deepBias / 60).toFixed(1)} min`}
-              subtitle="Falcon - Benchmark"
-            />
-            <SleepMetricCard
-              title="REM Bias"
-              value={`${(sessionData.metrics.remBias / 60).toFixed(1)} min`}
-              subtitle="Falcon - Benchmark"
-            />
-          </div>
-        </div>
-      )}
+      
 
       {/* Stage-wise Performance */}
       {hasBenchmark && (
@@ -208,6 +182,34 @@ export const AdminSleepSessionPage: React.FC = () => {
             benchmarkEpochs={sessionData.epochs.benchmark}
             showComparison={true}
           />
+        </div>
+      )}
+
+      {/* Validation Metrics */}
+      {hasBenchmark && (
+        <div>
+          <h2 className="text-xl font-semibold mb-4">Validation Performance</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <SleepMetricCard
+              title="Accuracy"
+              value={sessionData.metrics.accuracy.toFixed(1)}
+              unit="%"
+            />
+            <SleepMetricCard
+              title="Cohen's Kappa"
+              value={sessionData.metrics.kappa.toFixed(3)}
+            />
+            <SleepMetricCard
+              title="Deep Bias"
+              value={`${(sessionData.metrics.deepBias / 60).toFixed(1)} min`}
+              subtitle="Falcon - Benchmark"
+            />
+            <SleepMetricCard
+              title="REM Bias"
+              value={`${(sessionData.metrics.remBias / 60).toFixed(1)} min`}
+              subtitle="Falcon - Benchmark"
+            />
+          </div>
         </div>
       )}
 

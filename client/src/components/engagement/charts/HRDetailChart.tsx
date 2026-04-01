@@ -126,7 +126,7 @@ export const HRDetailChart: React.FC<HRDetailChartProps> = ({
           minRotation: 45,
           autoSkip: true,
           maxTicksLimit: 24,
-          callback: function(value, index) {
+          callback: function(value) {
             // Show every Nth label to avoid crowding
             const label = this.getLabelForValue(value as number);
             // Show label if it's on the hour (ends with :00)

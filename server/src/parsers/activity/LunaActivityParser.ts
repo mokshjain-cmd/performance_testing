@@ -9,9 +9,9 @@ export interface ILunaActivityDailyTotals {
   date: Date; // Date of the activity
   steps: number;
   distanceMeters: number;
-  caloriesTotal: number;
-  caloriesActive: number;
-  caloriesBasal: number;
+  caloriesTotal: number | null; // Null if not provided
+  caloriesActive: number | null;
+  caloriesBasal: number | null; // Null if not provided (no longer calculated)
 }
 
 /**
@@ -283,9 +283,9 @@ export class LunaActivityParser {
       const dailyTotals: ILunaActivityDailyTotals[] = [];
       
       for (const [dateStr, entry] of dateMap.entries()) {
-        const totalCal = entry.calories || 0;
-        const activeCal = entry.todaySportCalorieData || 0;
-        const basalCal = totalCal - activeCal; // Basal = Total - Active
+        const totalCal = entry.calories > 0 ? entry.calories : null;
+        const activeCal = entry.todaySportCalorieData > 0 ? entry.todaySportCalorieData : null;
+        const basalCal = null; // Luna logs don't provide basal directly - don't calculate
         
         dailyTotals.push({
           date: new Date(dateStr),

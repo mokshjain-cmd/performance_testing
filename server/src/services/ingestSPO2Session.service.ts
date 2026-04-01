@@ -129,7 +129,7 @@ export async function ingestSPO2SessionFiles({
         if (activityType === "daily" && mobileType?.toLowerCase() === "ios") {
           console.log("🍎 Using Luna iOS SPO2 parser for daily activity...");
           readings = await parseLunaIosSpo2Csv(csvFilePath, meta, startTime, endTime);
-        } else if (mobileType?.toLowerCase() === "android" || mobileType?.toLowerCase() === "spo2") {
+        } else if (activityType === "daily" && (mobileType?.toLowerCase() === "android")) {
           console.log("🤖 Using Luna Android SPO2 parser...");
           //readings = await parseLunaAndroidSpo2Csv(csvFilePath, meta, startTime, endTime);
         } else {

@@ -26,14 +26,16 @@ export const ActivityDetailCard: React.FC<ActivityDetailCardProps> = ({ metrics 
   const steps = activity.steps || 0;
   const distanceKm = activity.distanceMeters ? (activity.distanceMeters / 1000) : 0;
   const distanceMi = distanceKm * 0.621371;
-  const caloriesTotal = activity.caloriesTotal || 0;
-  const caloriesActive = activity.caloriesActive || 0;
-  const caloriesBasal = activity.caloriesBasal || caloriesTotal - caloriesActive;
+  const caloriesTotal = activity.caloriesTotal ?? null;
+  const caloriesActive = activity.caloriesActive ?? null;
+  const caloriesBasal = activity.caloriesBasal ?? null;
   
-  // Calculate percentages
+  // Calculate percentages only if values are not null
   const stepsGoal = 10000;
   const stepsPercent = (steps / stepsGoal) * 100;
-  const activeCaloriesPercent = caloriesTotal > 0 ? (caloriesActive / caloriesTotal) * 100 : 0;
+  const activeCaloriesPercent = (caloriesTotal !== null && caloriesTotal !== undefined && caloriesTotal > 0 && caloriesActive !== null && caloriesActive !== undefined) 
+    ? (caloriesActive / caloriesTotal) * 100 
+    : 0;
   
   return (
     <MetricCard title="Activity Summary" icon={Activity} iconColor="text-blue-500">
@@ -57,16 +59,16 @@ export const ActivityDetailCard: React.FC<ActivityDetailCardProps> = ({ metrics 
           />
           <StatBadge
             label="Total Calories"
-            value={caloriesTotal.toLocaleString()}
-            unit="kcal"
+            value={caloriesTotal !== null && caloriesTotal !== undefined ? caloriesTotal.toLocaleString() : '--'}
+            unit={caloriesTotal !== null && caloriesTotal !== undefined ? "kcal" : undefined}
             color="red"
             size="sm"
             icon={<Flame size={16} />}
           />
           <StatBadge
             label="Active Calories"
-            value={caloriesActive.toLocaleString()}
-            unit="kcal"
+            value={caloriesActive !== null && caloriesActive !== undefined ? caloriesActive.toLocaleString() : '--'}
+            unit={caloriesActive !== null && caloriesActive !== undefined ? "kcal" : undefined}
             color="orange"
             size="sm"
           />
@@ -109,8 +111,8 @@ export const ActivityDetailCard: React.FC<ActivityDetailCardProps> = ({ metrics 
           <div className="flex flex-col items-center">
             <div className="relative">
               <ProgressRing
-                value={caloriesActive}
-                max={caloriesTotal}
+                value={caloriesActive ?? 0}
+                max={caloriesTotal ?? 0}
                 size={130}
                 strokeWidth={12}
                 color="#f97316"
@@ -118,13 +120,15 @@ export const ActivityDetailCard: React.FC<ActivityDetailCardProps> = ({ metrics 
               />
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <Flame className="text-orange-500 mb-1" size={24} />
-                <div className="text-2xl font-bold text-gray-900">{caloriesTotal}</div>
+                <div className="text-2xl font-bold text-gray-900">{caloriesTotal !== null && caloriesTotal !== undefined ? caloriesTotal : '--'}</div>
                 <div className="text-xs text-gray-600">kcal</div>
               </div>
             </div>
             <div className="mt-3 text-center">
               <div className="text-sm font-semibold text-gray-900">Total Burned</div>
-              <div className="text-xs text-gray-600">{Math.round(activeCaloriesPercent)}% active</div>
+              <div className="text-xs text-gray-600">
+                {activeCaloriesPercent > 0 ? `${Math.round(activeCaloriesPercent)}% active` : '--'}
+              </div>
             </div>
           </div>
         </div>
@@ -137,7 +141,7 @@ export const ActivityDetailCard: React.FC<ActivityDetailCardProps> = ({ metrics 
             <div>
               <div className="flex items-center justify-between mb-2 text-sm">
                 <span className="text-gray-700 font-medium">Active Calories</span>
-                <span className="text-orange-700 font-bold">{caloriesActive} kcal</span>
+                <span className="text-orange-700 font-bold">{caloriesActive !== null ? `${caloriesActive} kcal` : '--'}</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
                 <div 
@@ -154,7 +158,7 @@ export const ActivityDetailCard: React.FC<ActivityDetailCardProps> = ({ metrics 
             <div>
               <div className="flex items-center justify-between mb-2 text-sm">
                 <span className="text-gray-700 font-medium">Basal Calories</span>
-                <span className="text-blue-700 font-bold">{caloriesBasal} kcal</span>
+                <span className="text-blue-700 font-bold">{caloriesBasal !== null ? `${caloriesBasal} kcal` : '--'}</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
                 <div 
@@ -209,13 +213,13 @@ export const ActivityDetailCard: React.FC<ActivityDetailCardProps> = ({ metrics 
               <div className="flex justify-between">
                 <span className="text-gray-600">Calories per step:</span>
                 <span className="font-semibold text-gray-900">
-                  {steps > 0 ? (caloriesTotal / steps).toFixed(3) : 'N/A'}
+                  {steps > 0 && caloriesTotal !== null && caloriesTotal !== undefined ? (caloriesTotal / steps).toFixed(3) : '--'}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Active ratio:</span>
                 <span className="font-semibold text-gray-900">
-                  {activeCaloriesPercent.toFixed(1)}%
+                  {activeCaloriesPercent > 0 ? activeCaloriesPercent.toFixed(1) + '%' : '--'}
                 </span>
               </div>
               <div className="flex justify-between">

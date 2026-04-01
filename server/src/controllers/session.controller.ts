@@ -573,7 +573,9 @@ export const getSessionIdsByUserIdParam = async (
     if (metric) {
       query.metric = metric;
     }
-    const sessions = await Session.find(query, '_id name activityType startTime metric devices').exec();
+    const sessions = await Session.find(query, '_id name activityType startTime metric devices')
+      .sort({ startTime: -1 }) // Sort by most recent first
+      .exec();
     
     // Extract Luna firmware version for each session
     const sessionsWithFirmware = sessions.map(session => {

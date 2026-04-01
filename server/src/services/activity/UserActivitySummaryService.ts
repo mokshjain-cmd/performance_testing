@@ -50,9 +50,9 @@ interface ISingleActivitySessionView {
   luna: {
     totalSteps: number;
     totalDistance: number; // meters
-    totalCalories: number;
-    caloriesActive?: number;
-    caloriesBasal?: number;
+    totalCalories: number | null;
+    caloriesActive?: number | null;
+    caloriesBasal?: number | null;
   };
   
   // Benchmark metrics (if available)
@@ -60,9 +60,9 @@ interface ISingleActivitySessionView {
     deviceType: string;
     totalSteps: number;
     totalDistance: number;
-    totalCalories: number;
-    caloriesActive?: number;
-    caloriesBasal?: number;
+    totalCalories: number | null;
+    caloriesActive?: number | null;
+    caloriesBasal?: number | null;
   };
   
   // Comparison (if benchmark available)
@@ -83,7 +83,7 @@ interface ISingleActivitySessionView {
       rmse: number;
       ratio: number;
     };
-    calories: {
+    calories?: {
       accuracyPercent: number;
       bias: number;
       mae: number;
@@ -256,9 +256,9 @@ export class UserActivitySummaryService {
         luna: {
           totalSteps: activityStats.steps?.lunaTotal || 0,
           totalDistance: activityStats.distance?.lunaMeters || 0,
-          totalCalories: activityStats.calories?.lunaTotal || 0,
-          caloriesActive: activityStats.activeCalories?.lunaActive || 0,
-          caloriesBasal: activityStats.basalCalories?.lunaBasal || 0,
+          totalCalories: activityStats.calories?.lunaTotal ?? null,
+          caloriesActive: activityStats.activeCalories?.lunaActive ?? null,
+          caloriesBasal: activityStats.basalCalories?.lunaBasal ?? null,
         },
       };
 
@@ -268,9 +268,9 @@ export class UserActivitySummaryService {
           deviceType: session.benchmarkDeviceType || 'unknown',
           totalSteps: activityStats.steps.benchmarkTotal,
           totalDistance: activityStats.distance?.benchmarkMeters || 0,
-          totalCalories: activityStats.calories?.benchmarkTotal || 0,
-          caloriesActive: activityStats.activeCalories?.benchmarkActive || 0,
-          caloriesBasal: activityStats.basalCalories?.benchmarkBasal || 0,
+          totalCalories: activityStats.calories?.benchmarkTotal ?? null,
+          caloriesActive: activityStats.activeCalories?.benchmarkActive ?? null,
+          caloriesBasal: activityStats.basalCalories?.benchmarkBasal ?? null,
         };
 
         // Build comparison object with just the metrics (not luna/benchmark totals)
@@ -291,20 +291,24 @@ export class UserActivitySummaryService {
             rmse: 0, // Not calculated for distance
             ratio: 0, // Not calculated for distance
           },
-          calories: {
-            accuracyPercent: activityStats.calories?.accuracyPercent || 0,
-            bias: activityStats.calories?.bias || 0,
-            mae: activityStats.calories?.mae || 0,
-            mape: activityStats.calories?.mape || 0,
-            rmse: 0, // Not calculated for calories
-            ratio: 0, // Not calculated for calories
-          },
         };
 
+        // Add total calories comparison only if accuracyPercent is available
+        if (activityStats.calories?.accuracyPercent != null) {
+          result.comparison.calories = {
+            accuracyPercent: activityStats.calories.accuracyPercent,
+            bias: activityStats.calories.bias || 0,
+            mae: activityStats.calories.mae || 0,
+            mape: activityStats.calories.mape || 0,
+            rmse: 0, // Not calculated for calories
+            ratio: 0, // Not calculated for calories
+          };
+        }
+
         // Add active calories comparison if available
-        if (activityStats.activeCalories) {
+        if (activityStats.activeCalories?.accuracyPercent != null) {
           result.comparison.activeCalories = {
-            accuracyPercent: activityStats.activeCalories.accuracyPercent || 0,
+            accuracyPercent: activityStats.activeCalories.accuracyPercent,
             bias: activityStats.activeCalories.bias || 0,
             mae: activityStats.activeCalories.mae || 0,
             mape: activityStats.activeCalories.mape || 0,
@@ -314,9 +318,9 @@ export class UserActivitySummaryService {
         }
 
         // Add basal calories comparison if available
-        if (activityStats.basalCalories) {
+        if (activityStats.basalCalories?.accuracyPercent != null) {
           result.comparison.basalCalories = {
-            accuracyPercent: activityStats.basalCalories.accuracyPercent || 0,
+            accuracyPercent: activityStats.basalCalories.accuracyPercent,
             bias: activityStats.basalCalories.bias || 0,
             mae: activityStats.basalCalories.mae || 0,
             mape: activityStats.basalCalories.mape || 0,

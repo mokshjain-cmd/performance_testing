@@ -189,57 +189,7 @@ const AdminSleepSessionView: React.FC<AdminSleepSessionViewProps> = ({ sessionId
         </div>
       </Card>
 
-      {/* Validation Metrics */}
-      {sessionSummary.benchmark && (
-        <Card>
-          <h3 className="text-lg font-semibold mb-4">Validation Metrics</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-4 border border-green-200">
-              <p className="text-sm text-gray-600 mb-1">Epoch Accuracy</p>
-              <p className={`text-3xl font-bold ${
-                sessionSummary.accuracyPercent >= 85 ? 'text-green-600' : 
-                sessionSummary.accuracyPercent >= 75 ? 'text-yellow-600' : 'text-red-600'
-              }`}>
-                {sessionSummary.accuracyPercent.toFixed(1)}%
-              </p>
-              <p className="text-xs text-gray-500 mt-1">Target: &gt;85%</p>
-            </div>
-
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">
-              <p className="text-sm text-gray-600 mb-1">Cohen's Kappa</p>
-              <p className={`text-3xl font-bold ${
-                sessionSummary.kappaScore >= 0.8 ? 'text-green-600' : 
-                sessionSummary.kappaScore >= 0.6 ? 'text-yellow-600' : 'text-red-600'
-              }`}>
-                {sessionSummary.kappaScore.toFixed(3)}
-              </p>
-              <p className="text-xs text-gray-500 mt-1">Target: &gt;0.8</p>
-            </div>
-
-            <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg p-4 border border-purple-200">
-              <p className="text-sm text-gray-600 mb-1">Total Sleep Bias</p>
-              <p className={`text-3xl font-bold ${
-                Math.abs(sessionSummary.totalSleepBiasSec) < 600 ? 'text-green-600' : 
-                Math.abs(sessionSummary.totalSleepBiasSec) < 1800 ? 'text-yellow-600' : 'text-red-600'
-              }`}>
-                {sessionSummary.totalSleepBiasSec > 0 ? '+' : ''}{formatTime(Math.abs(sessionSummary.totalSleepBiasSec))}
-              </p>
-              <p className="text-xs text-gray-500 mt-1">
-                {sessionSummary.totalSleepBiasSec > 0 ? 'Overestimation' : 'Underestimation'}
-              </p>
-            </div>
-          </div>
-
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-900">
-            <p className="font-semibold mb-2">💡 Understanding These Metrics:</p>
-            <ul className="space-y-1 ml-4 list-disc">
-              <li><strong>Accuracy:</strong> Percentage of 30-second epochs where Falcon and benchmark agree on sleep stage</li>
-              <li><strong>Cohen's Kappa:</strong> Agreement metric that accounts for chance. More reliable than simple accuracy</li>
-              <li><strong>Bias:</strong> Systematic over/underestimation. Positive means Falcon detects more sleep</li>
-            </ul>
-          </div>
-        </Card>
-      )}
+      
 
       {/* Sleep Metrics Comparison - Horizontal Cards */}
       <Card>
@@ -469,6 +419,8 @@ const AdminSleepSessionView: React.FC<AdminSleepSessionViewProps> = ({ sessionId
         )}
       </Card>
 
+      
+
       {/* Stage-wise Bias */}
       {sessionSummary.benchmark && (
         <Card>
@@ -478,6 +430,58 @@ const AdminSleepSessionView: React.FC<AdminSleepSessionViewProps> = ({ sessionId
             benchmarkEpochs={benchmarkEpochs}
             showComparison={true}
           />
+        </Card>
+      )}
+
+      {/* Validation Metrics */}
+      {sessionSummary.benchmark && (
+        <Card>
+          <h3 className="text-lg font-semibold mb-4">Validation Metrics</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-4 border border-green-200">
+              <p className="text-sm text-gray-600 mb-1">Epoch Accuracy</p>
+              <p className={`text-3xl font-bold ${
+                sessionSummary.accuracyPercent >= 85 ? 'text-green-600' : 
+                sessionSummary.accuracyPercent >= 75 ? 'text-yellow-600' : 'text-red-600'
+              }`}>
+                {sessionSummary.accuracyPercent.toFixed(1)}%
+              </p>
+              <p className="text-xs text-gray-500 mt-1">Target: &gt;85%</p>
+            </div>
+
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">
+              <p className="text-sm text-gray-600 mb-1">Cohen's Kappa</p>
+              <p className={`text-3xl font-bold ${
+                sessionSummary.kappaScore >= 0.8 ? 'text-green-600' : 
+                sessionSummary.kappaScore >= 0.6 ? 'text-yellow-600' : 'text-red-600'
+              }`}>
+                {sessionSummary.kappaScore.toFixed(3)}
+              </p>
+              <p className="text-xs text-gray-500 mt-1">Target: &gt;0.8</p>
+            </div>
+
+            <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg p-4 border border-purple-200">
+              <p className="text-sm text-gray-600 mb-1">Total Sleep Bias</p>
+              <p className={`text-3xl font-bold ${
+                Math.abs(sessionSummary.totalSleepBiasSec) < 600 ? 'text-green-600' : 
+                Math.abs(sessionSummary.totalSleepBiasSec) < 1800 ? 'text-yellow-600' : 'text-red-600'
+              }`}>
+                {sessionSummary.totalSleepBiasSec > 0 ? '+' : ''}{formatTime(Math.abs(sessionSummary.totalSleepBiasSec))}
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                {sessionSummary.totalSleepBiasSec > 0 ? 'Overestimation' : 'Underestimation'}
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-900">
+            <p className="font-semibold mb-2">💡 Understanding These Metrics:</p>
+            <ul className="space-y-1 ml-4 list-disc">
+              <li><strong>Accuracy:</strong> Percentage of 30-second epochs where Falcon and benchmark agree on sleep stage</li>
+              <li><strong>Cohen's Kappa:</strong> Agreement metric that accounts for chance. More reliable than simple accuracy</li>
+              <li><strong>Bias:</strong> Systematic over/underestimation. Positive means Falcon detects more sleep</li>
+            </ul>
+          </div>
         </Card>
       )}
 

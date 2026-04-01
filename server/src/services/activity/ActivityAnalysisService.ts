@@ -93,27 +93,52 @@ export class ActivityAnalysisService {
   private static calculateTotals(readings: any[]): {
     steps: number;
     distanceMeters: number;
-    caloriesTotal: number;
-    caloriesActive: number;
-    caloriesBasal: number;
+    caloriesTotal: number | null;
+    caloriesActive: number | null;
+    caloriesBasal: number | null;
   } {
-    const totals = {
-      steps: 0,
-      distanceMeters: 0,
-      caloriesTotal: 0,
-      caloriesActive: 0,
-      caloriesBasal: 0,
-    };
+    let steps = 0;
+    let distanceMeters = 0;
+    let caloriesTotal: number | null = null;
+    let caloriesActive: number | null = null;
+    let caloriesBasal: number | null = null;
 
+    // For steps and distance, sum them up
     readings.forEach((reading) => {
-      totals.steps += reading.totals.steps || 0;
-      totals.distanceMeters += reading.totals.distanceMeters || 0;
-      totals.caloriesTotal += reading.totals.caloriesTotal || 0;
-      totals.caloriesActive += reading.totals.caloriesActive || 0;
-      totals.caloriesBasal += reading.totals.caloriesBasal || 0;
+      steps += reading.totals.steps || 0;
+      distanceMeters += reading.totals.distanceMeters || 0;
     });
 
-    return totals;
+    // For calories, preserve null if ALL readings are null, otherwise sum non-null values
+    let hasCaloriesTotal = false;
+    let hasCaloriesActive = false;
+    let hasCaloriesBasal = false;
+    let totalSum = 0;
+    let activeSum = 0;
+    let basalSum = 0;
+
+    readings.forEach((reading) => {
+      if (reading.totals.caloriesTotal !== null && reading.totals.caloriesTotal !== undefined) {
+        hasCaloriesTotal = true;
+        totalSum += reading.totals.caloriesTotal;
+      }
+      if (reading.totals.caloriesActive !== null && reading.totals.caloriesActive !== undefined) {
+        hasCaloriesActive = true;
+        activeSum += reading.totals.caloriesActive;
+      }
+      if (reading.totals.caloriesBasal !== null && reading.totals.caloriesBasal !== undefined) {
+        hasCaloriesBasal = true;
+        basalSum += reading.totals.caloriesBasal;
+      }
+    });
+
+    return {
+      steps,
+      distanceMeters,
+      caloriesTotal: hasCaloriesTotal ? totalSum : null,
+      caloriesActive: hasCaloriesActive ? activeSum : null,
+      caloriesBasal: hasCaloriesBasal ? basalSum : null,
+    };
   }
 
   /**
@@ -165,59 +190,71 @@ export class ActivityAnalysisService {
       };
     }
 
-    // Total calories stats
-    if (benchmarkTotals.caloriesTotal > 0) {
-      const error = lunaTotals.caloriesTotal - benchmarkTotals.caloriesTotal;
-      const mape = Math.abs(error / benchmarkTotals.caloriesTotal) * 100;
-      const accuracyPercent = Math.max(0, (1 - Math.abs(error) / benchmarkTotals.caloriesTotal) * 100);
-
+    // Total calories stats - store values even if can't calculate comparison
+    if (lunaTotals.caloriesTotal !== null || benchmarkTotals.caloriesTotal !== null) {
       activityStats.calories = {
-        lunaTotal: Math.round(lunaTotals.caloriesTotal),
-        benchmarkTotal: Math.round(benchmarkTotals.caloriesTotal),
-        error: Math.round(error),
-        accuracyPercent: Math.round(accuracyPercent * 100) / 100,
-        mape: Math.round(mape * 100) / 100,
-        bias: Math.round(error),
-        mae: Math.round(Math.abs(error)),
+        lunaTotal: lunaTotals.caloriesTotal !== null ? Math.round(lunaTotals.caloriesTotal) : null,
+        benchmarkTotal: benchmarkTotals.caloriesTotal !== null ? Math.round(benchmarkTotals.caloriesTotal) : null,
       };
+
+      // Only calculate comparison metrics if both values exist
+      if (benchmarkTotals.caloriesTotal && benchmarkTotals.caloriesTotal > 0 && lunaTotals.caloriesTotal) {
+        const error = lunaTotals.caloriesTotal - benchmarkTotals.caloriesTotal;
+        const mape = Math.abs(error / benchmarkTotals.caloriesTotal) * 100;
+        const accuracyPercent = Math.max(0, (1 - Math.abs(error) / benchmarkTotals.caloriesTotal) * 100);
+
+        activityStats.calories.error = Math.round(error);
+        activityStats.calories.accuracyPercent = Math.round(accuracyPercent * 100) / 100;
+        activityStats.calories.mape = Math.round(mape * 100) / 100;
+        activityStats.calories.bias = Math.round(error);
+        activityStats.calories.mae = Math.round(Math.abs(error));
+      }
     }
 
-    // Active calories stats
-    if (benchmarkTotals.caloriesActive > 0) {
-      const error = lunaTotals.caloriesActive - benchmarkTotals.caloriesActive;
-      const mape = Math.abs(error / benchmarkTotals.caloriesActive) * 100;
-      const accuracyPercent = Math.max(
-        0,
-        (1 - Math.abs(error) / benchmarkTotals.caloriesActive) * 100
-      );
-
+    // Active calories stats - store values even if can't calculate comparison
+    if (lunaTotals.caloriesActive !== null || benchmarkTotals.caloriesActive !== null) {
       activityStats.activeCalories = {
-        lunaActive: Math.round(lunaTotals.caloriesActive),
-        benchmarkActive: Math.round(benchmarkTotals.caloriesActive),
-        accuracyPercent: Math.round(accuracyPercent * 100) / 100,
-        bias: Math.round(error),
-        mae: Math.round(Math.abs(error)),
-        mape: Math.round(mape * 100) / 100,
+        lunaActive: lunaTotals.caloriesActive !== null ? Math.round(lunaTotals.caloriesActive) : null,
+        benchmarkActive: benchmarkTotals.caloriesActive !== null ? Math.round(benchmarkTotals.caloriesActive) : null,
       };
+
+      // Only calculate comparison metrics if both values exist
+      if (benchmarkTotals.caloriesActive && benchmarkTotals.caloriesActive > 0 && lunaTotals.caloriesActive) {
+        const error = lunaTotals.caloriesActive - benchmarkTotals.caloriesActive;
+        const mape = Math.abs(error / benchmarkTotals.caloriesActive) * 100;
+        const accuracyPercent = Math.max(
+          0,
+          (1 - Math.abs(error) / benchmarkTotals.caloriesActive) * 100
+        );
+
+        activityStats.activeCalories.accuracyPercent = Math.round(accuracyPercent * 100) / 100;
+        activityStats.activeCalories.bias = Math.round(error);
+        activityStats.activeCalories.mae = Math.round(Math.abs(error));
+        activityStats.activeCalories.mape = Math.round(mape * 100) / 100;
+      }
     }
 
-    // Basal calories stats
-    if (benchmarkTotals.caloriesBasal > 0) {
-      const error = lunaTotals.caloriesBasal - benchmarkTotals.caloriesBasal;
-      const mape = Math.abs(error / benchmarkTotals.caloriesBasal) * 100;
-      const accuracyPercent = Math.max(
-        0,
-        (1 - Math.abs(error) / benchmarkTotals.caloriesBasal) * 100
-      );
-
+    // Basal calories stats - store values even if can't calculate comparison
+    if (lunaTotals.caloriesBasal !== null || benchmarkTotals.caloriesBasal !== null) {
       activityStats.basalCalories = {
-        lunaBasal: Math.round(lunaTotals.caloriesBasal),
-        benchmarkBasal: Math.round(benchmarkTotals.caloriesBasal),
-        accuracyPercent: Math.round(accuracyPercent * 100) / 100,
-        bias: Math.round(error),
-        mae: Math.round(Math.abs(error)),
-        mape: Math.round(mape * 100) / 100,
+        lunaBasal: lunaTotals.caloriesBasal !== null ? Math.round(lunaTotals.caloriesBasal) : null,
+        benchmarkBasal: benchmarkTotals.caloriesBasal !== null ? Math.round(benchmarkTotals.caloriesBasal) : null,
       };
+
+      // Only calculate comparison metrics if both values exist
+      if (benchmarkTotals.caloriesBasal && benchmarkTotals.caloriesBasal > 0 && lunaTotals.caloriesBasal) {
+        const error = lunaTotals.caloriesBasal - benchmarkTotals.caloriesBasal;
+        const mape = Math.abs(error / benchmarkTotals.caloriesBasal) * 100;
+        const accuracyPercent = Math.max(
+          0,
+          (1 - Math.abs(error) / benchmarkTotals.caloriesBasal) * 100
+        );
+
+        activityStats.basalCalories.accuracyPercent = Math.round(accuracyPercent * 100) / 100;
+        activityStats.basalCalories.bias = Math.round(error);
+        activityStats.basalCalories.mae = Math.round(Math.abs(error));
+        activityStats.basalCalories.mape = Math.round(mape * 100) / 100;
+      }
     }
 
     return activityStats;

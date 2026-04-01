@@ -38,35 +38,8 @@ export const SleepHypnograph: React.FC<SleepHypnographProps> = ({
     awake: COLORS.sleep.stages.awake
   };
 
-  // Generate hypnograph path
-  const generateHypnographPath = () => {
-    if (stages.length === 0) return '';
-    
-    let path = '';
-    const chartHeight = height - 40; // Leave space for labels
-    const stageHeight = chartHeight / 4; // 4 stages
-    
-    stages.forEach((stage, index) => {
-      const startMinutes = Math.floor((stage.startTime.getTime() - startTime.getTime()) / 1000 / 60);
-      const endMinutes = Math.floor((stage.endTime.getTime() - startTime.getTime()) / 1000 / 60);
-      
-      const xStart = (startMinutes / totalMinutes) * 100;
-      const xEnd = (endMinutes / totalMinutes) * 100;
-      const yPos = stageYPositions[stage.stage as keyof typeof stageYPositions] * stageHeight;
-      
-      if (index === 0) {
-        path += `M ${xStart} ${yPos} `;
-      } else {
-        // Vertical line to new stage
-        path += `V ${yPos} `;
-      }
-      
-      // Horizontal line for duration
-      path += `H ${xEnd} `;
-    });
-    
-    return path;
-  };
+  const chartHeight = height - 40; // Leave space for labels
+  const stageHeight = chartHeight / 4; // 4 stages
 
   // Calculate position for each stage block
   const getStageBlock = (stage: SleepStage) => {
@@ -94,9 +67,6 @@ export const SleepHypnograph: React.FC<SleepHypnographProps> = ({
     return labels;
   };
 
-  const chartHeight = height - 40;
-  const stageHeight = chartHeight / 4;
-
   return (
     <div className="space-y-3">
       {/* Hypnograph Chart */}
@@ -104,7 +74,7 @@ export const SleepHypnograph: React.FC<SleepHypnographProps> = ({
         <div className="relative" style={{ height: `${height}px` }}>
           {/* Y-axis labels */}
           <div className="absolute left-0 top-0 w-14 flex flex-col justify-start pr-2" style={{ height: `${chartHeight}px` }}>
-            {stageOrder.map((stage, index) => (
+            {stageOrder.map((stage) => (
               <div 
                 key={stage}
                 className="flex items-center justify-end text-[11px] font-semibold text-gray-600"

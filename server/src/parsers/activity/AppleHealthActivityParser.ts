@@ -8,9 +8,9 @@ export interface IAppleHealthActivityDailyTotals {
   date: Date; // Date of the activity
   steps: number;
   distanceMeters: number;
-  caloriesTotal: number;
-  caloriesActive: number;
-  caloriesBasal: number;
+  caloriesTotal: number | null; // Null if not provided
+  caloriesActive: number | null;
+  caloriesBasal: number | null;
 }
 
 /**
@@ -279,9 +279,9 @@ export class AppleHealthActivityParser {
         date: this.parseDateKey(dateKey),
         steps: Math.round(data.steps),
         distanceMeters: Math.round(data.distanceMeters),
-        caloriesTotal: Math.round(data.caloriesActive + data.caloriesBasal),
-        caloriesActive: Math.round(data.caloriesActive),
-        caloriesBasal: Math.round(data.caloriesBasal),
+        caloriesTotal: null, // Apple doesn't provide total directly - don't calculate it
+        caloriesActive: data.caloriesActive > 0 ? Math.round(data.caloriesActive) : null,
+        caloriesBasal: data.caloriesBasal > 0 ? Math.round(data.caloriesBasal) : null,
       });
     }
 
@@ -297,9 +297,9 @@ export class AppleHealthActivityParser {
         console.log(`[AppleHealthActivityParser]    ${dateStr}:`);
         console.log(`[AppleHealthActivityParser]      Steps: ${day.steps} steps`);
         console.log(`[AppleHealthActivityParser]      Distance: ${(day.distanceMeters / 1000).toFixed(2)} km`);
-        console.log(`[AppleHealthActivityParser]      Active Calories: ${day.caloriesActive.toFixed(2)} kcal`);
-        console.log(`[AppleHealthActivityParser]      Basal Calories: ${day.caloriesBasal.toFixed(2)} kcal`);
-        console.log(`[AppleHealthActivityParser]      Total Calories: ${day.caloriesTotal.toFixed(2)} kcal`);
+        console.log(`[AppleHealthActivityParser]      Active Calories: ${day.caloriesActive !== null ? day.caloriesActive.toFixed(2) + ' kcal' : '--'}`);
+        console.log(`[AppleHealthActivityParser]      Basal Calories: ${day.caloriesBasal !== null ? day.caloriesBasal.toFixed(2) + ' kcal' : '--'}`);
+        console.log(`[AppleHealthActivityParser]      Total Calories: ${day.caloriesTotal !== null ? day.caloriesTotal.toFixed(2) + ' kcal' : '--'}`);
       });
       if (dailyTotals.length > 5) {
         console.log(`[AppleHealthActivityParser]    ... and ${dailyTotals.length - 5} more days`);

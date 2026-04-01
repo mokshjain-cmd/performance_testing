@@ -174,13 +174,13 @@ export class FalconLunaActivityParser {
     const totalDistanceMeters = record.distanceData.reduce((sum, val) => sum + val, 0);
 
     // Use todayCalorieData for total calories (more accurate than summing hourly)
-    const caloriesTotal = record.todayCalorieData;
+    const caloriesTotal = record.todayCalorieData > 0 ? record.todayCalorieData : null;
 
     // Use todaySportCalorieData for active calories
-    const caloriesActive = record.todaySportCalorieData;
+    const caloriesActive = record.todaySportCalorieData > 0 ? record.todaySportCalorieData : null;
 
-    // Calculate basal calories (total - active)
-    const caloriesBasal = caloriesTotal - caloriesActive;
+    // Don't calculate basal calories - keep as null if not provided directly
+    const caloriesBasal = null; // Luna logs don't provide basal directly
 
     // Parse date string to Date object (as UTC to avoid timezone shifts)
     // Format: '2026-03-20 00:00:00' → Parse as UTC

@@ -61,7 +61,7 @@ export const AdminSleepDashboardPage: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Sleep Admin Dashboard</h1>
+          <h1 className="text-3xl font-bold">Sleep Admin Dashboard{summary.latestFirmwareVersion ? ` for v${summary.latestFirmwareVersion}` : ''}</h1>
           <p className="text-gray-600 mt-1">
             Global sleep analysis and validation metrics
           </p>

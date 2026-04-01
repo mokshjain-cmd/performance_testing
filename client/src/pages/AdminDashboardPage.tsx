@@ -199,7 +199,7 @@ const AdminDashboardPage: React.FC = () => {
           <div className="flex items-start justify-between gap-4">
             <div>
               <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                {selectedView === 'overview' && 'Global Overview & Analytics'}
+                {selectedView === 'overview' && `Global Overview & Analytics${latestFirmware ? ` for v${latestFirmware}` : ''}`}
                 {selectedView === 'user' && 'User Performance Analysis'}
                 {selectedView === 'session' && 'Session Details'}
               </h1>
@@ -211,14 +211,6 @@ const AdminDashboardPage: React.FC = () => {
                   selectedMetric={selectedMetric}
                   onSelectMetric={setSelectedMetric}
                 />
-                {latestFirmware && (
-                  <div className="flex flex-col items-start pb-2">
-                    <span className="text-xs text-gray-500 mb-1">Latest Falcon Firmware</span>
-                    <span className="inline-flex items-center px-3 py-1 rounded-lg text-xs font-semibold bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 border border-blue-200">
-                      v{latestFirmware}
-                    </span>
-                  </div>
-                )}
               </div>
               
             </div>
