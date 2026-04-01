@@ -169,7 +169,7 @@ const AdminActivitySessionView: React.FC<AdminActivitySessionViewProps> = ({ ses
       {/* Accuracy Cards - Small Cards */}
       {sessionData.comparison && (
         <div>
-          <h3 className="text-xl font-semibold mb-4">Falcon Accuracy</h3>
+          <h3 className="text-xl font-semibold mb-4">Falcon Accuracy vs {sessionData.benchmark?.deviceType || 'Benchmark'}</h3>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             {/* Steps Accuracy */}
             <Card className={`p-4 ${
@@ -214,69 +214,87 @@ const AdminActivitySessionView: React.FC<AdminActivitySessionViewProps> = ({ ses
           </Card>
 
           {/* Total Calories Accuracy */}
-          {sessionData.comparison.calories?.accuracyPercent != null && (
+          {(sessionData.luna.totalCalories != null || sessionData.benchmark?.totalCalories != null) && (
             <Card className={`p-4 ${
-              sessionData.comparison.calories.accuracyPercent >= 90 
-                ? 'bg-green-50 border-green-200' 
-                : sessionData.comparison.calories.accuracyPercent >= 80 
-                ? 'bg-yellow-50 border-yellow-200' 
-                : 'bg-red-50 border-red-200'
+              sessionData.comparison.calories?.accuracyPercent != null && sessionData.comparison.calories.accuracyPercent > 0
+                ? (sessionData.comparison.calories.accuracyPercent >= 90 
+                    ? 'bg-green-50 border-green-200' 
+                    : sessionData.comparison.calories.accuracyPercent >= 80 
+                    ? 'bg-yellow-50 border-yellow-200' 
+                    : 'bg-red-50 border-red-200')
+                : 'bg-gray-50 border-gray-200'
             }`}>
               <div className="text-xs text-gray-600 mb-1">Calories</div>
               <div className={`text-2xl font-bold ${
-                sessionData.comparison.calories.accuracyPercent >= 90 
-                  ? 'text-green-600' 
-                  : sessionData.comparison.calories.accuracyPercent >= 80 
-                  ? 'text-yellow-600' 
-                  : 'text-red-600'
+                sessionData.comparison.calories?.accuracyPercent != null && sessionData.comparison.calories.accuracyPercent > 0
+                  ? (sessionData.comparison.calories.accuracyPercent >= 90 
+                      ? 'text-green-600' 
+                      : sessionData.comparison.calories.accuracyPercent >= 80 
+                      ? 'text-yellow-600' 
+                      : 'text-red-600')
+                  : 'text-gray-400'
               }`}>
-                {sessionData.comparison.calories.accuracyPercent.toFixed(1)}%
+                {sessionData.comparison.calories?.accuracyPercent != null && sessionData.comparison.calories.accuracyPercent > 0
+                  ? `${sessionData.comparison.calories.accuracyPercent.toFixed(1)}%`
+                  : '--'}
               </div>
               <div className="text-xs text-gray-500 mt-1">Accuracy</div>
             </Card>
           )}
 
           {/* Active Calories Accuracy */}
-          {sessionData.comparison.activeCalories?.accuracyPercent != null && (
+          {(sessionData.luna.caloriesActive != null || sessionData.benchmark?.caloriesActive != null) && (
             <Card className={`p-4 ${
-              sessionData.comparison.activeCalories.accuracyPercent >= 90 
-                ? 'bg-green-50 border-green-200' 
-                : sessionData.comparison.activeCalories.accuracyPercent >= 80 
-                ? 'bg-yellow-50 border-yellow-200' 
-                : 'bg-red-50 border-red-200'
+              sessionData.comparison.activeCalories?.accuracyPercent != null && sessionData.comparison.activeCalories.accuracyPercent > 0
+                ? (sessionData.comparison.activeCalories.accuracyPercent >= 90 
+                    ? 'bg-green-50 border-green-200' 
+                    : sessionData.comparison.activeCalories.accuracyPercent >= 80 
+                    ? 'bg-yellow-50 border-yellow-200' 
+                    : 'bg-red-50 border-red-200')
+                : 'bg-gray-50 border-gray-200'
             }`}>
               <div className="text-xs text-gray-600 mb-1">Active Cal</div>
               <div className={`text-2xl font-bold ${
-                sessionData.comparison.activeCalories.accuracyPercent >= 90 
-                  ? 'text-green-600' 
-                  : sessionData.comparison.activeCalories.accuracyPercent >= 80 
-                  ? 'text-yellow-600' 
-                  : 'text-red-600'
+                sessionData.comparison.activeCalories?.accuracyPercent != null && sessionData.comparison.activeCalories.accuracyPercent > 0
+                  ? (sessionData.comparison.activeCalories.accuracyPercent >= 90 
+                      ? 'text-green-600' 
+                      : sessionData.comparison.activeCalories.accuracyPercent >= 80 
+                      ? 'text-yellow-600' 
+                      : 'text-red-600')
+                  : 'text-gray-400'
               }`}>
-                {sessionData.comparison.activeCalories.accuracyPercent.toFixed(1)}%
+                {sessionData.comparison.activeCalories?.accuracyPercent != null && sessionData.comparison.activeCalories.accuracyPercent > 0
+                  ? `${sessionData.comparison.activeCalories.accuracyPercent.toFixed(1)}%`
+                  : '--'}
               </div>
               <div className="text-xs text-gray-500 mt-1">Accuracy</div>
             </Card>
           )}
 
           {/* Basal Calories Accuracy */}
-          {sessionData.comparison.basalCalories?.accuracyPercent != null && (
+          {(sessionData.luna.caloriesBasal != null || sessionData.benchmark?.caloriesBasal != null) && (
             <Card className={`p-4 ${
-              sessionData.comparison.basalCalories.accuracyPercent >= 90 
-                ? 'bg-green-50 border-green-200' 
-                : sessionData.comparison.basalCalories.accuracyPercent >= 80 
-                ? 'bg-yellow-50 border-yellow-200' 
-                : 'bg-red-50 border-red-200'
+              sessionData.comparison.basalCalories?.accuracyPercent != null && sessionData.comparison.basalCalories.accuracyPercent > 0
+                ? (sessionData.comparison.basalCalories.accuracyPercent >= 90 
+                    ? 'bg-green-50 border-green-200' 
+                    : sessionData.comparison.basalCalories.accuracyPercent >= 80 
+                    ? 'bg-yellow-50 border-yellow-200' 
+                    : 'bg-red-50 border-red-200')
+                : 'bg-gray-50 border-gray-200'
             }`}>
               <div className="text-xs text-gray-600 mb-1">Basal Cal</div>
               <div className={`text-2xl font-bold ${
-                sessionData.comparison.basalCalories.accuracyPercent >= 90 
-                  ? 'text-green-600' 
-                  : sessionData.comparison.basalCalories.accuracyPercent >= 80 
-                  ? 'text-yellow-600' 
-                  : 'text-red-600'
+                sessionData.comparison.basalCalories?.accuracyPercent != null && sessionData.comparison.basalCalories.accuracyPercent > 0
+                  ? (sessionData.comparison.basalCalories.accuracyPercent >= 90 
+                      ? 'text-green-600' 
+                      : sessionData.comparison.basalCalories.accuracyPercent >= 80 
+                      ? 'text-yellow-600' 
+                      : 'text-red-600')
+                  : 'text-gray-400'
               }`}>
-                {sessionData.comparison.basalCalories.accuracyPercent.toFixed(1)}%
+                {sessionData.comparison.basalCalories?.accuracyPercent != null && sessionData.comparison.basalCalories.accuracyPercent > 0
+                  ? `${sessionData.comparison.basalCalories.accuracyPercent.toFixed(1)}%`
+                  : '--'}
               </div>
               <div className="text-xs text-gray-500 mt-1">Accuracy</div>
             </Card>
@@ -298,13 +316,13 @@ const AdminActivitySessionView: React.FC<AdminActivitySessionViewProps> = ({ ses
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Device</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Steps</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Distance</th>
-                  {sessionData.comparison.calories?.bias != null && (
+                  {(sessionData.luna.totalCalories != null || sessionData.benchmark?.totalCalories != null) && (
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Calories</th>
                   )}
-                  {sessionData.comparison.activeCalories?.bias != null && (
+                  {(sessionData.luna.caloriesActive != null || sessionData.benchmark?.caloriesActive != null) && (
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Active Cal</th>
                   )}
-                  {sessionData.comparison.basalCalories?.bias != null && (
+                  {(sessionData.luna.caloriesBasal != null || sessionData.benchmark?.caloriesBasal != null) && (
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Basal Cal</th>
                   )}
                 </tr>
@@ -315,16 +333,16 @@ const AdminActivitySessionView: React.FC<AdminActivitySessionViewProps> = ({ ses
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">Falcon</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{sessionData.luna.totalSteps.toLocaleString()}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{(sessionData.luna.totalDistance / 1000).toFixed(2)} km</td>
-                  {sessionData.comparison.calories?.bias != null && (
+                  {(sessionData.luna.totalCalories != null || sessionData.benchmark?.totalCalories != null) && (
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                      {sessionData.luna.totalCalories !== null && sessionData.luna.totalCalories !== undefined ? sessionData.luna.totalCalories.toFixed(0) + ' kcal' : '--'}
+                      {sessionData.luna.totalCalories != null ? sessionData.luna.totalCalories.toFixed(0) + ' kcal' : '--'}
                     </td>
                   )}
-                  {sessionData.comparison.activeCalories?.bias != null && (
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{sessionData.luna.caloriesActive !== null && sessionData.luna.caloriesActive !== undefined ? sessionData.luna.caloriesActive.toFixed(0) : '--'} kcal</td>
+                  {(sessionData.luna.caloriesActive != null || sessionData.benchmark?.caloriesActive != null) && (
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{sessionData.luna.caloriesActive != null ? sessionData.luna.caloriesActive.toFixed(0) + ' kcal' : '--'}</td>
                   )}
-                  {sessionData.comparison.basalCalories?.bias != null && (
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{sessionData.luna.caloriesBasal !== null && sessionData.luna.caloriesBasal !== undefined ? sessionData.luna.caloriesBasal.toFixed(0) : '--'} kcal</td>
+                  {(sessionData.luna.caloriesBasal != null || sessionData.benchmark?.caloriesBasal != null) && (
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{sessionData.luna.caloriesBasal != null ? sessionData.luna.caloriesBasal.toFixed(0) + ' kcal' : '--'}</td>
                   )}
                 </tr>
 
@@ -333,16 +351,16 @@ const AdminActivitySessionView: React.FC<AdminActivitySessionViewProps> = ({ ses
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">{sessionData.benchmark.deviceType}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{sessionData.benchmark.totalSteps.toLocaleString()}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{(sessionData.benchmark.totalDistance / 1000).toFixed(2)} km</td>
-                  {sessionData.comparison.calories?.bias != null && (
+                  {(sessionData.luna.totalCalories != null || sessionData.benchmark?.totalCalories != null) && (
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                      {sessionData.benchmark.totalCalories !== null && sessionData.benchmark.totalCalories !== undefined ? sessionData.benchmark.totalCalories.toFixed(0) + ' kcal' : '--'}
+                      {sessionData.benchmark.totalCalories != null ? sessionData.benchmark.totalCalories.toFixed(0) + ' kcal' : '--'}
                     </td>
                   )}
-                  {sessionData.comparison.activeCalories?.bias != null && (
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{sessionData.benchmark.caloriesActive !== null && sessionData.benchmark.caloriesActive !== undefined ? sessionData.benchmark.caloriesActive.toFixed(0) : '--'} kcal</td>
+                  {(sessionData.luna.caloriesActive != null || sessionData.benchmark?.caloriesActive != null) && (
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{sessionData.benchmark.caloriesActive != null ? sessionData.benchmark.caloriesActive.toFixed(0) + ' kcal' : '--'}</td>
                   )}
-                  {sessionData.comparison.basalCalories?.bias != null && (
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{sessionData.benchmark.caloriesBasal !== null && sessionData.benchmark.caloriesBasal !== undefined ? sessionData.benchmark.caloriesBasal.toFixed(0) : '--'} kcal</td>
+                  {(sessionData.luna.caloriesBasal != null || sessionData.benchmark?.caloriesBasal != null) && (
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{sessionData.benchmark.caloriesBasal != null ? sessionData.benchmark.caloriesBasal.toFixed(0) + ' kcal' : '--'}</td>
                   )}
                 </tr>
 
@@ -359,25 +377,37 @@ const AdminActivitySessionView: React.FC<AdminActivitySessionViewProps> = ({ ses
                   }`}>
                     {sessionData.comparison.distance.bias > 0 ? '+' : ''}{(sessionData.comparison.distance.bias / 1000).toFixed(2)} km
                   </td>
-                  {sessionData.comparison.calories?.bias != null && (
+                  {(sessionData.luna.totalCalories != null || sessionData.benchmark?.totalCalories != null) && (
                     <td className={`px-6 py-4 whitespace-nowrap text-sm font-semibold ${
-                      sessionData.comparison.calories.bias > 0 ? 'text-red-600' : sessionData.comparison.calories.bias < 0 ? 'text-blue-600' : 'text-gray-500'
+                      sessionData.comparison.calories?.bias != null 
+                        ? (sessionData.comparison.calories.bias > 0 ? 'text-red-600' : sessionData.comparison.calories.bias < 0 ? 'text-blue-600' : 'text-gray-500')
+                        : 'text-gray-400'
                     }`}>
-                      {sessionData.comparison.calories.bias > 0 ? '+' : ''}{sessionData.comparison.calories.bias.toFixed(0)} kcal
+                      {sessionData.comparison.calories?.bias != null 
+                        ? `${sessionData.comparison.calories.bias > 0 ? '+' : ''}${sessionData.comparison.calories.bias.toFixed(0)} kcal`
+                        : '--'}
                     </td>
                   )}
-                  {sessionData.comparison.activeCalories?.bias != null && (
+                  {(sessionData.luna.caloriesActive != null || sessionData.benchmark?.caloriesActive != null) && (
                     <td className={`px-6 py-4 whitespace-nowrap text-sm font-semibold ${
-                      sessionData.comparison.activeCalories.bias > 0 ? 'text-red-600' : sessionData.comparison.activeCalories.bias < 0 ? 'text-blue-600' : 'text-gray-500'
+                      sessionData.comparison.activeCalories?.bias != null
+                        ? (sessionData.comparison.activeCalories.bias > 0 ? 'text-red-600' : sessionData.comparison.activeCalories.bias < 0 ? 'text-blue-600' : 'text-gray-500')
+                        : 'text-gray-400'
                     }`}>
-                      {sessionData.comparison.activeCalories.bias > 0 ? '+' : ''}{sessionData.comparison.activeCalories.bias.toFixed(0)} kcal
+                      {sessionData.comparison.activeCalories?.bias != null
+                        ? `${sessionData.comparison.activeCalories.bias > 0 ? '+' : ''}${sessionData.comparison.activeCalories.bias.toFixed(0)} kcal`
+                        : '--'}
                     </td>
                   )}
-                  {sessionData.comparison.basalCalories?.bias != null && (
+                  {(sessionData.luna.caloriesBasal != null || sessionData.benchmark?.caloriesBasal != null) && (
                     <td className={`px-6 py-4 whitespace-nowrap text-sm font-semibold ${
-                      sessionData.comparison.basalCalories.bias > 0 ? 'text-red-600' : sessionData.comparison.basalCalories.bias < 0 ? 'text-blue-600' : 'text-gray-500'
+                      sessionData.comparison.basalCalories?.bias != null
+                        ? (sessionData.comparison.basalCalories.bias > 0 ? 'text-red-600' : sessionData.comparison.basalCalories.bias < 0 ? 'text-blue-600' : 'text-gray-500')
+                        : 'text-gray-400'
                     }`}>
-                      {sessionData.comparison.basalCalories.bias > 0 ? '+' : ''}{sessionData.comparison.basalCalories.bias.toFixed(0)} kcal
+                      {sessionData.comparison.basalCalories?.bias != null
+                        ? `${sessionData.comparison.basalCalories.bias > 0 ? '+' : ''}${sessionData.comparison.basalCalories.bias.toFixed(0)} kcal`
+                        : '--'}
                     </td>
                   )}
                 </tr>

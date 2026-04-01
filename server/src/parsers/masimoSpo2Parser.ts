@@ -20,7 +20,7 @@ type NormalizedReadingInput = {
 /**
  * Parse Masimo SPO2 CSV file
  * Expected columns: Session, Index, Timestamp, Date, Time, O2 Saturation, Pulse Rate, Perfusion Index
- * Timestamp is Unix epoch (seconds)
+ * Uses Date ("Wednesday, 1 April 2026") and Time ("1:48:01 PM India Standard Time") columns for timestamp
  * O2 Saturation is the SPO2 value (can be "--" for missing)
  * Perfusion Index can be used as quality indicator
  * @param filePath - Path to the Masimo CSV file
@@ -66,41 +66,52 @@ export async function parseMasimoSpo2Csv(
         totalRows++;
 
         try {
-          // Parse Unix timestamp
-          const timestampRaw = row["Timestamp"];
+          // Parse Date and Time columns directly (more reliable than Unix timestamp with TZ offset)
+          // Date format: "Wednesday, 1 April 2026"
+          // Time format: "1:48:01 PM India Standard Time"
+          const dateRaw = row["Date"];
+          const timeRaw = row["Time"];
           
-          if (!timestampRaw || timestampRaw === "--") {
+          if (!dateRaw || !timeRaw || dateRaw === "--" || timeRaw === "--") {
             invalidTimestampRows++;
             skippedRows++;
             return;
           }
 
-          const unixTimestamp = parseInt(timestampRaw);
+          // Extract date parts: "Wednesday, 1 April 2026" -> "1 April 2026"
+          const datePart = dateRaw.split(", ")[1]; // "1 April 2026"
           
-          if (isNaN(unixTimestamp)) {
-            invalidTimestampRows++;
-            skippedRows++;
-            console.log("⚠️ Invalid timestamp:", timestampRaw);
-            return;
-          }
+          // Extract time parts: "1:48:01 PM India Standard Time" -> "1:48:01 PM"
+          const timePart = timeRaw.replace(" India Standard Time", "").trim();
+          
+          // Parse and force timezone interpretation as UTC (ignore IST label)
+          // User enters times like "1:48 PM" and expects them to be treated as "13:48 UTC"
+          const combinedDateTime = `${datePart} ${timePart}`;
+          const localDate = new Date(combinedDateTime);
+          
+          // Convert local time components to UTC by forcing UTC interpretation
+          const timestamp = new Date(Date.UTC(
+            localDate.getFullYear(),
+            localDate.getMonth(),
+            localDate.getDate(),
+            localDate.getHours(),
+            localDate.getMinutes(),
+            localDate.getSeconds()
+          ));
 
-          // Convert Unix timestamp (seconds) to Date
-          // Note: Unix timestamps are in UTC, but if device records IST as Unix time,
-          // we need to adjust. In production (Cloud Run/UTC), use as-is.
-          // In local dev (IST), add IST offset (5:30) to align with user input times.
-          let timestamp: Date;
-          
-          if (process.env.ENV === 'production') {
-            // Production: timestamps are in UTC
-            timestamp = new Date(unixTimestamp * 1000);
-          } else {
-            // Local dev: add IST offset (5 hours 30 minutes = 19800 seconds)
-            timestamp = new Date((unixTimestamp + 19800) * 1000);
+          // Debug: Log first 3 parsed timestamps for comparison
+          if (totalRows <= 3) {
+            console.log(`🔍 Row ${totalRows}: dateRaw="${dateRaw}", timeRaw="${timeRaw}"`);
+            console.log(`   Combined: "${combinedDateTime}"`);
+            console.log(`   Parsed timestamp: ${timestamp.toISOString()}`);
+            console.log(`   Range: ${startTime.toISOString()} - ${endTime.toISOString()}`);
+            console.log(`   In range? ${timestamp >= startTime && timestamp <= endTime}`);
           }
 
           if (isNaN(timestamp.getTime())) {
             invalidTimestampRows++;
             skippedRows++;
+            console.log("⚠️ Invalid date/time:", dateRaw, timeRaw);
             return;
           }
 

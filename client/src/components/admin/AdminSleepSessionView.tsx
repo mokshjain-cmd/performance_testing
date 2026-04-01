@@ -261,7 +261,7 @@ const AdminSleepSessionView: React.FC<AdminSleepSessionViewProps> = ({ sessionId
                 </div>
                 
                 {/* Stats spread across full width */}
-                <div className="grid grid-cols-8 flex-1 gap-2 text-sm">
+                <div className="grid grid-cols-7 flex-1 gap-2 text-sm">
                   <div className="flex flex-col items-center gap-1">
                     <span className="text-gray-600 text-xs font-medium">Sleep Onset</span>
                     <span className="font-semibold text-gray-800 text-base">
@@ -302,12 +302,6 @@ const AdminSleepSessionView: React.FC<AdminSleepSessionViewProps> = ({ sessionId
                       {formatTime(sessionSummary.benchmark.awakeSec)} <span className="text-xs text-gray-500">({((sessionSummary.benchmark.awakeSec / sessionSummary.benchmark.timeInBedSec) * 100).toFixed(1)}%)</span>
                     </span>
                   </div>
-                  <div className="flex flex-col items-center gap-1">
-                    <span className="text-gray-600 text-xs font-medium">Efficiency</span>
-                    <span className="font-semibold text-gray-800 text-base">
-                      N/A
-                    </span>
-                  </div>
                 </div>
               </div>
             </div>
@@ -321,7 +315,7 @@ const AdminSleepSessionView: React.FC<AdminSleepSessionViewProps> = ({ sessionId
                 </div>
                 
                 {/* Stats spread across full width */}
-                <div className="grid grid-cols-8 flex-1 gap-2 text-sm">
+                <div className="grid grid-cols-7 flex-1 gap-2 text-sm">
                   <div className="flex flex-col items-center gap-1">
                     <span className="text-gray-600 text-xs font-medium">Onset Δ</span>
                     <span className="font-semibold text-gray-800 text-base">
@@ -392,12 +386,6 @@ const AdminSleepSessionView: React.FC<AdminSleepSessionViewProps> = ({ sessionId
                     }`}>
                       {sessionSummary.luna.awakeSec > sessionSummary.benchmark.awakeSec ? '+' : ''}
                       {formatTime(Math.abs(sessionSummary.luna.awakeSec - sessionSummary.benchmark.awakeSec))}
-                    </span>
-                  </div>
-                  <div className="flex flex-col items-center gap-1">
-                    <span className="text-gray-600 text-xs font-medium">-</span>
-                    <span className="font-semibold text-gray-800 text-base">
-                      -
                     </span>
                   </div>
                 </div>

@@ -256,8 +256,6 @@ Please do not reply to this email.
     try {
         //console.log('JWT Secret is set:', JWT_SECRET);
       const decoded = jwt.verify(token, JWT_SECRET) as TokenPayload;
-
-      console.log(`✅ Token verified for user: ${decoded.email}`);
       return decoded;
     } catch (error) {
       console.error('❌ Token verification failed:', error);

@@ -23,13 +23,10 @@ export const authenticateJWT = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    console.log('\n🔐 JWT Authentication');
-    
     // Extract token from Authorization header
     const authHeader = req.headers.authorization;
 
     if (!authHeader) {
-      console.log('❌ No authorization header');
       res.status(401).json({
         success: false,
         message: 'No authorization token provided'
@@ -41,7 +38,6 @@ export const authenticateJWT = async (
     const parts = authHeader.split(' ');
 
     if (parts.length !== 2 || parts[0] !== 'Bearer') {
-      console.log('❌ Invalid authorization header format');
       res.status(401).json({
         success: false,
         message: 'Invalid authorization header format. Expected: Bearer <token>'
@@ -55,15 +51,12 @@ export const authenticateJWT = async (
     const decoded = authService.verifyToken(token);
 
     if (!decoded) {
-      console.log('❌ Invalid or expired token');
       res.status(401).json({
         success: false,
         message: 'Invalid or expired token'
       });
       return;
     }
-
-    console.log(`✅ Token verified for user: ${decoded.email}`);
 
     // Fetch full user details
     const user = await User.findById(decoded.userId);
@@ -81,8 +74,6 @@ export const authenticateJWT = async (
     req.userId = decoded.userId;
     req.user = user;
     req.userRole = user.role;
-
-    console.log(`✅ User authenticated: ${user.email} (${user.role})`);
 
     next();
   } catch (error) {
