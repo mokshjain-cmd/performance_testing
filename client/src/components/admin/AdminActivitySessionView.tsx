@@ -371,11 +371,21 @@ const AdminActivitySessionView: React.FC<AdminActivitySessionViewProps> = ({ ses
                     sessionData.comparison.steps.bias > 0 ? 'text-red-600' : sessionData.comparison.steps.bias < 0 ? 'text-blue-600' : 'text-gray-500'
                   }`}>
                     {sessionData.comparison.steps.bias > 0 ? '+' : ''}{sessionData.comparison.steps.bias.toFixed(0)}
+                    {sessionData.benchmark.totalSteps > 0 && (
+                      <span className="text-xs ml-1">
+                        ({((sessionData.comparison.steps.bias / sessionData.benchmark.totalSteps) * 100).toFixed(2)}%)
+                      </span>
+                    )}
                   </td>
                   <td className={`px-6 py-4 whitespace-nowrap text-sm font-semibold ${
                     sessionData.comparison.distance.bias > 0 ? 'text-red-600' : sessionData.comparison.distance.bias < 0 ? 'text-blue-600' : 'text-gray-500'
                   }`}>
                     {sessionData.comparison.distance.bias > 0 ? '+' : ''}{(sessionData.comparison.distance.bias / 1000).toFixed(2)} km
+                    {sessionData.benchmark.totalDistance > 0 && (
+                      <span className="text-xs ml-1">
+                        ({((sessionData.comparison.distance.bias / sessionData.benchmark.totalDistance) * 100).toFixed(2)}%)
+                      </span>
+                    )}
                   </td>
                   {(sessionData.luna.totalCalories != null || sessionData.benchmark?.totalCalories != null) && (
                     <td className={`px-6 py-4 whitespace-nowrap text-sm font-semibold ${
@@ -384,7 +394,16 @@ const AdminActivitySessionView: React.FC<AdminActivitySessionViewProps> = ({ ses
                         : 'text-gray-400'
                     }`}>
                       {sessionData.comparison.calories?.bias != null 
-                        ? `${sessionData.comparison.calories.bias > 0 ? '+' : ''}${sessionData.comparison.calories.bias.toFixed(0)} kcal`
+                        ? (
+                          <>
+                            {sessionData.comparison.calories.bias > 0 ? '+' : ''}{sessionData.comparison.calories.bias.toFixed(0)} kcal
+                            {sessionData.benchmark.totalCalories != null && sessionData.benchmark.totalCalories > 0 && (
+                              <span className="text-xs ml-1">
+                                ({((sessionData.comparison.calories.bias / sessionData.benchmark.totalCalories) * 100).toFixed(2)}%)
+                              </span>
+                            )}
+                          </>
+                        )
                         : '--'}
                     </td>
                   )}
@@ -395,7 +414,16 @@ const AdminActivitySessionView: React.FC<AdminActivitySessionViewProps> = ({ ses
                         : 'text-gray-400'
                     }`}>
                       {sessionData.comparison.activeCalories?.bias != null
-                        ? `${sessionData.comparison.activeCalories.bias > 0 ? '+' : ''}${sessionData.comparison.activeCalories.bias.toFixed(0)} kcal`
+                        ? (
+                          <>
+                            {sessionData.comparison.activeCalories.bias > 0 ? '+' : ''}{sessionData.comparison.activeCalories.bias.toFixed(0)} kcal
+                            {sessionData.benchmark.caloriesActive != null && sessionData.benchmark.caloriesActive > 0 && (
+                              <span className="text-xs ml-1">
+                                ({((sessionData.comparison.activeCalories.bias / sessionData.benchmark.caloriesActive) * 100).toFixed(2)}%)
+                              </span>
+                            )}
+                          </>
+                        )
                         : '--'}
                     </td>
                   )}
@@ -406,7 +434,16 @@ const AdminActivitySessionView: React.FC<AdminActivitySessionViewProps> = ({ ses
                         : 'text-gray-400'
                     }`}>
                       {sessionData.comparison.basalCalories?.bias != null
-                        ? `${sessionData.comparison.basalCalories.bias > 0 ? '+' : ''}${sessionData.comparison.basalCalories.bias.toFixed(0)} kcal`
+                        ? (
+                          <>
+                            {sessionData.comparison.basalCalories.bias > 0 ? '+' : ''}{sessionData.comparison.basalCalories.bias.toFixed(0)} kcal
+                            {sessionData.benchmark.caloriesBasal != null && sessionData.benchmark.caloriesBasal > 0 && (
+                              <span className="text-xs ml-1">
+                                ({((sessionData.comparison.basalCalories.bias / sessionData.benchmark.caloriesBasal) * 100).toFixed(2)}%)
+                              </span>
+                            )}
+                          </>
+                        )
                         : '--'}
                     </td>
                   )}
