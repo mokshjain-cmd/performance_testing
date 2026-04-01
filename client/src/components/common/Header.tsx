@@ -31,7 +31,7 @@ const Header: React.FC<Props> = ({ isLoggedIn, onLogin, onLogout, onNavigate }) 
             <div className="h-6 w-px bg-gray-300 hidden sm:block"></div>
             
             <button
-              className="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100/80 hover:text-gray-900 transition-all duration-200 flex items-center gap-1.5"
+              className="px-3 py-1.5 rounded-lg text-sm font-medium text-red-700 hover:bg-red-50 hover:text-red-900 transition-all duration-200 flex items-center gap-1.5 border border-red-200"
               onClick={() => onNavigate('dashboard')}
             >
               {isAdmin ? <Shield size={16} /> : <LayoutDashboard size={16} />}

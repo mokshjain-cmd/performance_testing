@@ -26,12 +26,16 @@ export default function Layout({ children, fullWidth = false }: LayoutProps) {
   };
   const handleNavigate = (route: string) => {
     if (route === 'dashboard') {
-      // Navigate to appropriate dashboard based on role
+      // Navigate to appropriate dashboard based on role with page refresh
       const userRole = localStorage.getItem('userRole');
-      if (userRole === 'admin') {
-        navigate('/admin/dashboard');
+      const targetPath = userRole === 'admin' ? '/admin/dashboard' : '/dashboard';
+      
+      // If already on the dashboard, refresh the page
+      if (location.pathname === targetPath) {
+        window.location.reload();
       } else {
-        navigate('/dashboard');
+        // Navigate with full page load
+        window.location.href = targetPath;
       }
     } else if (route === 'create-session') {
       navigate('/session/new');
