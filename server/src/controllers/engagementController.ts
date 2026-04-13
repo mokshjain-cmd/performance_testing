@@ -9,13 +9,15 @@ import fs from 'fs/promises';
 export class EngagementController {
   
   /**
-   * Upload daily logs for processing
+   * Upload daily logs for processing (ASYNC - Returns immediately after validation)
    * POST /api/engagement/upload-logs
    * Body: multipart/form-data with files and user mappings (email instead of userId)
    * Expected format: 
    *   - files: array of log files
    *   - email_<fieldname>: user email for each file
    *   - date_<fieldname>: date for each file (optional, defaults to current date)
+   * 
+   * Processing happens in background - check server logs for results
    */
   async uploadLogs(req: Request, res: Response): Promise<void> {
     try {
@@ -31,70 +33,83 @@ export class EngagementController {
       }
       
       // Parse the uploaded files and user mappings
-      // Expected format: files array with metadata
-      const files = req.files as any; // Type depends on your multer setup
+      const files = req.files as any;
       
-      // Process each file
-      const results = [];
+      // Quick validation: Check users exist and metadata is present
+      const validatedFiles = [];
+      const rejectedFiles = [];
+      
       for (const file of Object.values(files)) {
-        try {
-          const fileData = file as any;
-          const email = req.body[`email_${fileData.fieldname}`];
-          const date = req.body[`date_${fileData.fieldname}`] || new Date();
-          
-          if (!email) {
-            results.push({
-              fileName: fileData.originalname,
-              status: 'failed',
-              error: 'Email not provided for this file'
-            });
-            continue;
-          }
-          
-          // Find user by email
-          const user = await User.findOne({ email: email.toLowerCase().trim() });
-          
-          if (!user) {
-            results.push({
-              fileName: fileData.originalname,
-              email,
-              status: 'failed',
-              error: `User not found with email: ${email}`
-            });
-            continue;
-          }
-          
-          console.log(`📝 Processing log file for user ${user.name} (${user.email}): ${fileData.path}`);
-          
-          // Process the log file with user's MongoDB ObjectId
-          await engagementService.processLogFile(
-            fileData.path,
-            user._id.toString(),
-            new Date(date)
-          );
-          
-          results.push({
+        const fileData = file as any;
+        const email = req.body[`email`];
+        const date = req.body[`date_${fileData.fieldname}`] || new Date();
+        
+        // Validate email provided
+        if (!email) {
+          rejectedFiles.push({
             fileName: fileData.originalname,
-            email: user.email,
-            userName: user.name,
-            userId: user._id,
-            status: 'success'
+            reason: 'Email not provided for this file'
           });
-        } catch (error: any) {
-          console.error(`❌ Error processing log file ${(file as any).originalname}:`, error);
-          results.push({
-            fileName: (file as any).originalname,
-            status: 'failed',
-            error: error.message
-          });
+          // Delete rejected file immediately
+          await fs.unlink(fileData.path).catch((err) => 
+            console.error(`Failed to delete rejected file: ${fileData.path}`, err)
+          );
+          continue;
         }
+        
+        // Verify user exists
+        const user = await User.findOne({ email: email.toLowerCase().trim() });
+        
+        if (!user) {
+          rejectedFiles.push({
+            fileName: fileData.originalname,
+            email,
+            reason: `User not found with email: ${email}`
+          });
+          // Delete rejected file immediately
+          await fs.unlink(fileData.path).catch((err) => 
+            console.error(`Failed to delete rejected file: ${fileData.path}`, err)
+          );
+          continue;
+        }
+        
+        // File is valid - add to processing queue
+        validatedFiles.push({
+          filePath: fileData.path,
+          fileName: fileData.originalname,
+          userId: user._id.toString(),
+          userName: user.name,
+          email: user.email,
+          date: new Date(date)
+        });
       }
       
-      res.status(200).json({
-        success: true,
-        message: 'Log upload completed',
-        results
+      // Return response immediately after validation
+      const allRejected = validatedFiles.length === 0;
+      const allAccepted = rejectedFiles.length === 0;
+      
+      res.status(allRejected ? 400 : 202).json({
+        success: !allRejected,
+        message: allRejected 
+          ? 'All files rejected. Please check validation errors.'
+          : allAccepted
+            ? 'All files accepted for processing. Processing will continue in background.'
+            : 'Some files accepted for processing. Check rejected files for errors.',
+        accepted: validatedFiles.length,
+        rejected: rejectedFiles.length,
+        acceptedFiles: validatedFiles.map(f => ({
+          fileName: f.fileName,
+          email: f.email,
+          userName: f.userName
+        })),
+        rejectedFiles: rejectedFiles,
+        note: allRejected ? 'Fix validation errors and retry' : 'Check server logs for processing results'
       });
+      
+      // Process files in background (fire-and-forget)
+      if (validatedFiles.length > 0) {
+        this.processFilesInBackground(validatedFiles);
+      }
       
     } catch (error: any) {
       console.error('❌ Error uploading logs:', error);
@@ -104,6 +119,55 @@ export class EngagementController {
         error: error.message
       });
     }
+  }
+  
+  /**
+   * Process files in background (async - no client response)
+   * Handles parsing, DB save, and file cleanup
+   */
+  private async processFilesInBackground(
+    files: Array<{
+      filePath: string;
+      fileName: string;
+      userId: string;
+      userName: string;
+      email: string;
+      date: Date;
+    }>
+  ): Promise<void> {
+    console.log(`🔄 Starting background processing for ${files.length} files`);
+    
+    for (const fileInfo of files) {
+      try {
+        console.log(`📝 Processing log file for user ${fileInfo.userName} (${fileInfo.email}): ${fileInfo.filePath}`);
+        
+        // Parse and save to database
+        await engagementService.processLogFile(
+          fileInfo.filePath,
+          fileInfo.userId,
+          fileInfo.date
+        );
+        
+        console.log(`✅ Successfully processed ${fileInfo.fileName} for ${fileInfo.email}`);
+        
+        // TODO: Upload to GCS for archival before deletion
+        // await storageService.uploadFile(fileInfo.filePath, `engagement-logs/${fileInfo.date}/${fileInfo.email}/`);
+        
+        // Delete the local file after successful processing
+        await fs.unlink(fileInfo.filePath);
+        console.log(`🗑️  Deleted local file: ${fileInfo.filePath}`);
+        
+      } catch (error: any) {
+        console.error(`❌ BACKGROUND PROCESSING FAILED for ${fileInfo.fileName} (${fileInfo.email}):`, error);
+        console.error(`   File path: ${fileInfo.filePath}`);
+        console.error(`   Error details:`, error.message);
+        
+        // Keep file for debugging if processing failed
+        console.warn(`⚠️  Keeping file for manual review: ${fileInfo.filePath}`);
+      }
+    }
+    
+    console.log(`🏁 Background processing completed for ${files.length} files`);
   }
   
   /**

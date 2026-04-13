@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { engagementController } from '../controllers/engagementController';
 import { authenticateJWT, requireRole } from '../middleware/auth.middleware';
+import { validateApiKey } from '../middleware/apiKey.middleware';
 import multer from 'multer';
 import path from 'path';
 
@@ -24,9 +25,10 @@ const upload = multer({
   }
 });
 
-// ============ PUBLIC ROUTES (No Auth Required) ============
+// ============ PUBLIC ROUTES (API Key Protected) ============
 // Upload logs endpoint (for app team to upload logs automatically)
-router.post('/upload-logs', upload.any(), engagementController.uploadLogs.bind(engagementController));
+// Requires X-API-Key header with valid API secret
+router.post('/upload-logs', validateApiKey, upload.any(), engagementController.uploadLogs.bind(engagementController));
 
 // ============ PROTECTED ROUTES (Admin Only) ============
 // Get engagement statistics (overview)

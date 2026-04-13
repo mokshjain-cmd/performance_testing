@@ -26,7 +26,8 @@ const axios = require('axios');
 
 // Configuration
 const API_URL = process.env.API_URL || 'http://localhost:8080';
-const AUTH_TOKEN = process.env.ADMIN_TOKEN || '';  // Set this in environment
+const AUTH_TOKEN = process.env.ADMIN_TOKEN || '';  // Legacy - kept for backward compatibility
+const API_SECRET = process.env.ENGAGEMENT_API_SECRET || '';  // API key for engagement uploads
 
 async function uploadLogs(logsDirectory, date) {
   try {
@@ -93,7 +94,7 @@ async function uploadLogs(logsDirectory, date) {
       {
         headers: {
           ...formData.getHeaders(),
-          'Authorization': `Bearer ${AUTH_TOKEN}`
+          'X-API-Key': API_SECRET
         },
         maxContentLength: Infinity,
         maxBodyLength: Infinity
@@ -202,12 +203,12 @@ if (args.length < 2) {
 
 const [logsDirectory, date] = args;
 
-if (!AUTH_TOKEN) {
-  console.error('❌ Error: ADMIN_TOKEN environment variable not set');
+if (!API_SECRET) {
+  console.error('❌ Error: ENGAGEMENT_API_SECRET environment variable not set');
   console.error('\nSet it with:');
-  console.error('   export ADMIN_TOKEN="your_token_here"');
+  console.error('   export ENGAGEMENT_API_SECRET="your_secret_key_here"');
   console.error('   # OR');
-  console.error('   ADMIN_TOKEN="your_token" node uploadLogs.js ...');
+  console.error('   ENGAGEMENT_API_SECRET="your_secret_key" node uploadLogs.js ...');
   console.error();
   process.exit(1);
 }
