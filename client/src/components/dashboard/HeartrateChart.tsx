@@ -35,6 +35,7 @@ const HeartRateChart: React.FC<Props> = ({ points, analysis, metric = 'HR' }) =>
       case 'Sleep': return 'sleep';
       case 'Calories': return 'calories';
       case 'Steps': return 'steps';
+      case 'SkinTemp': return 'skinTemp';
       default: return 'heartRate';
     }
   };
@@ -46,6 +47,7 @@ const HeartRateChart: React.FC<Props> = ({ points, analysis, metric = 'HR' }) =>
       case 'Sleep': return 'Sleep';
       case 'Calories': return 'Calories';
       case 'Steps': return 'Steps';
+      case 'SkinTemp': return 'Skin Temperature';
       default: return 'Heart Rate';
     }
   };
@@ -57,6 +59,7 @@ const HeartRateChart: React.FC<Props> = ({ points, analysis, metric = 'HR' }) =>
       case 'Sleep': return 'score';
       case 'Calories': return 'kcal';
       case 'Steps': return 'steps';
+      case 'SkinTemp': return '°C';
       default: return 'BPM';
     }
   };
@@ -64,7 +67,8 @@ const HeartRateChart: React.FC<Props> = ({ points, analysis, metric = 'HR' }) =>
   const metricField = getMetricField(metric);
   const metricLabel = getMetricLabel(metric);
   const metricUnit = getMetricUnit(metric);
-  const metricKey = metric.toLowerCase();
+  // Use camelCase for deviceStats lookup (skinTemp, not skintemp)
+  const metricKey = metric === 'SkinTemp' ? 'skinTemp' : metric.toLowerCase();
 
   const chartData = timestamps.map(ts => {
     const row: any = { timestamp: ts };

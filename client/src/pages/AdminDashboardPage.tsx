@@ -100,12 +100,14 @@ const AdminDashboardPage: React.FC = () => {
   // Fetch sessions for a specific user
   const fetchUserSessions = async (userId: string) => {
     try {
-      // Convert metric to backend format (hr -> HR, spo2 -> SPO2, sleep -> Sleep, activity -> Activity)
+      // Convert metric to backend format (hr -> HR, spo2 -> SPO2, sleep -> Sleep, activity -> Activity, skintemp -> SkinTemp)
       let metricParam = selectedMetric.toUpperCase();
       if (selectedMetric === 'sleep') {
         metricParam = 'Sleep';
       } else if (selectedMetric === 'activity') {
         metricParam = 'Activity';
+      } else if (selectedMetric === 'skintemp') {
+        metricParam = 'SkinTemp';
       }
       console.log('[Admin Dashboard] 🔍 Fetching sessions for user:', userId, 'metric:', metricParam);
       const res = await apiClient.get(`/sessions/user/${userId}/ids?metric=${metricParam}`);

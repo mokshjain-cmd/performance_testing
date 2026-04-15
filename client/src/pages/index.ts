@@ -9,3 +9,6 @@ export { AdminSleepDashboardPage } from './AdminSleepDashboardPage';
 export { AdminSleepSessionPage } from './AdminSleepSessionPage';
 export { ActivityOverviewPage } from './ActivityOverviewPage';
 export { AdminActivityDashboardPage } from './AdminActivityDashboardPage';
+export { SkinTempOverviewPage } from './SkinTempOverviewPage';
+export { SkinTempSessionPage } from './SkinTempSessionPage';
+export { AdminSkinTempDashboardPage } from './AdminSkinTempDashboardPage';

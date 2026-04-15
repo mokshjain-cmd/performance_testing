@@ -9,6 +9,23 @@ interface Props {
 }
 
 const AnalysisSection: React.FC<Props> = ({ analysis, isAdmin = false }) => {
+  // Get unit based on metric type
+  const getUnit = () => {
+    if (analysis?.metric === 'SkinTemp') return '°C';
+    if (analysis?.metric === 'SPO2') return '%';
+    return 'BPM';
+  };
+  const unit = getUnit();
+
+  // Get target thresholds based on metric
+  const getTargets = () => {
+    if (analysis?.metric === 'SkinTemp') {
+      return { mae: '0.5°C', rmse: '0.7°C', bias: '±0.3°C' };
+    }
+    return { mae: '5 BPM', rmse: '7 BPM', bias: '±2 BPM' };
+  };
+  const targets = getTargets();
+
   return (
     <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.06)] border border-gray-100/50 p-4 transition-all duration-300 hover:shadow-[0_12px_48px_rgba(0,0,0,0.08)]">
       <h2 className="mb-3 text-xl font-semibold text-gray-800">
@@ -37,13 +54,13 @@ const AnalysisSection: React.FC<Props> = ({ analysis, isAdmin = false }) => {
                     <div className="flex flex-col items-center gap-1">
                       <span className="text-gray-600 text-xs font-medium">MAE</span>
                       <span className="font-semibold text-gray-800 text-base">
-                        {pair.mae != null ? pair.mae.toFixed(2) : '--'} <span className="text-xs text-gray-500 font-normal">BPM</span>
+                        {pair.mae != null ? pair.mae.toFixed(2) : '--'} <span className="text-xs text-gray-500 font-normal">{unit}</span>
                       </span>
                     </div>
                     <div className="flex flex-col items-center gap-1">
                       <span className="text-gray-600 text-xs font-medium">RMSE</span>
                       <span className="font-semibold text-gray-800 text-base">
-                        {pair.rmse != null ? pair.rmse.toFixed(2) : '--'} <span className="text-xs text-gray-500 font-normal">BPM</span>
+                        {pair.rmse != null ? pair.rmse.toFixed(2) : '--'} <span className="text-xs text-gray-500 font-normal">{unit}</span>
                       </span>
                     </div>
                     <div className="flex flex-col items-center gap-1">
@@ -55,7 +72,7 @@ const AnalysisSection: React.FC<Props> = ({ analysis, isAdmin = false }) => {
                     <div className="flex flex-col items-center gap-1">
                       <span className="text-gray-600 text-xs font-medium">Mean Bias</span>
                       <span className="font-semibold text-gray-800 text-base">
-                        {pair.meanBias != null ? pair.meanBias.toFixed(2) : '--'} <span className="text-xs text-gray-500 font-normal">BPM</span>
+                        {pair.meanBias != null ? pair.meanBias.toFixed(2) : '--'} <span className="text-xs text-gray-500 font-normal">{unit}</span>
                       </span>
                     </div>
                   </div>
@@ -69,10 +86,10 @@ const AnalysisSection: React.FC<Props> = ({ analysis, isAdmin = false }) => {
             <div className="text-sm text-blue-800">
               <div className="font-semibold mb-2">How to Interpret Metrics:</div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                <div><span className="font-medium">MAE:</span> Mean Absolute Error (BPM) | Lower is better | Target: &lt;5 BPM</div>
-                <div><span className="font-medium">RMSE:</span> Root Mean Square Error (BPM) | Penalizes large spikes | Target: &lt;7 BPM</div>
+                <div><span className="font-medium">MAE:</span> Mean Absolute Error ({unit}) | Lower is better | Target: &lt;{targets.mae}</div>
+                <div><span className="font-medium">RMSE:</span> Root Mean Square Error ({unit}) | Penalizes large spikes | Target: &lt;{targets.rmse}</div>
                 <div><span className="font-medium">Pearson R:</span> Correlation (-1 to 1) | Higher is better | Target: &gt;0.9</div>
-                <div><span className="font-medium">Mean Bias:</span> Systematic error (BPM) | Closer to 0 is better | Target: ±2 BPM</div>
+                <div><span className="font-medium">Mean Bias:</span> Systematic error ({unit}) | Closer to 0 is better | Target: {targets.bias}</div>
               </div>
             </div>
           </div>

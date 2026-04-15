@@ -78,7 +78,8 @@ const FirmwarePerformanceTab: React.FC<FirmwarePerformanceTabProps> = ({ metric 
     }
   };
 
-  const isBetterValue = (metric: FirmwareMetric, value: number, otherValue: number) => {
+  const isBetterValue = (metric: FirmwareMetric, value: number | undefined, otherValue: number | undefined) => {
+    if (value === undefined || otherValue === undefined) return false;
     if (metric === 'avgPearson') {
       return value > otherValue;
     }
@@ -88,9 +89,13 @@ const FirmwarePerformanceTab: React.FC<FirmwarePerformanceTabProps> = ({ metric 
   const getBestPerformer = (metric: FirmwareMetric): string | null => {
     if (firmwareData.length === 0) return null;
     
-    let best = firmwareData[0];
-    for (const firmware of firmwareData) {
-      if (isBetterValue(metric, firmware.overallAccuracy[metric], best.overallAccuracy[metric])) {
+    // Filter to only firmware with valid overallAccuracy data for this metric
+    const validFirmware = firmwareData.filter(f => f.overallAccuracy?.[metric] !== undefined);
+    if (validFirmware.length === 0) return null;
+    
+    let best = validFirmware[0];
+    for (const firmware of validFirmware) {
+      if (isBetterValue(metric, firmware.overallAccuracy?.[metric], best.overallAccuracy?.[metric])) {
         best = firmware;
       }
     }
@@ -115,8 +120,8 @@ const FirmwarePerformanceTab: React.FC<FirmwarePerformanceTabProps> = ({ metric 
         aValue = sortKey === 'firmwareVersion' ? a.firmwareVersion : a.totalSessions;
         bValue = sortKey === 'firmwareVersion' ? b.firmwareVersion : b.totalSessions;
       } else {
-        aValue = a.overallAccuracy[sortKey];
-        bValue = b.overallAccuracy[sortKey];
+        aValue = a.overallAccuracy?.[sortKey] ?? 0;
+        bValue = b.overallAccuracy?.[sortKey] ?? 0;
       }
 
       if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
@@ -130,7 +135,7 @@ const FirmwarePerformanceTab: React.FC<FirmwarePerformanceTabProps> = ({ metric 
   const getBarChartData = () => {
     return firmwareData.map(fw => ({
       name: fw.firmwareVersion,
-      value: fw.overallAccuracy[selectedMetric],
+      value: fw.overallAccuracy?.[selectedMetric] ?? 0,
       sessions: fw.totalSessions,
     }));
   };
@@ -138,7 +143,7 @@ const FirmwarePerformanceTab: React.FC<FirmwarePerformanceTabProps> = ({ metric 
   const getTrendLineData = () => {
     return firmwareData.map(fw => ({
       version: fw.firmwareVersion,
-      value: fw.overallAccuracy[selectedMetric],
+      value: fw.overallAccuracy?.[selectedMetric] ?? 0,
     }));
   };
 

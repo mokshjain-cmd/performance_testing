@@ -47,6 +47,23 @@ interface AdminOverviewTabProps {
 }
 
 const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({ metric, subTab }) => {
+  // Get unit based on metric
+  const getUnit = () => {
+    if (metric === 'skintemp') return '°C';
+    if (metric === 'spo2') return '%';
+    return 'BPM';
+  };
+  const unit = getUnit();
+  
+  // Get target thresholds based on metric
+  const getTargets = () => {
+    if (metric === 'skintemp') {
+      return { mae: '0.5°C', rmse: '0.7°C', bias: '±0.3°C' };
+    }
+    return { mae: '5 BPM', rmse: '7 BPM', bias: '±2 BPM' };
+  };
+  const targets = getTargets();
+
   // Handle sleep metric separately with dedicated component
   if (metric === 'sleep') {
     return <AdminSleepOverviewTab subTab={subTab} />;
@@ -75,8 +92,8 @@ const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({ metric, subTab }) =
     setGlobalSummary(null);
     setDailyTrends([]);
     
-    // Convert metric to backend format (HR, SPO2)
-    const metricParam = metric === 'hr' ? 'HR' : 'SPO2';
+    // Convert metric to backend format (HR, SPO2, SkinTemp)
+    const metricParam = metric === 'hr' ? 'HR' : metric === 'spo2' ? 'SPO2' : 'SkinTemp';
     
     // Fetch global summary
     setLoading(true);
@@ -206,10 +223,10 @@ const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({ metric, subTab }) =
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600 font-medium">MAE</span>
                     <span className="text-lg font-semibold text-gray-800">
-                      {globalSummary.lunaStats.avgMAE != null ? globalSummary.lunaStats.avgMAE.toFixed(2) : '--'} <span className="text-sm text-gray-500">BPM</span>
+                      {globalSummary.lunaStats.avgMAE != null ? globalSummary.lunaStats.avgMAE.toFixed(2) : '--'} <span className="text-sm text-gray-500">{unit}</span>
                     </span>
                   </div>
-                  <p className="text-xs text-gray-500">Mean Absolute Error. Lower is better. Ideal: &lt;5 BPM</p>
+                  <p className="text-xs text-gray-500">Mean Absolute Error. Lower is better. Ideal: &lt;{targets.mae}</p>
                 </div>
               </Card>
               <Card>
@@ -217,10 +234,10 @@ const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({ metric, subTab }) =
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600 font-medium">RMSE</span>
                     <span className="text-lg font-semibold text-gray-800">
-                      {globalSummary.lunaStats.avgRMSE != null ? globalSummary.lunaStats.avgRMSE.toFixed(2) : '--'} <span className="text-sm text-gray-500">BPM</span>
+                      {globalSummary.lunaStats.avgRMSE != null ? globalSummary.lunaStats.avgRMSE.toFixed(2) : '--'} <span className="text-sm text-gray-500">{unit}</span>
                     </span>
                   </div>
-                  <p className="text-xs text-gray-500">Penalizes large spikes. Lower is better. Ideal: &lt;7 BPM</p>
+                  <p className="text-xs text-gray-500">Penalizes large spikes. Lower is better. Ideal: &lt;{targets.rmse}</p>
                 </div>
               </Card>
               <Card>
@@ -250,10 +267,10 @@ const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({ metric, subTab }) =
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600 font-medium">Mean Bias</span>
                     <span className="text-lg font-semibold text-gray-800">
-                      {globalSummary.lunaStats.avgBias != null ? globalSummary.lunaStats.avgBias.toFixed(2) : '--'} <span className="text-sm text-gray-500">BPM</span>
+                      {globalSummary.lunaStats.avgBias != null ? globalSummary.lunaStats.avgBias.toFixed(2) : '--'} <span className="text-sm text-gray-500">{unit}</span>
                     </span>
                   </div>
-                  <p className="text-xs text-gray-500">Systematic error. Closer to 0 is better. Ideal: ±2 BPM</p>
+                  <p className="text-xs text-gray-500">Systematic error. Closer to 0 is better. Ideal: {targets.bias}</p>
                 </div>
               </Card>
             </div>

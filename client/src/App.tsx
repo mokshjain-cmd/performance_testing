@@ -10,7 +10,10 @@ import {
   AdminSleepDashboardPage,
   AdminSleepSessionPage,
   ActivityOverviewPage,
-  AdminActivityDashboardPage
+  AdminActivityDashboardPage,
+  SkinTempOverviewPage,
+  SkinTempSessionPage,
+  AdminSkinTempDashboardPage
 } from './pages';
 import SignUpPage from './pages/SignUpPage';
 import FirmwareConfigPage from './pages/FirmwareConfigPage';
@@ -53,6 +56,13 @@ function App() {
           </AdminRoute>
         } />
         
+        {/* Admin SkinTemp Dashboard - Only accessible by admins */}
+        <Route path="/admin/skintemp" element={
+          <AdminRoute>
+            <AdminSkinTempDashboardPage />
+          </AdminRoute>
+        } />
+        
         {/* Admin Firmware Configuration - Only accessible by admins */}
         <Route path="/admin/firmware-config" element={
           <AdminRoute>
@@ -92,6 +102,20 @@ function App() {
         <Route path="/activity" element={
           <ProtectedRoute>
             <ActivityOverviewPage />
+          </ProtectedRoute>
+        } />
+        
+        {/* User SkinTemp Overview - Available to authenticated users */}
+        <Route path="/skintemp" element={
+          <ProtectedRoute>
+            <SkinTempOverviewPage />
+          </ProtectedRoute>
+        } />
+        
+        {/* User SkinTemp Session - Available to authenticated users */}
+        <Route path="/skintemp/session/:sessionId" element={
+          <ProtectedRoute>
+            <SkinTempSessionPage />
           </ProtectedRoute>
         } />
         

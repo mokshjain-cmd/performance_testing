@@ -57,7 +57,8 @@ const BenchmarkComparisonTab: React.FC<BenchmarkComparisonTabProps> = ({ metric 
     }
   };
 
-  const isBetterValue = (metric: BenchmarkMetric, value: number, otherValue: number) => {
+  const isBetterValue = (metric: BenchmarkMetric, value: number | undefined, otherValue: number | undefined) => {
+    if (value === undefined || otherValue === undefined) return false;
     if (metric === 'avgPearson') {
       return value > otherValue; // Higher is better
     }
@@ -67,9 +68,13 @@ const BenchmarkComparisonTab: React.FC<BenchmarkComparisonTabProps> = ({ metric 
   const getBestPerformer = (metric: BenchmarkMetric): string | null => {
     if (benchmarkComparisons.length === 0) return null;
     
-    let best = benchmarkComparisons[0];
-    for (const comp of benchmarkComparisons) {
-      if (isBetterValue(metric, comp.hrStats[metric], best.hrStats[metric])) {
+    // Filter to only comparisons with valid hrStats for this metric
+    const validComps = benchmarkComparisons.filter(c => c.hrStats?.[metric] !== undefined);
+    if (validComps.length === 0) return null;
+    
+    let best = validComps[0];
+    for (const comp of validComps) {
+      if (isBetterValue(metric, comp.hrStats?.[metric], best.hrStats?.[metric])) {
         best = comp;
       }
     }
@@ -79,7 +84,7 @@ const BenchmarkComparisonTab: React.FC<BenchmarkComparisonTabProps> = ({ metric 
   const getBenchmarkChartData = () => {
     return benchmarkComparisons.map(comp => ({
       name: comp.benchmarkDeviceType.charAt(0).toUpperCase() + comp.benchmarkDeviceType.slice(1),
-      value: comp.hrStats[selectedBenchmarkMetric],
+      value: comp.hrStats?.[selectedBenchmarkMetric] ?? 0,
       sessions: comp.totalSessions,
     }));
   };

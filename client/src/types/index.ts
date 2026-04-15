@@ -33,7 +33,7 @@ export interface Session {
   _id: string;
   userId: User;
   activityType: string;
-  metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity';
+  metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity' | 'SkinTemp';
   startTime: string;
   endTime: string;
   durationSec: number;
@@ -93,6 +93,14 @@ export interface DeviceStats {
     stdDev: number;
     range: number;
   };
+  skinTemp?: {
+    min: number;
+    max: number;
+    avg: number;
+    median: number;
+    stdDev: number;
+    range: number;
+  };
 }
 
 export interface BlandAltmanData {
@@ -121,7 +129,7 @@ export interface Analysis {
   sessionId: string;
   userId: string;
   activityType: string;
-  metric?: 'HR' | 'SPO2' | 'Sleep' | 'Activity';
+  metric?: 'HR' | 'SPO2' | 'Sleep' | 'Activity' | 'SkinTemp';
   startTime: string;
   endTime: string;
   deviceStats: DeviceStats[];

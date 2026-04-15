@@ -27,6 +27,17 @@ const AdminSessionView: React.FC<AdminSessionViewProps> = ({ sessionId, userId: 
     return <AdminActivitySessionView sessionId={sessionId} />;
   }
 
+  // Handle skintemp metric - use the user SkinTempSessionPage component
+  if (metric === 'skintemp') {
+    // Import dynamically to avoid circular dependencies
+    const SkinTempSessionPage = React.lazy(() => import('../../pages/SkinTempSessionPage').then(m => ({ default: m.SkinTempSessionPage })));
+    return (
+      <React.Suspense fallback={<div className="flex items-center justify-center h-64"><div className="text-lg text-gray-600">Loading...</div></div>}>
+        <SkinTempSessionPage sessionId={sessionId} />
+      </React.Suspense>
+    );
+  }
+
   const [sessionDetails, setSessionDetails] = useState<SessionFullDetails | null>(null);
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);

@@ -60,6 +60,7 @@ const AdminUserView: React.FC<AdminUserViewProps> = ({ userId, metric }) => {
     return <AdminActivityUserView userId={userId} />;
   }
 
+  // For HR, SPO2, and SkinTemp - use the same user summary view
   const [userSummary, setUserSummary] = useState<UserSummary | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -67,7 +68,11 @@ const AdminUserView: React.FC<AdminUserViewProps> = ({ userId, metric }) => {
     // TODO: Fetch user summary data
     // API: GET /api/users/summary/{userId}
     setLoading(true);
-    const metricParam = metric === 'hr' ? 'HR' : 'SPO2';
+    // Convert metric to backend format (hr -> HR, spo2 -> SPO2, skintemp -> SkinTemp)
+    let metricParam = metric.toUpperCase();
+    if (metric === 'skintemp') {
+      metricParam = 'SkinTemp';
+    }
     apiClient.get(`/users/summary/${userId}?metric=${metricParam}`)
       .then(res => {
         setUserSummary(res.data.summary);
@@ -102,6 +107,23 @@ const AdminUserView: React.FC<AdminUserViewProps> = ({ userId, metric }) => {
       return 'text-gray-800';
   }
 };
+
+  // Get unit based on metric type
+  const getUnit = () => {
+    if (metric === 'skintemp') return '°C';
+    if (metric === 'spo2') return '%';
+    return 'BPM';
+  };
+  const unit = getUnit();
+  
+  // Get target thresholds based on metric
+  const getTargets = () => {
+    if (metric === 'skintemp') {
+      return { mae: '0.5°C' };
+    }
+    return { mae: '5 BPM' };
+  };
+  const targets = getTargets();
 
   if (loading) {
     return (
@@ -154,10 +176,10 @@ const AdminUserView: React.FC<AdminUserViewProps> = ({ userId, metric }) => {
             <p className="text-sm text-gray-500 uppercase tracking-wide">Avg MAE</p>
             <p className={`text-3xl font-bold ${getMetricColor(userSummary.overallAccuracy?.avgMAE, 'mae')}`}>
               {userSummary.overallAccuracy?.avgMAE != null
-                ? `${userSummary.overallAccuracy.avgMAE.toFixed(2)} BPM`
+                ? `${userSummary.overallAccuracy.avgMAE.toFixed(2)} ${unit}`
                 : '--'}
             </p>
-            <p className="text-xs text-gray-500">Mean Absolute Error | Lower is better | Target: &lt;5 BPM</p>
+            <p className="text-xs text-gray-500">Mean Absolute Error | Lower is better | Target: &lt;{targets.mae}</p>
           </div>
         </Card>
 
