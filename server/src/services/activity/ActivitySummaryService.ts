@@ -61,20 +61,26 @@ export class ActivitySummaryService {
       }
 
       // Calculate aggregates
+      // Counters for Luna data (all sessions with Luna totals)
+      let lunaStepsSum = 0;
+      let lunaStepsCount = 0;
+      let lunaDistanceSum = 0;
+      let lunaDistanceCount = 0;
+      let lunaCaloriesSum = 0;
+      let lunaCaloriesCount = 0;
+
+      // Counters for comparison data (sessions with benchmark comparison)
       let stepsAccuracySum = 0;
       let stepsBiasSum = 0;
-      let stepsCount = 0;
-      let lunaStepsSum = 0;
+      let stepsComparisonCount = 0;
 
       let distanceAccuracySum = 0;
       let distanceBiasSum = 0;
-      let distanceCount = 0;
-      let lunaDistanceSum = 0;
+      let distanceComparisonCount = 0;
 
       let caloriesAccuracySum = 0;
       let caloriesBiasSum = 0;
-      let caloriesCount = 0;
-      let lunaCaloriesSum = 0;
+      let caloriesComparisonCount = 0;
 
       let activeCaloriesAccuracySum = 0;
       let activeCaloriesBiasSum = 0;
@@ -93,85 +99,112 @@ export class ActivitySummaryService {
 
         // Steps stats
         if (activityStats.steps) {
-          stepsAccuracySum += activityStats.steps.accuracyPercent || 0;
-          stepsBiasSum += activityStats.steps.bias || 0;
-          lunaStepsSum += activityStats.steps.lunaTotal || 0;
-          stepsCount++;
-
-          // Track best/worst by steps accuracy
-          const accuracyPercent = activityStats.steps.accuracyPercent || 0;
-          if (!bestSession || accuracyPercent > (bestSession.accuracyPercent || 0)) {
-            bestSession = {
-              sessionId: analysis.sessionId,
-              activityType: analysis.activityType,
-              accuracyPercent,
-            };
+          // Always count Luna totals if present
+          if (activityStats.steps.lunaTotal !== undefined) {
+            lunaStepsSum += activityStats.steps.lunaTotal;
+            lunaStepsCount++;
           }
-          if (!worstSession || accuracyPercent < (worstSession.accuracyPercent || 100)) {
-            worstSession = {
-              sessionId: analysis.sessionId,
-              activityType: analysis.activityType,
-              accuracyPercent,
-            };
+
+          // Only count comparison metrics if benchmark was present
+          if (activityStats.steps.accuracyPercent !== undefined) {
+            stepsAccuracySum += activityStats.steps.accuracyPercent;
+            stepsBiasSum += activityStats.steps.bias || 0;
+            stepsComparisonCount++;
+
+            // Track best/worst by steps accuracy (only for sessions with comparison)
+            const accuracyPercent = activityStats.steps.accuracyPercent;
+            if (!bestSession || accuracyPercent > (bestSession.accuracyPercent || 0)) {
+              bestSession = {
+                sessionId: analysis.sessionId,
+                activityType: analysis.activityType,
+                accuracyPercent,
+              };
+            }
+            if (!worstSession || accuracyPercent < (worstSession.accuracyPercent || 100)) {
+              worstSession = {
+                sessionId: analysis.sessionId,
+                activityType: analysis.activityType,
+                accuracyPercent,
+              };
+            }
           }
         }
 
         // Distance stats
         if (activityStats.distance) {
-          distanceAccuracySum += activityStats.distance.accuracyPercent || 0;
-          distanceBiasSum += activityStats.distance.bias || 0;
-          lunaDistanceSum += activityStats.distance.lunaMeters || 0;
-          distanceCount++;
+          // Always count Luna totals if present
+          if (activityStats.distance.lunaMeters !== undefined) {
+            lunaDistanceSum += activityStats.distance.lunaMeters;
+            lunaDistanceCount++;
+          }
+
+          // Only count comparison metrics if benchmark was present
+          if (activityStats.distance.accuracyPercent !== undefined) {
+            distanceAccuracySum += activityStats.distance.accuracyPercent;
+            distanceBiasSum += activityStats.distance.bias || 0;
+            distanceComparisonCount++;
+          }
         }
 
         // Calories stats
         if (activityStats.calories) {
-          caloriesAccuracySum += activityStats.calories.accuracyPercent || 0;
-          caloriesBiasSum += activityStats.calories.bias || 0;
-          lunaCaloriesSum += activityStats.calories.lunaTotal || 0;
-          caloriesCount++;
+          // Always count Luna totals if present
+          if (activityStats.calories.lunaTotal !== undefined) {
+            lunaCaloriesSum += activityStats.calories.lunaTotal;
+            lunaCaloriesCount++;
+          }
+
+          // Only count comparison metrics if benchmark was present
+          if (activityStats.calories.accuracyPercent !== undefined) {
+            caloriesAccuracySum += activityStats.calories.accuracyPercent;
+            caloriesBiasSum += activityStats.calories.bias || 0;
+            caloriesComparisonCount++;
+          }
         }
 
         // Active calories stats
-        if (activityStats.activeCalories) {
-          activeCaloriesAccuracySum += activityStats.activeCalories.accuracyPercent || 0;
+        if (activityStats.activeCalories && activityStats.activeCalories.accuracyPercent !== undefined) {
+          activeCaloriesAccuracySum += activityStats.activeCalories.accuracyPercent;
           activeCaloriesBiasSum += activityStats.activeCalories.bias || 0;
           activeCaloriesCount++;
         }
 
         // Basal calories stats
-        if (activityStats.basalCalories) {
-          basalCaloriesAccuracySum += activityStats.basalCalories.accuracyPercent || 0;
+        if (activityStats.basalCalories && activityStats.basalCalories.accuracyPercent !== undefined) {
+          basalCaloriesAccuracySum += activityStats.basalCalories.accuracyPercent;
           basalCaloriesBiasSum += activityStats.basalCalories.bias || 0;
           basalCaloriesCount++;
         }
       });
 
       // Build activityOverview object
+      // Luna averages use Luna session counts; accuracy averages use comparison session counts
       const activityOverview: any = {
-        avgDailySteps: stepsCount > 0 ? Math.round(lunaStepsSum / stepsCount) : 0,
-        avgDailyDistance: distanceCount > 0 ? Math.round(lunaDistanceSum / distanceCount) : 0,
-        avgDailyCalories: caloriesCount > 0 ? Math.round(lunaCaloriesSum / caloriesCount) : 0,
+        avgDailySteps: lunaStepsCount > 0 ? Math.round(lunaStepsSum / lunaStepsCount) : 0,
+        avgDailyDistance: lunaDistanceCount > 0 ? Math.round(lunaDistanceSum / lunaDistanceCount) : 0,
+        avgDailyCalories: lunaCaloriesCount > 0 ? Math.round(lunaCaloriesSum / lunaCaloriesCount) : 0,
+        totalLunaSessions: analyses.length,
+        totalComparisonSessions: stepsComparisonCount,
       };
 
-      if (stepsCount > 0) {
+      if (stepsComparisonCount > 0) {
         activityOverview.steps = {
-          avgAccuracyPercent: Math.round((stepsAccuracySum / stepsCount) * 100) / 100,
-          avgDifference: Math.round(stepsBiasSum / stepsCount),
+          avgAccuracyPercent: Math.round((stepsAccuracySum / stepsComparisonCount) * 100) / 100,
+          avgDifference: Math.round(stepsBiasSum / stepsComparisonCount),
         };
       }
 
-      if (distanceCount > 0) {
+      if (distanceComparisonCount > 0) {
         activityOverview.distance = {
-          avgAccuracyPercent: Math.round((distanceAccuracySum / distanceCount) * 100) / 100,
-          avgDifference: Math.round(distanceBiasSum / distanceCount),
+          avgAccuracyPercent: Math.round((distanceAccuracySum / distanceComparisonCount) * 100) / 100,
+          avgDifference: Math.round(distanceBiasSum / distanceComparisonCount),
         };
       }
 
-      if (caloriesCount > 0) {
+      if (caloriesComparisonCount > 0) {
         activityOverview.calories = {
-          avgAccuracyPercent: Math.round((caloriesAccuracySum / caloriesCount) * 100) / 100,
-          avgDifference: Math.round(caloriesBiasSum / caloriesCount),
+          avgAccuracyPercent: Math.round((caloriesAccuracySum / caloriesComparisonCount) * 100) / 100,
+          avgDifference: Math.round(caloriesBiasSum / caloriesComparisonCount),
         };
       }
 
@@ -266,32 +299,33 @@ export class ActivitySummaryService {
         const activityStats = analysis.activityStats;
         if (!activityStats) return;
 
-        if (activityStats.steps) {
-          stepsAccuracySum += activityStats.steps.accuracyPercent || 0;
+        // Only count sessions with comparison data (accuracyPercent exists)
+        if (activityStats.steps && activityStats.steps.accuracyPercent !== undefined) {
+          stepsAccuracySum += activityStats.steps.accuracyPercent;
           stepsBiasSum += activityStats.steps.bias || 0;
           stepsCount++;
         }
 
-        if (activityStats.distance) {
-          distanceAccuracySum += activityStats.distance.accuracyPercent || 0;
+        if (activityStats.distance && activityStats.distance.accuracyPercent !== undefined) {
+          distanceAccuracySum += activityStats.distance.accuracyPercent;
           distanceBiasSum += activityStats.distance.bias || 0;
           distanceCount++;
         }
 
-        if (activityStats.calories) {
-          caloriesAccuracySum += activityStats.calories.accuracyPercent || 0;
+        if (activityStats.calories && activityStats.calories.accuracyPercent !== undefined) {
+          caloriesAccuracySum += activityStats.calories.accuracyPercent;
           caloriesBiasSum += activityStats.calories.bias || 0;
           caloriesCount++;
         }
 
-        if (activityStats.activeCalories) {
-          activeCaloriesAccuracySum += activityStats.activeCalories.accuracyPercent || 0;
+        if (activityStats.activeCalories && activityStats.activeCalories.accuracyPercent !== undefined) {
+          activeCaloriesAccuracySum += activityStats.activeCalories.accuracyPercent;
           activeCaloriesBiasSum += activityStats.activeCalories.bias || 0;
           activeCaloriesCount++;
         }
 
-        if (activityStats.basalCalories) {
-          basalCaloriesAccuracySum += activityStats.basalCalories.accuracyPercent || 0;
+        if (activityStats.basalCalories && activityStats.basalCalories.accuracyPercent !== undefined) {
+          basalCaloriesAccuracySum += activityStats.basalCalories.accuracyPercent;
           basalCaloriesBiasSum += activityStats.basalCalories.bias || 0;
           basalCaloriesCount++;
         }
@@ -377,18 +411,18 @@ export class ActivitySummaryService {
         return;
       }
 
-      // Calculate aggregates
+      // Calculate aggregates (only sessions with comparison data)
       let stepsAccuracySum = 0;
       let stepBiasSum = 0;
-      let stepsCount = 0;
+      let stepsComparisonCount = 0;
 
       let distanceAccuracySum = 0;
       let distanceBiasSum = 0;
-      let distanceCount = 0;
+      let distanceComparisonCount = 0;
 
       let calorieAccuracySum = 0;
       let calorieBiasSum = 0;
-      let caloriesCount = 0;
+      let caloriesComparisonCount = 0;
 
       let activeCaloriesAccuracySum = 0;
       let activeCaloriesBiasSum = 0;
@@ -402,58 +436,59 @@ export class ActivitySummaryService {
         const activityStats = analysis.activityStats;
         if (!activityStats) return;
 
-        if (activityStats.steps) {
-          stepsAccuracySum += activityStats.steps.accuracyPercent || 0;
+        // Only count sessions with comparison data (accuracyPercent exists)
+        if (activityStats.steps && activityStats.steps.accuracyPercent !== undefined) {
+          stepsAccuracySum += activityStats.steps.accuracyPercent;
           stepBiasSum += activityStats.steps.bias || 0;
-          stepsCount++;
+          stepsComparisonCount++;
         }
 
-        if (activityStats.distance) {
-          distanceAccuracySum += activityStats.distance.accuracyPercent || 0;
+        if (activityStats.distance && activityStats.distance.accuracyPercent !== undefined) {
+          distanceAccuracySum += activityStats.distance.accuracyPercent;
           distanceBiasSum += activityStats.distance.bias || 0;
-          distanceCount++;
+          distanceComparisonCount++;
         }
 
-        if (activityStats.calories) {
-          calorieAccuracySum += activityStats.calories.accuracyPercent || 0;
+        if (activityStats.calories && activityStats.calories.accuracyPercent !== undefined) {
+          calorieAccuracySum += activityStats.calories.accuracyPercent;
           calorieBiasSum += activityStats.calories.bias || 0;
-          caloriesCount++;
+          caloriesComparisonCount++;
         }
 
-        if (activityStats.activeCalories) {
-          activeCaloriesAccuracySum += activityStats.activeCalories.accuracyPercent || 0;
+        if (activityStats.activeCalories && activityStats.activeCalories.accuracyPercent !== undefined) {
+          activeCaloriesAccuracySum += activityStats.activeCalories.accuracyPercent;
           activeCaloriesBiasSum += activityStats.activeCalories.bias || 0;
           activeCaloriesCount++;
         }
 
-        if (activityStats.basalCalories) {
-          basalCaloriesAccuracySum += activityStats.basalCalories.accuracyPercent || 0;
+        if (activityStats.basalCalories && activityStats.basalCalories.accuracyPercent !== undefined) {
+          basalCaloriesAccuracySum += activityStats.basalCalories.accuracyPercent;
           basalCaloriesBiasSum += activityStats.basalCalories.bias || 0;
           basalCaloriesCount++;
         }
       });
 
-      // Build activityStats object
+      // Build activityStats object (only from sessions with comparison data)
       const activityStats: any = {};
 
-      if (stepsCount > 0) {
+      if (stepsComparisonCount > 0) {
         activityStats.steps = {
-          avgAccuracyPercent: Math.round((stepsAccuracySum / stepsCount) * 100) / 100,
-          avgDifference: Math.round(stepBiasSum / stepsCount),
+          avgAccuracyPercent: Math.round((stepsAccuracySum / stepsComparisonCount) * 100) / 100,
+          avgDifference: Math.round(stepBiasSum / stepsComparisonCount),
         };
       }
 
-      if (distanceCount > 0) {
+      if (distanceComparisonCount > 0) {
         activityStats.distance = {
-          avgAccuracyPercent: Math.round((distanceAccuracySum / distanceCount) * 100) / 100,
-          avgDifference: Math.round(distanceBiasSum / distanceCount),
+          avgAccuracyPercent: Math.round((distanceAccuracySum / distanceComparisonCount) * 100) / 100,
+          avgDifference: Math.round(distanceBiasSum / distanceComparisonCount),
         };
       }
 
-      if (caloriesCount > 0) {
+      if (caloriesComparisonCount > 0) {
         activityStats.calories = {
-          avgAccuracyPercent: Math.round((calorieAccuracySum / caloriesCount) * 100) / 100,
-          avgDifference: Math.round(calorieBiasSum / caloriesCount),
+          avgAccuracyPercent: Math.round((calorieAccuracySum / caloriesComparisonCount) * 100) / 100,
+          avgDifference: Math.round(calorieBiasSum / caloriesComparisonCount),
         };
       }
 
@@ -537,18 +572,18 @@ export class ActivitySummaryService {
         return;
       }
 
-      // Calculate aggregates
+      // Calculate aggregates (only sessions with comparison data)
       let stepsAccuracySum = 0;
       let stepBiasSum = 0;
-      let stepsCount = 0;
+      let stepsComparisonCount = 0;
 
       let distanceAccuracySum = 0;
       let distanceBiasSum = 0;
-      let distanceCount = 0;
+      let distanceComparisonCount = 0;
 
       let calorieAccuracySum = 0;
       let calorieBiasSum = 0;
-      let caloriesCount = 0;
+      let caloriesComparisonCount = 0;
 
       let activeCaloriesAccuracySum = 0;
       let activeCaloriesBiasSum = 0;
@@ -562,58 +597,59 @@ export class ActivitySummaryService {
         const activityStats = analysis.activityStats;
         if (!activityStats) return;
 
-        if (activityStats.steps) {
-          stepsAccuracySum += activityStats.steps.accuracyPercent || 0;
+        // Only count sessions with comparison data (accuracyPercent exists)
+        if (activityStats.steps && activityStats.steps.accuracyPercent !== undefined) {
+          stepsAccuracySum += activityStats.steps.accuracyPercent;
           stepBiasSum += activityStats.steps.bias || 0;
-          stepsCount++;
+          stepsComparisonCount++;
         }
 
-        if (activityStats.distance) {
-          distanceAccuracySum += activityStats.distance.accuracyPercent || 0;
+        if (activityStats.distance && activityStats.distance.accuracyPercent !== undefined) {
+          distanceAccuracySum += activityStats.distance.accuracyPercent;
           distanceBiasSum += activityStats.distance.bias || 0;
-          distanceCount++;
+          distanceComparisonCount++;
         }
 
-        if (activityStats.calories) {
-          calorieAccuracySum += activityStats.calories.accuracyPercent || 0;
+        if (activityStats.calories && activityStats.calories.accuracyPercent !== undefined) {
+          calorieAccuracySum += activityStats.calories.accuracyPercent;
           calorieBiasSum += activityStats.calories.bias || 0;
-          caloriesCount++;
+          caloriesComparisonCount++;
         }
 
-        if (activityStats.activeCalories) {
-          activeCaloriesAccuracySum += activityStats.activeCalories.accuracyPercent || 0;
+        if (activityStats.activeCalories && activityStats.activeCalories.accuracyPercent !== undefined) {
+          activeCaloriesAccuracySum += activityStats.activeCalories.accuracyPercent;
           activeCaloriesBiasSum += activityStats.activeCalories.bias || 0;
           activeCaloriesCount++;
         }
 
-        if (activityStats.basalCalories) {
-          basalCaloriesAccuracySum += activityStats.basalCalories.accuracyPercent || 0;
+        if (activityStats.basalCalories && activityStats.basalCalories.accuracyPercent !== undefined) {
+          basalCaloriesAccuracySum += activityStats.basalCalories.accuracyPercent;
           basalCaloriesBiasSum += activityStats.basalCalories.bias || 0;
           basalCaloriesCount++;
         }
       });
 
-      // Build activityStats object
+      // Build activityStats object (only from sessions with comparison data)
       const activityStats: any = {};
 
-      if (stepsCount > 0) {
+      if (stepsComparisonCount > 0) {
         activityStats.steps = {
-          avgAccuracyPercent: Math.round((stepsAccuracySum / stepsCount) * 100) / 100,
-          avgDifference: Math.round(stepBiasSum / stepsCount),
+          avgAccuracyPercent: Math.round((stepsAccuracySum / stepsComparisonCount) * 100) / 100,
+          avgDifference: Math.round(stepBiasSum / stepsComparisonCount),
         };
       }
 
-      if (distanceCount > 0) {
+      if (distanceComparisonCount > 0) {
         activityStats.distance = {
-          avgAccuracyPercent: Math.round((distanceAccuracySum / distanceCount) * 100) / 100,
-          avgDifference: Math.round(distanceBiasSum / distanceCount),
+          avgAccuracyPercent: Math.round((distanceAccuracySum / distanceComparisonCount) * 100) / 100,
+          avgDifference: Math.round(distanceBiasSum / distanceComparisonCount),
         };
       }
 
-      if (caloriesCount > 0) {
+      if (caloriesComparisonCount > 0) {
         activityStats.calories = {
-          avgAccuracyPercent: Math.round((calorieAccuracySum / caloriesCount) * 100) / 100,
-          avgDifference: Math.round(calorieBiasSum / caloriesCount),
+          avgAccuracyPercent: Math.round((calorieAccuracySum / caloriesComparisonCount) * 100) / 100,
+          avgDifference: Math.round(calorieBiasSum / caloriesComparisonCount),
         };
       }
 

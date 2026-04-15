@@ -9,6 +9,7 @@ import { SleepAnalysisService } from '../services/sleep/SleepAnalysisService';
 import { IngestActivityService } from '../services/activity/IngestActivityService';
 import { ActivityAnalysisService } from '../services/activity/ActivityAnalysisService';
 import { ActivitySummaryService } from '../services/activity/ActivitySummaryService';
+import { ingestSkinTempSessionFiles } from '../services/ingestSkinTempSession.service';
 import { deleteSession as deleteSessionService } from '../services/sessionDeletion.service';
 import storageService from '../services/storage.service';
 import { updateAdminGlobalSummary } from '../services/adminGlobalSummary.service';
@@ -88,7 +89,7 @@ export const createSession = async (
     }
 
     // Validate metric value
-    const validMetrics = ['HR', 'SPO2', 'Sleep', 'Activity'];
+    const validMetrics = ['HR', 'SPO2', 'Sleep', 'Activity', 'SkinTemp', 'Stress'];
     if (!validMetrics.includes(metric)) {
       res.status(400).json({
         success: false,
@@ -135,8 +136,8 @@ export const createSession = async (
       
       // End time: Activity day at 23:59:59
       end = new Date(Date.UTC(year, month - 1, day, 23, 59, 59));
-    } else if ((metric === 'HR' || metric === 'SPO2') && activityType === 'daily' && dailyDate) {
-      // For HR/SPO2 daily monitoring sessions
+    } else if ((metric === 'HR' || metric === 'SPO2' || metric === 'SkinTemp') && activityType === 'daily' && dailyDate) {
+      // For HR/SPO2/SkinTemp daily monitoring sessions
       // Parse the daily date (e.g., "2026-03-09")
       const [year, month, day] = dailyDate.split("-").map(Number);
       
@@ -350,6 +351,18 @@ export const createSession = async (
         console.log(`✅ Activity summary collections updated for session ${session._id}`);
       }).catch((error) => {
         console.error(`❌ Error in activity ingestion/analysis/summary update for session ${session._id}:`, error);
+      });
+    } else if (metric === 'SkinTemp') {
+      // Call SkinTemp ingestion service
+      ingestSkinTempSessionFiles({
+        sessionId: session._id,
+        userId,
+        activityType,
+        bandPosition,
+        startTime: start,
+        endTime: end,
+        files,
+        mobileType,
       });
     }
 

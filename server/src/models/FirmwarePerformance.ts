@@ -2,7 +2,7 @@ import { Schema, model, Document } from "mongoose";
 
 export interface IFirmwarePerformance extends Document {
   firmwareVersion: string;
-  metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity';
+  metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity' | 'SkinTemp';
   totalSessions: number;
   totalUsers: number;
   overallAccuracy?: {
@@ -52,7 +52,7 @@ const FirmwarePerformanceSchema = new Schema<IFirmwarePerformance>({
   firmwareVersion: { type: String, index: true },
   metric: { 
     type: String, 
-    enum: ['HR', 'SPO2', 'Sleep', 'Activity'],
+    enum: ['HR', 'SPO2', 'Sleep', 'Activity', 'SkinTemp'],
     required: true,
     index: true 
   },

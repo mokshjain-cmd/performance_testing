@@ -6,6 +6,7 @@ import NormalizedReading from '../models/NormalizedReadings';
 import { parseLunaCsv } from '../parsers/lunaParser';
 import { parsePolarCsv } from '../parsers/polarParser';
 import { LunaIOSHRParser } from '../parsers/lunaiosHRparser';
+import { LunaAndroidHRParser } from '../parsers/DailyParsers/Lunaandroidapp';
 import { parseAppleHR } from '../parsers/appleHRparser';
 import { analyzeSession } from './sessionAnalysis.service';
 import { updateUserAccuracySummary } from './userAccuracySummary.service';
@@ -33,6 +34,20 @@ export async function ingestSessionFiles({
   files,
   mobileType,
 }: any) {
+    console.log('\n🔥🔥🔥 ============================================');
+    console.log('🔥 HR INGESTION SERVICE CALLED');
+    console.log('🔥🔥🔥 ============================================');
+    console.log('📊 Received Parameters:');
+    console.log('   - sessionId:', sessionId);
+    console.log('   - userId:', userId);
+    console.log('   - activityType:', activityType);
+    console.log('   - bandPosition:', bandPosition);
+    console.log('   - startTime:', startTime);
+    console.log('   - endTime:', endTime);
+    console.log('   - mobileType:', mobileType);
+    console.log('   - files:', files?.map((f: any) => ({ fieldname: f.fieldname, filename: f.filename })));
+    console.log('🔥🔥🔥 ============================================\n');
+    
     let userEmail: string | undefined;
     let userName: string | undefined;
     let sessionName: string | undefined;
@@ -101,8 +116,21 @@ export async function ingestSessionFiles({
             readings = await parseLunaCsv(csvFilePath, meta, startTime, endTime);
             console.log(`Parsed ${readings.length} readings from Luna file (fallback).`);
           }
+        } else if (activityType === "daily" && mobileType === "Android") {
+          // Use Android-specific parser for daily activity
+          console.log('Using Luna Android HR parser for daily activity');
+          try {
+            readings = await LunaAndroidHRParser.parse(filePath, meta, startTime, endTime);
+            console.log(`Parsed ${readings.length} readings from Luna Android file.`);
+          } catch (androidParseError) {
+            console.error('❌ Luna Android HR parser failed, falling back to standard parser:', androidParseError);
+            // Fallback to standard parser if Android parser fails
+            const csvFilePath = await convertLunaTxtToCsv(filePath);
+            readings = await parseLunaCsv(csvFilePath, meta, startTime, endTime);
+            console.log(`Parsed ${readings.length} readings from Luna file (fallback).`);
+          }
         } else {
-          // Use standard Luna parser for Android or non-daily activities
+          // Use standard Luna parser for non-daily activities
           console.log('Using standard Luna HR parser');
           const csvFilePath = await convertLunaTxtToCsv(filePath);
           readings = await parseLunaCsv(csvFilePath, meta, startTime, endTime);

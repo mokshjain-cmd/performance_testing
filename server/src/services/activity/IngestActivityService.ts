@@ -34,6 +34,18 @@ export class IngestActivityService {
     mobileType?: string,
     appPlatform?: string
   ): Promise<void> {
+    console.log('\n🏃🏃🏃 ============================================');
+    console.log('🏃 ACTIVITY INGESTION SERVICE CALLED');
+    console.log('🏃🏃🏃 ============================================');
+    console.log('📊 Received Parameters:');
+    console.log('   - sessionId:', sessionId);
+    console.log('   - userId:', userId);
+    console.log('   - benchmarkDeviceType:', benchmarkDeviceType);
+    console.log('   - mobileType:', mobileType);
+    console.log('   - appPlatform:', appPlatform);
+    console.log('   - files:', files?.map(f => ({ fieldname: f.fieldname, filename: f.filename })));
+    console.log('🏃🏃🏃 ============================================\n');
+    
     let userEmail: string | undefined;
     let userName: string | undefined;
     let sessionName: string | undefined;
@@ -229,11 +241,11 @@ export class IngestActivityService {
       let parseResult;
       
       // Route to correct parser based on appPlatform and mobileType
-      if (appPlatform === 'Luna') {
+      if (appPlatform === 'Luna' && mobileType?.toLowerCase() === 'android') {
         // Use Falcon Luna Android parser for app logs
         console.log(`[IngestActivityService] Using Falcon Luna Activity parser (App Logs)`);
         parseResult = await FalconLunaActivityParser.parseFalconLunaActivityFile(filePath, startDate, endDate);
-      } else if (mobileType === 'iOS') {
+      } else if (appPlatform === 'Luna' && mobileType?.toLowerCase() === 'ios') {
         console.log(`[IngestActivityService] Using iOS Luna parser`);
         parseResult = await LunaActivityParser.parseLunaActivityFileIOS(filePath, startDate, endDate);
       } else {

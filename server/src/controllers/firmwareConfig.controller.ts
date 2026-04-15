@@ -113,7 +113,7 @@ export const updateFirmwareConfig = async (
  * Returns null if not configured
  */
 export const getLatestFirmwareVersion = async (
-  metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity'
+  metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity' | 'SkinTemp'
 ): Promise<string | null> => {
   try {
     const config = await FirmwareConfig.findOne({ metric });

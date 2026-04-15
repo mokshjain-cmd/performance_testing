@@ -2,7 +2,7 @@ import { Schema, model, Document } from "mongoose";
 
 export interface IBenchmarkComparisonSummary extends Document {
   benchmarkDeviceType: string;
-  metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity';
+  metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity' | 'SkinTemp';
 
   totalSessions: number;
 
@@ -53,7 +53,7 @@ const BenchmarkComparisonSummarySchema =
     benchmarkDeviceType: { type: String, required: true, index: true },
     metric: { 
       type: String, 
-      enum: ['HR', 'SPO2', 'Sleep', 'Activity'],
+      enum: ['HR', 'SPO2', 'Sleep', 'Activity', 'SkinTemp'],
       required: true,
       index: true 
     },

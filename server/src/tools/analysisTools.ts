@@ -41,6 +41,11 @@ export function calcDeviceStats(deviceType: string, readings: any[], metric: str
     valueArr = readings
       .map(r => r.metrics?.steps)
       .filter((v: number | null | undefined) => v !== null && v !== undefined);
+  } else if (metric === 'SkinTemp') {
+    metricKey = 'skinTemp';
+    valueArr = readings
+      .map(r => r.metrics?.skinTemp)
+      .filter((v: number | null | undefined) => v !== null && v !== undefined);
   }
 
 
@@ -161,6 +166,7 @@ export function calcPairwiseStats(
     if (metric === 'Sleep') return reading.metrics?.sleep;
     if (metric === 'Calories') return reading.metrics?.calories;
     if (metric === 'Steps') return reading.metrics?.steps;
+    if (metric === 'SkinTemp') return reading.metrics?.skinTemp;
     return null;
   };
 

@@ -33,6 +33,18 @@ export class IngestSleepService {
     mobileType?: string,
     appPlatform?: string
   ): Promise<void> {
+    console.log('\n😴😴😴 ============================================');
+    console.log('😴 SLEEP INGESTION SERVICE CALLED');
+    console.log('😴😴😴 ============================================');
+    console.log('📊 Received Parameters:');
+    console.log('   - sessionId:', sessionId);
+    console.log('   - userId:', userId);
+    console.log('   - benchmarkDeviceType:', benchmarkDeviceType);
+    console.log('   - mobileType:', mobileType);
+    console.log('   - appPlatform:', appPlatform);
+    console.log('   - files:', files?.map(f => ({ fieldname: f.fieldname, filename: f.filename })));
+    console.log('😴😴😴 ============================================\n');
+    
     let userEmail: string | undefined;
     let userName: string | undefined;
     let sessionName: string | undefined;
@@ -318,8 +330,8 @@ export class IngestSleepService {
         parseResult = await AppleHealthSleepParser.parse(fileToProcess, sessionId.toString(), userId.toString(), sleepDate);
       } else {
         // For other benchmarks, use AppleSleepParser as fallback
-        parseResult = await AppleSleepParser.parse(fileToProcess, sessionId.toString(), userId.toString());
-      }
+        console.log(`Device Not recognized , parser is not ready yet for this benchmark.`);
+        }
 
       // Get firmware version from session devices (if applicable)
       const session = await Session.findById(sessionId).populate("devices.deviceId");
@@ -327,7 +339,7 @@ export class IngestSleepService {
       const firmwareVersion = benchmarkDevice?.firmwareVersion;
 
       // Store each epoch in the database
-      if (parseResult.epochs && parseResult.epochs.length > 0) {
+      if (parseResult && parseResult.epochs && parseResult.epochs.length > 0) {
         const epochDocs = parseResult.epochs.map((epoch) => ({
           meta: {
             sessionId,
@@ -344,7 +356,7 @@ export class IngestSleepService {
         console.log(`[IngestSleepService] ✅ Inserted ${epochDocs.length} ${benchmarkDeviceType} sleep epochs`);
         
         // Store benchmark metadata
-        if (parseResult.metadata) {
+        if (parseResult && parseResult.metadata) {
           console.log(`[IngestSleepService] ${benchmarkDeviceType} metadata:`, parseResult.metadata);
           // TODO: Store this in SessionAnalysis
         }

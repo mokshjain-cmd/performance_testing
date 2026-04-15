@@ -14,6 +14,7 @@ interface IDeviceStats {
   firmwareVersion?: string;
   hr?: IMetricStats;
   spo2?: IMetricStats;
+  skinTemp?: IMetricStats;
 }
 
 interface IBlandAltman {
@@ -43,7 +44,7 @@ export interface ISessionAnalysis extends Document {
   sessionId: Types.ObjectId;
   userId: Types.ObjectId;
   activityType: string;
-  metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity';
+  metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity' | 'SkinTemp';
   startTime: Date;
   endTime: Date;
   deviceStats: IDeviceStats[];
@@ -149,6 +150,7 @@ const DeviceStatsSchema = new Schema<IDeviceStats>(
     firmwareVersion: String,
     hr: MetricStatsSchema,
     spo2: MetricStatsSchema,
+    skinTemp: MetricStatsSchema,
   },
   { _id: false }
 );
@@ -269,7 +271,7 @@ const SessionAnalysisSchema = new Schema<ISessionAnalysis>({
   activityType: String,
   metric: { 
     type: String, 
-    enum: ['HR', 'SPO2', 'Sleep', 'Activity'],
+    enum: ['HR', 'SPO2', 'Sleep', 'Activity', 'SkinTemp'],
     required: true,
     index: true 
   },

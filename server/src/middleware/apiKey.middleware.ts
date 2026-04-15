@@ -16,6 +16,7 @@ export const validateApiKey = (req: Request, res: Response, next: NextFunction) 
       success: false,
       message: 'API key validation is not properly configured'
     });
+    
   }
 
   // Check if API key is provided

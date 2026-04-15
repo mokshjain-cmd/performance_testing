@@ -26,18 +26,42 @@ export class ActivityAnalysisService {
       }
 
       // Fetch Luna daily readings
+      const sessionObjId = typeof sessionId === 'string' ? new Types.ObjectId(sessionId) : sessionId;
       const lunaReadings = await ActivityDailyReading.find({
-        "meta.sessionId": sessionId,
+        "meta.sessionId": sessionObjId,
         "meta.deviceType": "luna",
       }).sort({ "meta.date": 1 });
-      console.log(`[ActivityAnalysisService] 📊 Found ${lunaReadings.length} Luna daily readings`);
+      console.log(`[ActivityAnalysisService] 📊 Found ${lunaReadings.length} Luna daily readings for sessionId: ${sessionId}`);
+
+      // Early return if no Luna data at all - still create minimal SessionAnalysis
+      if (lunaReadings.length === 0) {
+        console.warn(`[ActivityAnalysisService] ⚠️ No Luna daily readings found for session ${sessionId}`);
+        // Still create a SessionAnalysis record with empty stats so frontend knows analysis ran
+        await SessionAnalysis.findOneAndUpdate(
+          { sessionId: sessionObjId },
+          {
+            sessionId: sessionObjId,
+            userId: session.userId,
+            activityType: session.activityType,
+            metric: session.metric,
+            startTime: session.startTime,
+            endTime: session.endTime,
+            activityStats: { steps: { lunaTotal: 0 }, distance: { lunaMeters: 0 } },
+            isValid: session.isValid,
+            computedAt: new Date(),
+          },
+          { upsert: true, new: true }
+        );
+        console.log(`[ActivityAnalysisService] ✅ Created empty session analysis for ${sessionId} (no Luna data)`);
+        return;
+      }
 
       // Fetch benchmark device daily readings (if available)
       const benchmarkDeviceType = session.benchmarkDeviceType;
       let benchmarkReadings: any[] = [];
       if (benchmarkDeviceType) {
         benchmarkReadings = await ActivityDailyReading.find({
-          "meta.sessionId": sessionId,
+          "meta.sessionId": sessionObjId,
           "meta.deviceType": benchmarkDeviceType,
         }).sort({ "meta.date": 1 });
         console.log(`[ActivityAnalysisService] 📊 Found ${benchmarkReadings.length} ${benchmarkDeviceType} daily readings`);
@@ -57,16 +81,35 @@ export class ActivityAnalysisService {
       // Calculate comparison metrics if both devices present
       let activityStats: any = {};
 
+      // Always store Luna totals if available (even without benchmark)
+      if (lunaTotals) {
+        activityStats.steps = { lunaTotal: lunaTotals.steps };
+        activityStats.distance = { lunaMeters: Math.round(lunaTotals.distanceMeters) };
+        
+        if (lunaTotals.caloriesTotal !== null) {
+          activityStats.calories = { lunaTotal: Math.round(lunaTotals.caloriesTotal) };
+        }
+        if (lunaTotals.caloriesActive !== null) {
+          activityStats.activeCalories = { lunaActive: Math.round(lunaTotals.caloriesActive) };
+        }
+        if (lunaTotals.caloriesBasal !== null) {
+          activityStats.basalCalories = { lunaBasal: Math.round(lunaTotals.caloriesBasal) };
+        }
+        
+        console.log(`[ActivityAnalysisService] 📊 Luna totals stored:`, activityStats);
+      }
+
+      // Add comparison metrics if benchmark exists (overwrites with full comparison stats)
       if (benchmarkTotals && lunaTotals) {
         activityStats = this.calculateActivityStats(lunaTotals, benchmarkTotals);
-        console.log(`[ActivityAnalysisService] ✅ Activity stats computed:`, activityStats);
+        console.log(`[ActivityAnalysisService] ✅ Activity stats with comparison computed:`, activityStats);
       }
 
       // Save or update SessionAnalysis
       await SessionAnalysis.findOneAndUpdate(
-        { sessionId },
+        { sessionId: sessionObjId },
         {
-          sessionId,
+          sessionId: sessionObjId,
           userId: session.userId,
           activityType: session.activityType,
           metric: session.metric,

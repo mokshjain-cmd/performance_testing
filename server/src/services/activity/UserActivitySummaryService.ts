@@ -237,47 +237,50 @@ export class UserActivitySummaryService {
       }
 
       const analysis = await SessionAnalysis.findOne({ sessionId });
+      const activityStats = analysis?.activityStats;
 
-      if (!analysis || !analysis.activityStats) {
-        throw new Error("Activity analysis not available for this session");
-      }
+      // Check if we have Luna data in activityStats
+      const hasLunaDataInAnalysis = activityStats && 
+        (activityStats.steps?.lunaTotal !== undefined || 
+         activityStats.distance?.lunaMeters !== undefined);
 
-      const activityStats = analysis.activityStats;
+      let result: ISingleActivitySessionView;
 
-      // Build Luna data from analysis
-      const result: ISingleActivitySessionView = {
-        session: {
-          _id: session._id.toString(),
-          name: session.name,
-          startTime: session.startTime,
-          endTime: session.endTime,
-          date: session.startTime,
-        },
-        luna: {
-          totalSteps: activityStats.steps?.lunaTotal || 0,
-          totalDistance: activityStats.distance?.lunaMeters || 0,
-          totalCalories: activityStats.calories?.lunaTotal ?? null,
-          caloriesActive: activityStats.activeCalories?.lunaActive ?? null,
-          caloriesBasal: activityStats.basalCalories?.lunaBasal ?? null,
-        },
-      };
-
-      // Add benchmark data if available
-      if (activityStats.steps?.benchmarkTotal !== undefined) {
-        result.benchmark = {
-          deviceType: session.benchmarkDeviceType || 'unknown',
-          totalSteps: activityStats.steps.benchmarkTotal,
-          totalDistance: activityStats.distance?.benchmarkMeters || 0,
-          totalCalories: activityStats.calories?.benchmarkTotal ?? null,
-          caloriesActive: activityStats.activeCalories?.benchmarkActive ?? null,
-          caloriesBasal: activityStats.basalCalories?.benchmarkBasal ?? null,
+      if (hasLunaDataInAnalysis) {
+        // Use data from existing analysis
+        result = {
+          session: {
+            _id: session._id.toString(),
+            name: session.name,
+            startTime: session.startTime,
+            endTime: session.endTime,
+            date: session.startTime,
+          },
+          luna: {
+            totalSteps: activityStats.steps?.lunaTotal || 0,
+            totalDistance: activityStats.distance?.lunaMeters || 0,
+            totalCalories: activityStats.calories?.lunaTotal ?? null,
+            caloriesActive: activityStats.activeCalories?.lunaActive ?? null,
+            caloriesBasal: activityStats.basalCalories?.lunaBasal ?? null,
+          },
         };
 
-        // Build comparison object with just the metrics (not luna/benchmark totals)
-        result.comparison = {
-          steps: {
-            accuracyPercent: activityStats.steps.accuracyPercent || 0,
-            bias: activityStats.steps.bias || 0,
+        // Add benchmark data if available
+        if (activityStats.steps?.benchmarkTotal !== undefined) {
+          result.benchmark = {
+            deviceType: session.benchmarkDeviceType || 'unknown',
+            totalSteps: activityStats.steps.benchmarkTotal,
+            totalDistance: activityStats.distance?.benchmarkMeters || 0,
+            totalCalories: activityStats.calories?.benchmarkTotal ?? null,
+            caloriesActive: activityStats.activeCalories?.benchmarkActive ?? null,
+            caloriesBasal: activityStats.basalCalories?.benchmarkBasal ?? null,
+          };
+
+          // Build comparison object with just the metrics (not luna/benchmark totals)
+          result.comparison = {
+            steps: {
+              accuracyPercent: activityStats.steps.accuracyPercent || 0,
+              bias: activityStats.steps.bias || 0,
             mae: activityStats.steps.mae || 0,
             mape: activityStats.steps.mape || 0,
             rmse: activityStats.steps.rmse || 0,
@@ -328,6 +331,53 @@ export class UserActivitySummaryService {
             ratio: 0,
           };
         }
+        }
+      } else {
+        // No analysis data - fetch Luna totals directly from ActivityDailyReading
+        const lunaReadings = await ActivityDailyReading.find({
+          "meta.sessionId": sessionId,
+          "meta.deviceType": "luna",
+        }).sort({ "meta.date": 1 });
+
+        // Calculate totals from daily readings
+        let totalSteps = 0;
+        let totalDistance = 0;
+        let totalCalories: number | null = null;
+        let activeCalories: number | null = null;
+        let basalCalories: number | null = null;
+
+        lunaReadings.forEach((r: any) => {
+          totalSteps += r.totals.steps || 0;
+          totalDistance += r.totals.distanceMeters || 0;
+          if (r.totals.caloriesTotal != null) {
+            totalCalories = (totalCalories || 0) + r.totals.caloriesTotal;
+          }
+          if (r.totals.caloriesActive != null) {
+            activeCalories = (activeCalories || 0) + r.totals.caloriesActive;
+          }
+          if (r.totals.caloriesBasal != null) {
+            basalCalories = (basalCalories || 0) + r.totals.caloriesBasal;
+          }
+        });
+
+        result = {
+          session: {
+            _id: session._id.toString(),
+            name: session.name,
+            startTime: session.startTime,
+            endTime: session.endTime,
+            date: session.startTime,
+          },
+          luna: {
+            totalSteps,
+            totalDistance: Math.round(totalDistance),
+            totalCalories,
+            caloriesActive: activeCalories,
+            caloriesBasal: basalCalories,
+          },
+        };
+
+        console.log(`[UserActivitySummaryService] Built session view from daily readings (no analysis): steps=${totalSteps}, distance=${totalDistance}`);
       }
 
       // Add daily data if requested

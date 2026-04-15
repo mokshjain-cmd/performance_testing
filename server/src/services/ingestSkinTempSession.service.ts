@@ -2,30 +2,24 @@ import Session from '../models/Session';
 import Device from '../models/Devices';
 import User from '../models/Users';
 import NormalizedReading from '../models/NormalizedReadings';
-import { parseMasimoSpo2Csv } from '../parsers/masimoSpo2Parser';
-import { parseLunaSpo2Csv } from '../parsers/lunaSpo2Parser';
-import { parseLunaIosSpo2Csv } from '../parsers/lunaiosspo2parser';
-import { parseLunaAndroidSpo2 } from '../parsers/DailyParsers/Lunaandroidapp';
-import { parseAppleSpo2 } from '../parsers/applespo2parser';
+import { LunaAndroidSkinTempParser } from '../parsers/DailyParsers/Lunaandroidapp';
 import { analyzeSession } from './sessionAnalysis.service';
 import { updateUserAccuracySummary } from './userAccuracySummary.service';
 import { updateLunaFirmwarePerformanceForSession } from './lunaFirmwarePerformanceUpdate.service';
-import { updateActivityPerformanceSummary } from './activityPerformanceSummary.service';
 import { updateAdminDailyTrend } from './adminDailyTrend.service';
 import { updateAdminGlobalSummary } from './adminGlobalSummary.service';
 import { updateBenchmarkComparisonSummariesForSession } from './benchmarkComparisonSummary.service';
 import { mailService } from './mail.service';
-import { convertLunaTxtToCsv } from '../tools/lunaTxtToCsv';
 import fs from 'fs';
 import { promisify } from 'util';
 
 const unlinkAsync = promisify(fs.unlink);
 
 /**
- * Ingest SPO2 session files from Masimo and Luna devices
- * Similar to HR ingestion but uses SPO2-specific parsers
+ * Ingest SkinTemp session files from Luna and benchmark devices
+ * Similar to HR/SPO2 ingestion but uses SkinTemp-specific parsers
  */
-export async function ingestSPO2SessionFiles({
+export async function ingestSkinTempSessionFiles({
   sessionId,
   userId,
   activityType,
@@ -47,7 +41,7 @@ export async function ingestSPO2SessionFiles({
   let userEmail: string | undefined;
   let userName: string | undefined;
   let sessionName: string | undefined;
-  let metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity' | 'SkinTemp' = 'SPO2';
+  const metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity' | 'SkinTemp' = 'SkinTemp';
   
   try {
     // Fetch user details for email notification
@@ -67,9 +61,9 @@ export async function ingestSPO2SessionFiles({
       }
     }
     
-    console.log('\n🫁🫁🫁 ============================================');
-    console.log('🫁 SPO2 INGESTION SERVICE CALLED');
-    console.log('🫁🫁🫁 ============================================');
+    console.log('\n🌡️🌡️🌡️ ============================================');
+    console.log('🌡️ SKINTEMP INGESTION SERVICE CALLED');
+    console.log('🌡️🌡️🌡️ ============================================');
     console.log('📊 Received Parameters:');
     console.log('   - sessionId:', sessionId);
     console.log('   - userId:', userId);
@@ -79,10 +73,10 @@ export async function ingestSPO2SessionFiles({
     console.log('   - endTime:', endTime);
     console.log('   - mobileType:', mobileType);
     console.log('   - files:', files?.map((f: any) => ({ fieldname: f.fieldname, filename: f.filename })));
-    console.log('🫁🫁🫁 ============================================\n');
+    console.log('🌡️🌡️🌡️ ============================================\n');
     
     console.log("\n===============================");
-    console.log("🩺 Starting SPO2 Session Ingestion...");
+    console.log("🌡️ Starting SkinTemp Session Ingestion...");
     console.log("📋 Session ID:", sessionId);
     console.log("👤 User ID:", userId);
     console.log("🏃 Activity Type:", activityType);
@@ -104,7 +98,7 @@ export async function ingestSPO2SessionFiles({
     for (const file of files) {
       const deviceType = file.fieldname;
       const filePath = file.path;
-      console.log(`\n📂 Processing SPO2 file for device: ${deviceType}`);
+      console.log(`\n📂 Processing SkinTemp file for device: ${deviceType}`);
       console.log(`📂 File path: ${filePath}`);
 
       const device = await Device.findOne({ deviceType });
@@ -127,53 +121,32 @@ export async function ingestSPO2SessionFiles({
 
       let readings: any[] = [];
 
-      // Parse based on device type - using SPO2-specific parsers
-      if (deviceType === "masimo") {
-        console.log("🩺 Parsing Masimo SPO2 file...");
-        readings = await parseMasimoSpo2Csv(filePath, meta, startTime, endTime);
-        console.log(`✅ Parsed ${readings.length} SPO2 readings from Masimo file.`);
-      } else if (deviceType === "luna") {
-        console.log("🩺 Parsing Luna SPO2 file...");
+      // Parse based on device type - using SkinTemp-specific parsers
+      if (deviceType === "luna") {
+        console.log("🌡️ Parsing Luna SkinTemp file...");
         console.log(`📱 Mobile Type: ${mobileType}, Activity Type: ${activityType}`);
         
-        // Convert .txt to .csv with header if needed
-        
-        
         // Use different parsers based on mobileType and activityType
-        if (activityType === "daily" && mobileType?.toLowerCase() === "ios") {
-          console.log("🍎 Using Luna iOS SPO2 parser for daily activity...");
-          readings = await parseLunaIosSpo2Csv(filePath, meta, startTime, endTime);
-        } else if (activityType === "daily" && (mobileType?.toLowerCase() === "android")) {
-          console.log("🤖 Using Luna Android SPO2 parser...");
-          readings = await parseLunaAndroidSpo2(filePath, meta, startTime, endTime);
+        if (activityType === "daily" && mobileType?.toLowerCase() === "android") {
+          console.log("🤖 Using Luna Android SkinTemp parser for daily activity...");
+          readings = await LunaAndroidSkinTempParser.parse(filePath, meta, startTime, endTime);
+        } else if (activityType === "daily" && mobileType?.toLowerCase() === "ios") {
+          // iOS parser placeholder
+          console.warn("🍎 Luna iOS SkinTemp parser not implemented yet. Skipping...");
         } else {
-          const csvFilePath = await convertLunaTxtToCsv(filePath);
-          console.log("📊 Using standard Luna SPO2 parser...");
-          readings = await parseLunaSpo2Csv(csvFilePath, meta, startTime, endTime);
+          console.warn(`⚠️ SkinTemp parser only supports "daily" activity type with Android/iOS. Current: activityType=${activityType}, mobileType=${mobileType}`);
         }
         
-        console.log(`✅ Parsed ${readings.length} SPO2 readings from Luna file.`);
-      } else if (deviceType === "apple") {
-        console.log("🍎 Parsing Apple SPO2 file...");
-        console.log(`📱 Activity Type: ${activityType}`);
-        
-        // Only process if activity type is "daily"
-        if (activityType === "daily") {
-          console.log("📊 Using Apple SPO2 parser for daily activity...");
-          readings = await parseAppleSpo2(filePath, meta, startTime, endTime);
-        } else {
-          console.warn(`⚠️ Apple SPO2 parser only supports "daily" activity type. Current activity type: ${activityType}`);
-        }
-        
-        console.log(`✅ Parsed ${readings.length} SPO2 readings from Apple file.`);
+        console.log(`✅ Parsed ${readings.length} SkinTemp readings from Luna file.`);
       } else {
-        console.warn(`⚠️ Unknown device type for SPO2: ${deviceType}`);
+        // Future: Add benchmark device parsers (Apple Watch, etc.)
+        console.warn(`⚠️ SkinTemp parser not yet implemented for device: ${deviceType}`);
       }
 
       if (readings.length > 0) {
         console.log(`💾 Inserting ${readings.length} readings into database...`);
         const result = await NormalizedReading.insertMany(readings, { ordered: false });
-        console.log(`✅ Inserted ${readings.length} SPO2 readings for ${deviceType}`);
+        console.log(`✅ Inserted ${readings.length} SkinTemp readings for ${deviceType}`);
         console.log(`📊 Time range: ${startTime.toISOString()} - ${endTime.toISOString()}`);
         anyInserted = true;
       } else {
@@ -188,10 +161,6 @@ export async function ingestSPO2SessionFiles({
         await analyzeSession(sessionId);
         console.log("✅ Session analysis completed for session:", sessionId);
 
-        // Get session to access metric
-        const session = await Session.findById(sessionId);
-        metric = session?.metric || 'SPO2';
-
         // Update user accuracy summary after analysis
         if (userId) {
           console.log("📊 Updating user accuracy summary...");
@@ -203,9 +172,6 @@ export async function ingestSPO2SessionFiles({
         console.log("📊 Updating firmware performance...");
         await updateLunaFirmwarePerformanceForSession(sessionId);
         console.log("✅ Firmware performance updated");
-
-        // Update activity performance summary no activity performance in SPO2 sessions, but keeping this here for future when we add more metrics to SPO2 sessions
-        
 
         // Update admin daily trend for session date
         if (startTime) {
@@ -246,7 +212,7 @@ export async function ingestSPO2SessionFiles({
     );
 
     console.log("\n===============================");
-    console.log("✅ SPO2 Session Ingestion Complete!");
+    console.log("✅ SkinTemp Session Ingestion Complete!");
     console.log("===============================\n");
     
     // Send success email notification
@@ -263,7 +229,7 @@ export async function ingestSPO2SessionFiles({
     }
 
   } catch (err) {
-    console.error("❌ SPO2 session ingestion failed:", err);
+    console.error("❌ SkinTemp session ingestion failed:", err);
     
     // Send failure email notification
     if (userEmail && userName && sessionId && sessionName) {

@@ -107,18 +107,18 @@ export class AdminActivitySummaryService {
         activityStats: { $exists: true },
       });
 
-      // Calculate aggregates
+      // Calculate aggregates (only sessions with comparison data)
       let stepsAccuracySum = 0;
       let stepBiasSum = 0;
-      let stepsCount = 0;
+      let stepsComparisonCount = 0;
 
       let distanceAccuracySum = 0;
       let distanceBiasSum = 0;
-      let distanceCount = 0;
+      let distanceComparisonCount = 0;
 
       let calorieAccuracySum = 0;
       let calorieBiasSum = 0;
-      let caloriesCount = 0;
+      let caloriesComparisonCount = 0;
 
       let activeCaloriesAccuracySum = 0;
       let activeCaloriesBiasSum = 0;
@@ -132,50 +132,51 @@ export class AdminActivitySummaryService {
         const activityStats = analysis.activityStats;
         if (!activityStats) return;
 
-        if (activityStats.steps) {
-          stepsAccuracySum += activityStats.steps.accuracyPercent || 0;
+        // Only count sessions with comparison data (accuracyPercent exists)
+        if (activityStats.steps && activityStats.steps.accuracyPercent !== undefined) {
+          stepsAccuracySum += activityStats.steps.accuracyPercent;
           stepBiasSum += activityStats.steps.bias || 0;
-          stepsCount++;
+          stepsComparisonCount++;
         }
 
-        if (activityStats.distance) {
-          distanceAccuracySum += activityStats.distance.accuracyPercent || 0;
+        if (activityStats.distance && activityStats.distance.accuracyPercent !== undefined) {
+          distanceAccuracySum += activityStats.distance.accuracyPercent;
           distanceBiasSum += activityStats.distance.bias || 0;
-          distanceCount++;
+          distanceComparisonCount++;
         }
 
-        if (activityStats.calories) {
-          calorieAccuracySum += activityStats.calories.accuracyPercent || 0;
+        if (activityStats.calories && activityStats.calories.accuracyPercent !== undefined) {
+          calorieAccuracySum += activityStats.calories.accuracyPercent;
           calorieBiasSum += activityStats.calories.bias || 0;
-          caloriesCount++;
+          caloriesComparisonCount++;
         }
 
-        if (activityStats.activeCalories) {
-          activeCaloriesAccuracySum += activityStats.activeCalories.accuracyPercent || 0;
+        if (activityStats.activeCalories && activityStats.activeCalories.accuracyPercent !== undefined) {
+          activeCaloriesAccuracySum += activityStats.activeCalories.accuracyPercent;
           activeCaloriesBiasSum += activityStats.activeCalories.bias || 0;
           activeCaloriesCount++;
         }
 
-        if (activityStats.basalCalories) {
-          basalCaloriesAccuracySum += activityStats.basalCalories.accuracyPercent || 0;
+        if (activityStats.basalCalories && activityStats.basalCalories.accuracyPercent !== undefined) {
+          basalCaloriesAccuracySum += activityStats.basalCalories.accuracyPercent;
           basalCaloriesBiasSum += activityStats.basalCalories.bias || 0;
           basalCaloriesCount++;
         }
       });
 
-      // Build activityStats object
+      // Build activityStats object (only from sessions with comparison data)
       const activityStats: any = {
-        steps: stepsCount > 0 ? {
-          avgAccuracyPercent: Math.round((stepsAccuracySum / stepsCount) * 100) / 100,
-          avgDifference: Math.round(stepBiasSum / stepsCount),
+        steps: stepsComparisonCount > 0 ? {
+          avgAccuracyPercent: Math.round((stepsAccuracySum / stepsComparisonCount) * 100) / 100,
+          avgDifference: Math.round(stepBiasSum / stepsComparisonCount),
         } : { avgAccuracyPercent: 0, avgDifference: 0 },
-        distance: distanceCount > 0 ? {
-          avgAccuracyPercent: Math.round((distanceAccuracySum / distanceCount) * 100) / 100,
-          avgDifference: Math.round(distanceBiasSum / distanceCount),
+        distance: distanceComparisonCount > 0 ? {
+          avgAccuracyPercent: Math.round((distanceAccuracySum / distanceComparisonCount) * 100) / 100,
+          avgDifference: Math.round(distanceBiasSum / distanceComparisonCount),
         } : { avgAccuracyPercent: 0, avgDifference: 0 },
-        calories: caloriesCount > 0 ? {
-          avgAccuracyPercent: Math.round((calorieAccuracySum / caloriesCount) * 100) / 100,
-          avgDifference: Math.round(calorieBiasSum / caloriesCount),
+        calories: caloriesComparisonCount > 0 ? {
+          avgAccuracyPercent: Math.round((calorieAccuracySum / caloriesComparisonCount) * 100) / 100,
+          avgDifference: Math.round(calorieBiasSum / caloriesComparisonCount),
         } : { avgAccuracyPercent: 0, avgDifference: 0 },
       };
 

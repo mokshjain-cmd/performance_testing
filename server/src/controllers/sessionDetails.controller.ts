@@ -46,6 +46,8 @@ export const getSessionFullDetails = async (req: Request, res: Response): Promis
       projection['metrics.steps'] = 1;
       projection['metrics.calories'] = 1;
       projection['metrics.distance'] = 1;
+    } else if (metric === 'SkinTemp') {
+      projection['metrics.skinTemp'] = 1;
     } else {
       // Default to heartRate if unknown metric
       projection['metrics.heartRate'] = 1;
@@ -84,6 +86,8 @@ export const getSessionFullDetails = async (req: Request, res: Response): Promis
         metricsData.steps = metricsObj?.steps ?? null;
         metricsData.calories = metricsObj?.calories ?? null;
         metricsData.distance = metricsObj?.distance ?? null;
+      } else if (metric === 'SkinTemp') {
+        metricsData.skinTemp = metricsObj?.skinTemp ?? null;
       } else {
         // Default to heartRate
         metricsData.heartRate = metricsObj?.heartRate ?? null;
