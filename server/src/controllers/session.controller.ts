@@ -353,36 +353,37 @@ export const createSession = async (
     }
     
 
-    // Call appropriate ingestion service based on metric
-    if (metric === 'SPO2') {
-      ingestSPO2SessionFiles({
-        sessionId: session._id,
-        userId,
-        activityType,
-        bandPosition,
-        startTime: start,
-        endTime: end,
-        files,
-        mobileType,
-      });
-    } else if (metric === 'HR') {
-      // Default to HR ingestion for HR and other metrics
-      ingestSessionFiles({
-        sessionId: session._id,
-        userId,
-        activityType,
-        bandPosition,
-        startTime: start,
-        endTime: end,
-        files,
-        mobileType,
-      });
-    } else if (metric === 'Sleep') {
-      // Call sleep ingestion service
-      IngestSleepService.ingestSleepSession(session._id, userId, files, benchmarkDeviceType, mobileType, appPlatform).then(() => {
+    // Call appropriate ingestion service based on metric - await full pipeline completion
+    try {
+      if (metric === 'SPO2') {
+        await ingestSPO2SessionFiles({
+          sessionId: session._id,
+          userId,
+          activityType,
+          bandPosition,
+          startTime: start,
+          endTime: end,
+          files,
+          mobileType,
+        });
+        console.log(`✅ SPO2 full pipeline completed for session ${session._id}`);
+      } else if (metric === 'HR') {
+        await ingestSessionFiles({
+          sessionId: session._id,
+          userId,
+          activityType,
+          bandPosition,
+          startTime: start,
+          endTime: end,
+          files,
+          mobileType,
+        });
+        console.log(`✅ HR full pipeline completed for session ${session._id}`);
+      } else if (metric === 'Sleep') {
+        await IngestSleepService.ingestSleepSession(session._id, userId, files, benchmarkDeviceType, mobileType, appPlatform);
         console.log(`✅ Sleep ingestion completed for session ${session._id}`);
-        return SleepAnalysisService.analyzeSession(session._id);
-      }).then(async () => {
+        
+        await SleepAnalysisService.analyzeSession(session._id);
         console.log(`✅ Sleep analysis completed for session ${session._id}`);
         
         // Get Luna firmware version from session
@@ -390,7 +391,7 @@ export const createSession = async (
         const lunaDevice = sessionWithDevices?.devices.find((d: any) => d.deviceType === 'luna');
         const lunaFirmware = lunaDevice?.firmwareVersion;
         
-        // Update all summary collections (filtered by latest firmware)
+        // Update all summary collections
         await updateAdminGlobalSummary('Sleep', true);
         if (lunaFirmware) {
           await updateFirmwarePerformanceForLuna(lunaFirmware, 'Sleep');
@@ -398,16 +399,12 @@ export const createSession = async (
         await updateBenchmarkComparisonSummariesForSession(session._id);
         await updateAdminDailyTrend(session.startTime, 'Sleep', true);
         
-        console.log(`✅ Summary collections updated for session ${session._id}`);
-      }).catch((error) => {
-        console.error(`❌ Error in sleep ingestion/analysis/summary update for session ${session._id}:`, error);
-      });
-    } else if (metric === 'Activity') {
-      // Call activity ingestion service
-      IngestActivityService.ingestActivitySession(session._id, userId, files, benchmarkDeviceType, mobileType, appPlatform).then(() => {
+        console.log(`✅ Sleep full pipeline completed for session ${session._id}`);
+      } else if (metric === 'Activity') {
+        await IngestActivityService.ingestActivitySession(session._id, userId, files, benchmarkDeviceType, mobileType, appPlatform);
         console.log(`✅ Activity ingestion completed for session ${session._id}`);
-        return ActivityAnalysisService.analyzeSession(session._id);
-      }).then(async () => {
+        
+        await ActivityAnalysisService.analyzeSession(session._id);
         console.log(`✅ Activity analysis completed for session ${session._id}`);
         
         // Get Luna firmware version from session
@@ -424,32 +421,36 @@ export const createSession = async (
         await ActivitySummaryService.updateAdminDailyTrend(session.startTime);
         if (lunaFirmware) {
           await ActivitySummaryService.updateFirmwarePerformance(lunaFirmware);
-        
         }
         
-        console.log(`✅ Activity summary collections updated for session ${session._id}`);
-      }).catch((error) => {
-        console.error(`❌ Error in activity ingestion/analysis/summary update for session ${session._id}:`, error);
+        console.log(`✅ Activity full pipeline completed for session ${session._id}`);
+      } else if (metric === 'SkinTemp') {
+        await ingestSkinTempSessionFiles({
+          sessionId: session._id,
+          userId,
+          activityType,
+          bandPosition,
+          startTime: start,
+          endTime: end,
+          files,
+          mobileType,
+        });
+        console.log(`✅ SkinTemp full pipeline completed for session ${session._id}`);
+      }
+
+      res.status(201).json({
+        success: true,
+        message: "Session created and fully processed",
+        data: session
       });
-    } else if (metric === 'SkinTemp') {
-      // Call SkinTemp ingestion service
-      ingestSkinTempSessionFiles({
-        sessionId: session._id,
-        userId,
-        activityType,
-        bandPosition,
-        startTime: start,
-        endTime: end,
-        files,
-        mobileType,
+    } catch (pipelineError) {
+      console.error(`❌ Pipeline error for session ${session._id}:`, pipelineError);
+      res.status(500).json({
+        success: false,
+        message: `Session created but pipeline failed: ${pipelineError instanceof Error ? pipelineError.message : 'Unknown error'}`,
+        data: { sessionId: session._id }
       });
     }
-
-    
-    res.status(201).json({
-      success: true,
-      data: session
-    });
 
 
 
