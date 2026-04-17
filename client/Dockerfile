@@ -3,9 +3,9 @@ FROM node:20-alpine AS build
 
 WORKDIR /app
 
-# Accept build arguments for environment variables
-ARG VITE_API_URL
-ENV VITE_API_URL=$VITE_API_URL
+# Accept build argument for environment
+ARG VITE_ENV=production
+ENV VITE_ENV=$VITE_ENV
 
 # Copy package files and install dependencies (including devDependencies for build)
 COPY package*.json ./

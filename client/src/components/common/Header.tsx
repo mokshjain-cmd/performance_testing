@@ -66,6 +66,7 @@ const Header: React.FC<Props> = ({ isLoggedIn, onLogin, onLogout, onNavigate }) 
                 <span className="hidden sm:inline">Firmware</span>
               </button>
             )}
+            {/* Performance Testing button hidden - feature not working
             {isAdmin && (
               <button
                 className="px-3 py-1.5 rounded-lg text-sm font-medium text-green-700 hover:bg-green-50 hover:text-green-900 transition-all duration-200 flex items-center gap-1.5 border border-green-200"
@@ -76,6 +77,7 @@ const Header: React.FC<Props> = ({ isLoggedIn, onLogin, onLogout, onNavigate }) 
                 <span className="hidden sm:inline">Performance Testing</span>
               </button>
             )}
+            */}
           </>
         )}
       </div>
