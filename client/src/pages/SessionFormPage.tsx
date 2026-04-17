@@ -28,7 +28,7 @@ const METRIC_OPTIONS = [
   { value: 'Sleep', label: 'Sleep', icon: '😴' },
   { value: 'Activity', label: 'Activity', icon: '🏃' },
   { value: 'Workout', label: 'Workout', icon: '💪' },
-  { value: 'Stress', label: 'Stress (Beta)', icon: '😰' },
+  // { value: 'Stress', label: 'Stress (Beta)', icon: '😰' }, // Hidden - not yet implemented
   { value: 'SkinTemp', label: 'Skin Temperature (Beta)', icon: '🌡️' },
 ];
 

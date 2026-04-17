@@ -130,10 +130,11 @@ export class AppleHealthSleepParser {
     records: ParsedHealthSleepRecord[] 
   } | null> {
     const targetDate = new Date(date);
-    const previousNight = new Date(targetDate);
-    previousNight.setDate(previousNight.getDate() - 1);
+    const targetDateStr = this.dateToString(targetDate);
 
-    console.log(`📅 [AppleHealthSleepParser] Fetching sleep data from night of ${this.formatDate(previousNight)} to morning of ${this.formatDate(targetDate)}`);
+    console.log(`\n🛏️ ========================================`);
+    console.log(`🛏️ [AppleHealthSleepParser] Looking for sleep ENDING on: ${targetDateStr}`);
+    console.log(`🛏️ ========================================`);
 
     const allSleepRecords = await this.parseAllSleepRecords();
     
@@ -146,20 +147,14 @@ export class AppleHealthSleepParser {
     const uniqueRecords = this.deduplicateSleepRecords(allSleepRecords);
     console.log(`✅ [AppleHealthSleepParser] Deduplicated: ${allSleepRecords.length} records → ${uniqueRecords.length} unique`);
 
-    const filteredRecords = this.filterByDateRange(uniqueRecords, previousNight, targetDate);
-    
-    if (filteredRecords.length === 0) {
-      console.log('⚠️  [AppleHealthSleepParser] No sleep data found for this date range');
-      return null;
-    }
+    // Group ALL records into sessions (no date range filtering)
+    const sessions = this.groupIntoSessions(uniqueRecords);
+    console.log(`📋 [AppleHealthSleepParser] Found ${sessions.length} total sleep sessions`);
 
-    // Group into sessions
-    const sessions = this.groupIntoSessions(filteredRecords);
-    console.log(`📋 [AppleHealthSleepParser] Found ${sessions.length} sleep sessions in date range`);
-
-    // Select the night sleep
-    const nightSession = this.selectNightSleep(sessions, targetDate);
+    // Find session where endTimestamp matches target date (NO FALLBACK)
+    const nightSession = this.findSessionByExitDate(sessions, targetDate);
     if (!nightSession || nightSession.length === 0) {
+      console.log(`❌ [AppleHealthSleepParser] No sleep found ending on ${targetDateStr}`);
       return null;
     }
 
@@ -383,33 +378,38 @@ export class AppleHealthSleepParser {
   }
 
   /**
-   * Select the night sleep session that ends on target date morning
+   * Find sleep session where last record's endTimestamp matches target date
+   * NO FALLBACK - only returns a session if endTimestamp exactly matches
    */
-  private selectNightSleep(
+  private findSessionByExitDate(
     sessions: ParsedHealthSleepRecord[][], 
     targetDate: Date
   ): ParsedHealthSleepRecord[] | null {
     if (sessions.length === 0) return null;
-    if (sessions.length === 1) return sessions[0];
 
-    const targetDayStr = this.dateToString(targetDate);
+    const targetDateStr = this.dateToString(targetDate);
+    
+    console.log(`🔍 [AppleHealthSleepParser] Searching ${sessions.length} sessions for endTimestamp matching ${targetDateStr}:`);
 
-    // Prefer sessions that end on target day
     for (const session of sessions) {
-      const endDate = new Date(session[session.length - 1].endTimestamp * 1000);
+      const endTimestamp = session[session.length - 1].endTimestamp;
+      const endDate = new Date(endTimestamp * 1000);
       const endDateStr = this.dateToString(endDate);
+      
+      const startTimestamp = session[0].startTimestamp;
+      const startDate = new Date(startTimestamp * 1000);
+      
+      const matches = endDateStr === targetDateStr;
+      console.log(`   - start=${startDate.toISOString()}, end=${endDate.toISOString()}, endDate=${endDateStr} ${matches ? '✅ MATCH' : ''}`);
 
-      if (endDateStr === targetDayStr) {
+      if (matches) {
+        console.log(`✅ [AppleHealthSleepParser] Found sleep session ending on ${endDateStr}`);
         return session;
       }
     }
 
-    // Fallback: return longest session
-    return sessions.reduce((longest, current) => {
-      const currentDuration = current[current.length - 1].endTimestamp - current[0].startTimestamp;
-      const longestDuration = longest[longest.length - 1].endTimestamp - longest[0].startTimestamp;
-      return currentDuration > longestDuration ? current : longest;
-    });
+    // NO FALLBACK - strict matching only
+    return null;
   }
 
   /**

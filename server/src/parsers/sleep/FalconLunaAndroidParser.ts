@@ -211,25 +211,24 @@ export class FalconLunaAndroidParser {
    */
   async getSleepSessionForDate(date: string | Date, userId?: string): Promise<ISleepSession | null> {
     const targetDate = this.parseDate(date);
-    const previousNight = new Date(targetDate);
-    previousNight.setDate(previousNight.getDate() - 1);
+    const targetDateStr = this.dateToString(targetDate);
 
-    console.log(`📅 [Falcon] Fetching sleep data from night of ${this.formatDate(previousNight)} to morning of ${this.formatDate(targetDate)}`);
+    console.log(`\n🛏️ ========================================`);
+    console.log(`🛏️ [Falcon] Looking for sleep ENDING on: ${targetDateStr}`);
+    console.log(`🛏️ ========================================`);
 
     const allSleepRecords = await this.parseAllSleepRecords();
     
     const uniqueRecords = this.deduplicateSleepRecords(allSleepRecords);
     console.log(`✅ [Falcon] Deduplicated: ${allSleepRecords.length} records → ${uniqueRecords.length} unique sessions\n`);
 
-    const filteredRecords = this.filterByDateRange(uniqueRecords, previousNight, targetDate);
+    // Find sleep where exitTime date matches target date (NO filtering by log date)
+    const nightSleep = this.findSleepByExitDate(uniqueRecords, targetDate);
     
-    if (filteredRecords.length === 0) {
-      console.log('⚠️  [Falcon] No sleep data found for this date range');
+    if (!nightSleep) {
+      console.log(`❌ [Falcon] No sleep found ending on ${targetDateStr}`);
       return null;
     }
-
-    const nightSleep = this.selectNightSleep(filteredRecords, targetDate);
-    if (!nightSleep) return null;
 
     const selectedDurationHours = ((nightSleep.exitTime - nightSleep.entryTime) / 3600).toFixed(2);
     console.log(`✅ [Falcon] Selected session [${selectedDurationHours}h]\n`);
@@ -423,28 +422,32 @@ export class FalconLunaAndroidParser {
   }
 
   /**
-   * Select the night sleep from multiple sessions
+   * Find sleep session where exitTime date matches target date
+   * NO FALLBACK - only returns a session if exitTime exactly matches
    */
-  private selectNightSleep(records: ParsedRingSleepResult[], targetDate: Date): ParsedRingSleepResult | null {
+  private findSleepByExitDate(records: ParsedRingSleepResult[], targetDate: Date): ParsedRingSleepResult | null {
     if (records.length === 0) return null;
-    if (records.length === 1) return records[0];
 
-    const targetDayStr = this.dateToString(targetDate);
+    const targetDateStr = this.dateToString(targetDate);
+    
+    console.log(`🔍 [Falcon] Searching ${records.length} records for exitTime matching ${targetDateStr}:`);
 
     for (const rec of records) {
-      const endDate = new Date(rec.exitTime * 1000);
-      const endDateStr = this.dateToString(endDate);
+      const exitDate = new Date(rec.exitTime * 1000);
+      const exitDateStr = this.dateToString(exitDate);
+      const entryDate = new Date(rec.entryTime * 1000);
       
-      if (endDateStr === targetDayStr) {
+      const matches = exitDateStr === targetDateStr;
+      console.log(`   - entry=${entryDate.toISOString()}, exit=${exitDate.toISOString()}, exitDate=${exitDateStr} ${matches ? '✅ MATCH' : ''}`);
+      
+      if (matches) {
+        console.log(`✅ [Falcon] Found sleep ending on ${exitDateStr}`);
         return rec;
       }
     }
 
-    return records.reduce((longest, current) => {
-      const currentDuration = current.exitTime - current.entryTime;
-      const longestDuration = longest.exitTime - longest.entryTime;
-      return currentDuration > longestDuration ? current : longest;
-    });
+    // NO FALLBACK - strict matching only
+    return null;
   }
 
   /**

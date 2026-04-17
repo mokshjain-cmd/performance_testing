@@ -219,10 +219,11 @@ export class LunaSleepParser {
    */
   async getSleepSessionForDate(date: string | Date, userId?: string): Promise<ISleepSession | null> {
     const targetDate = this.parseDate(date);
-    const previousNight = new Date(targetDate);
-    previousNight.setDate(previousNight.getDate() - 1);
+    const targetDateStr = this.dateToString(targetDate);
 
-    console.log(`📅 Fetching sleep data from night of ${this.formatDate(previousNight)} to morning of ${this.formatDate(targetDate)}`);
+    console.log(`\n🛏️ ========================================`);
+    console.log(`🛏️ [LunaSleepParser] Looking for sleep ENDING on: ${targetDateStr}`);
+    console.log(`🛏️ ========================================`);
 
     const allSleepRecords = await this.parseAllSleepRecords();
     
@@ -230,16 +231,13 @@ export class LunaSleepParser {
     const uniqueRecords = this.deduplicateSleepRecords(allSleepRecords);
     console.log(`✅ Deduplicated: ${allSleepRecords.length} records → ${uniqueRecords.length} unique sessions\n`);
 
-    const filteredRecords = this.filterByDateRange(uniqueRecords, previousNight, targetDate);
+    // Find sleep where exitTime date matches target date (NO filtering by log date)
+    const nightSleep = this.findSleepByExitDate(uniqueRecords, targetDate);
     
-    if (filteredRecords.length === 0) {
-      console.log('⚠️  No sleep data found for this date range');
+    if (!nightSleep) {
+      console.log(`❌ No sleep found ending on ${targetDateStr}`);
       return null;
     }
-
-    // Select the longest sleep (night sleep, not a nap)
-    const nightSleep = this.selectNightSleep(filteredRecords, targetDate);
-    if (!nightSleep) return null;
 
     const selectedDurationHours = ((nightSleep.exitTime - nightSleep.entryTime) / 3600).toFixed(2);
     console.log(`✅ Selected session [${selectedDurationHours}h]\n`);
@@ -442,37 +440,36 @@ export class LunaSleepParser {
   }
 
   /**
-   * Select the night sleep from multiple sessions in the date range
-   * For a request like "27/02/2026", we want the sleep that:
-   * - Starts on the EVENING of 26/02
-   * - Ends on the MORNING of 27/02
+   * Find sleep session where exitTime date matches target date
+   * NO FALLBACK - only returns a session if exitTime exactly matches
    * 
-   * This is the session that bridges the two days (not earlier sessions)
+   * @param records All sleep records from the log
+   * @param targetDate User-entered date (sleep should end on this date)
+   * @returns Matching sleep record or null if none found
    */
-  private selectNightSleep(records: ParsedRingSleepResult[], targetDate: Date): ParsedRingSleepResult | null {
+  private findSleepByExitDate(records: ParsedRingSleepResult[], targetDate: Date): ParsedRingSleepResult | null {
     if (records.length === 0) return null;
-    if (records.length === 1) return records[0];
 
-    // For "26th night to 27th morning", we want the session closest to the target date
-    // Filter for sessions that end ON or near the target date in the morning
-    const targetDayStr = this.dateToString(targetDate);
+    const targetDateStr = this.dateToString(targetDate);
+    
+    console.log(`🔍 [LunaSleepParser] Searching ${records.length} records for exitTime matching ${targetDateStr}:`);
 
-    // Prefer sessions that end on the target day (morning of target date)
     for (const rec of records) {
-      const endDate = new Date(rec.exitTime * 1000);
-      const endDateStr = this.dateToString(endDate);
+      const exitDate = new Date(rec.exitTime * 1000);
+      const exitDateStr = this.dateToString(exitDate);
+      const entryDate = new Date(rec.entryTime * 1000);
       
-      if (endDateStr === targetDayStr) {
+      const matches = exitDateStr === targetDateStr;
+      console.log(`   - entry=${entryDate.toISOString()}, exit=${exitDate.toISOString()}, exitDate=${exitDateStr} ${matches ? '✅ MATCH' : ''}`);
+      
+      if (matches) {
+        console.log(`✅ [LunaSleepParser] Found sleep ending on ${exitDateStr}`);
         return rec;
       }
     }
 
-    // Fallback: return longest session
-    return records.reduce((longest, current) => {
-      const currentDuration = current.exitTime - current.entryTime;
-      const longestDuration = longest.exitTime - longest.entryTime;
-      return currentDuration > longestDuration ? current : longest;
-    });
+    // NO FALLBACK - strict matching only
+    return null;
   }
 
   /**

@@ -192,6 +192,46 @@ export class LunaSleepParserIOS {
   /**
    * Main parse method - parses iOS Luna sleep log file
    * @param filePath Local path to the iOS log file (from temp directory)
+  /**
+   * Helper to convert date to YYYY-MM-DD string
+   */
+  private static dateToString(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  /**
+   * Find sleep session where exitTime date matches target date
+   * NO FALLBACK - only returns a session if exitTime exactly matches
+   */
+  private static findSleepByExitDate(sleepDataList: IOSSleepData[], targetDate: Date): IOSSleepData | null {
+    const targetDateStr = this.dateToString(targetDate);
+    
+    console.log(`🔍 [LunaSleepParserIOS] Searching ${sleepDataList.length} sessions for exitTime matching ${targetDateStr}:`);
+
+    for (const sleepData of sleepDataList) {
+      const exitDate = new Date(sleepData.exitTime * 1000);
+      const exitDateStr = this.dateToString(exitDate);
+      const entryDate = new Date(sleepData.entryTime * 1000);
+      
+      const matches = exitDateStr === targetDateStr;
+      console.log(`   - entry=${entryDate.toISOString()}, exit=${exitDate.toISOString()}, exitDate=${exitDateStr} ${matches ? '✅ MATCH' : ''}`);
+      
+      if (matches) {
+        console.log(`✅ [LunaSleepParserIOS] Found sleep ending on ${exitDateStr}`);
+        return sleepData;
+      }
+    }
+
+    // NO FALLBACK - strict matching only
+    return null;
+  }
+
+  /**
+   * Main parse method - parses iOS Luna sleep log file
+   * @param filePath Local path to the iOS log file (from temp directory)
    * @param sessionId Session identifier
    * @param userId User identifier
    * @param sleepDate Optional date for which to extract sleep data
@@ -221,10 +261,30 @@ export class LunaSleepParserIOS {
         throw new Error('No iOS sleep data found in log file');
       }
 
-      // Use the first (or most recent) sleep session
-      // TODO: If sleepDate is provided, filter to matching session
-      const sleepData = sleepDataList[sleepDataList.length - 1]; // Most recent
-      console.log(`📱 [LunaSleepParserIOS] Using sleep session: ${new Date(sleepData.entryTime * 1000).toISOString()}`);
+      // Find sleep where exitTime matches sleepDate (if provided)
+      let sleepData: IOSSleepData | null;
+      
+      if (sleepDate) {
+        console.log(`\n🛏️ ========================================`);
+        console.log(`🛏️ [LunaSleepParserIOS] Looking for sleep ENDING on: ${this.dateToString(sleepDate)}`);
+        console.log(`🛏️ ========================================`);
+        
+        sleepData = this.findSleepByExitDate(sleepDataList, sleepDate);
+        
+        if (!sleepData) {
+          console.log(`❌ [LunaSleepParserIOS] No sleep found ending on ${this.dateToString(sleepDate)}`);
+          return {
+            epochs: [],
+            metadata: {}
+          };
+        }
+      } else {
+        // No date provided - use most recent (legacy behavior)
+        sleepData = sleepDataList[sleepDataList.length - 1];
+        console.log(`📱 [LunaSleepParserIOS] No sleepDate provided, using most recent session`);
+      }
+      
+      console.log(`📱 [LunaSleepParserIOS] Using sleep session: entry=${new Date(sleepData.entryTime * 1000).toISOString()}, exit=${new Date(sleepData.exitTime * 1000).toISOString()}`);
 
       // Generate 30-second epochs
       const epochs30Sec = this.generate30SecEpochs(
