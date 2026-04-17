@@ -38,13 +38,6 @@ const formatDuration = (seconds: number): string => {
   return `${mins}m`;
 };
 
-const _getAccuracyColor = (mae: number | undefined): string => {
-  if (!mae) return 'text-gray-500';
-  if (mae <= 5) return 'text-green-600';
-  if (mae <= 10) return 'text-yellow-600';
-  return 'text-red-600';
-};
-
 const AdminWorkoutUserView: React.FC<AdminWorkoutUserViewProps> = ({ 
   userId, 
   metric: _metric

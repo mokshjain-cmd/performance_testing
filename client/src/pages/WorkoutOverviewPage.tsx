@@ -116,7 +116,7 @@ export const WorkoutOverviewPage: React.FC = () => {
             <div>
               <p className="text-sm text-gray-500">Sessions w/ Benchmark</p>
               <p className="text-2xl font-bold text-gray-900">
-                {overview.workouts.filter(w => w.lunaAccuracyPercent !== undefined).length}
+                {(overview.workouts || []).filter(w => w.lunaAccuracyPercent !== undefined).length}
               </p>
             </div>
           </div>
@@ -130,7 +130,7 @@ export const WorkoutOverviewPage: React.FC = () => {
             <div>
               <p className="text-sm text-gray-500">Total Calories</p>
               <p className="text-2xl font-bold text-gray-900">
-                {overview.workouts.reduce((sum, w) => sum + (w.calories || 0), 0).toLocaleString()}
+                {(overview.workouts || []).reduce((sum, w) => sum + (w.calories || 0), 0).toLocaleString()}
               </p>
             </div>
           </div>

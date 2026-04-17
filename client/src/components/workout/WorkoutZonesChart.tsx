@@ -84,8 +84,8 @@ export const WorkoutZonesChart: React.FC<WorkoutZonesChartProps> = ({ zones }) =
               }}
             />
             <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-              {data.map((entry, _index) => (
-                <Cell key={`cell-${index}`} fill={entry.color} />
+              {data.map((entry, idx) => (
+                <Cell key={`cell-${idx}`} fill={entry.color} />
               ))}
             </Bar>
           </BarChart>
@@ -94,7 +94,7 @@ export const WorkoutZonesChart: React.FC<WorkoutZonesChartProps> = ({ zones }) =
 
       {/* Zone Legend */}
       <div className="grid grid-cols-2 gap-3">
-        {data.map((zone, index) => (
+        {data.map((zone) => (
           <div 
             key={zone.name}
             className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg"

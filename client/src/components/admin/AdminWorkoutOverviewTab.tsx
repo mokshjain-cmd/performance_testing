@@ -265,7 +265,7 @@ const AdminWorkoutOverviewTab: React.FC<AdminWorkoutOverviewTabProps> = ({ subTa
                     cx="50%"
                     cy="50%"
                     outerRadius={80}
-                    label={({ name, percent }: { name: string; percent?: number }) => `${name} (${((percent || 0) * 100).toFixed(0)}%)`}
+                    label={({ name, percent }: { name?: string; percent?: number }) => `${name || 'Unknown'} (${((percent || 0) * 100).toFixed(0)}%)`}
                   >
                     {globalSummary.sportTypeDistribution.map((_entry, index) => (
                       <Cell key={`cell-${index}`} fill={SPORT_COLORS[index % SPORT_COLORS.length]} />

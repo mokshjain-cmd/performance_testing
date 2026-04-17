@@ -7,7 +7,8 @@ import {
   CartesianGrid,
   ReferenceLine,
   Area,
-  ComposedChart
+  ComposedChart,
+  Line
 } from 'recharts';
 import type { WorkoutReading } from '../../types';
 
@@ -48,7 +49,6 @@ export const WorkoutHRChart: React.FC<WorkoutHRChartProps> = ({
   const benchmarkMap = useMemo(() => {
     const map = new Map<number, number>();
     if (benchmarkReadings && benchmarkReadings.length > 0 && readings.length > 0) {
-      const _lunaStart = new Date(readings[0].timestamp).getTime();
       const benchmarkStart = new Date(benchmarkReadings[0].timestamp).getTime();
       
       benchmarkReadings.forEach(r => {
@@ -158,12 +158,12 @@ export const WorkoutHRChart: React.FC<WorkoutHRChartProps> = ({
                 borderRadius: '8px',
                 padding: '10px',
               }}
-              formatter={(value: number | undefined, name: string) => {
-                if (value === undefined) return ['N/A', name];
+              formatter={(value: number | undefined, name: string | undefined) => {
+                if (value === undefined) return ['N/A', name || ''];
                 if (name === 'heartRate') return [`${value.toFixed(0)} BPM`, 'Falcon HR'];
                 if (name === 'benchmarkHr') return [`${value.toFixed(0)} BPM`, `${benchmarkDeviceType || 'Benchmark'} HR`];
                 if (name === 'intensity') return [`${value}%`, 'Intensity'];
-                return [value, name];
+                return [value, name || ''];
               }}
               labelFormatter={(label) => `Time: ${label}`}
             />

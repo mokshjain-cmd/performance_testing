@@ -3,3 +3,5 @@ node-modules/
 dummy-data/
 guide.txt
 notes/
+dist/
+build/
