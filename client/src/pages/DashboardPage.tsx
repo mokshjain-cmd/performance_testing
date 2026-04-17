@@ -8,7 +8,6 @@ import SleepOverviewTab from '../components/dashboard/SleepOverviewTab';
 import SleepSessionsTab from '../components/dashboard/SleepSessionsTab';
 import { ActivityOverviewPage } from './ActivityOverviewPage';
 import { ActivitySessionPage } from './ActivitySessionPage';
-import { SkinTempOverviewPage } from './SkinTempOverviewPage';
 import { SkinTempSessionPage } from './SkinTempSessionPage';
 import { WorkoutOverviewPage } from './WorkoutOverviewPage';
 import { WorkoutSessionPage } from './WorkoutSessionPage';

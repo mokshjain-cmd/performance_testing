@@ -3,7 +3,7 @@ const ENV = import.meta.env.VITE_ENV || 'development';
 
 const API_URLS: Record<string, string> = {
   development: 'http://localhost:3000/api',
-  uat: '',  // UAT backend URL
+  uat: 'https://performance-testing-backend-uat-326803110924.asia-south2.run.app',  // UAT backend URL
   production: 'https://performance-testing-326803110924.asia-south2.run.app/api',
 };
 

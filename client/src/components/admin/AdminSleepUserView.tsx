@@ -466,7 +466,7 @@ const AdminSleepUserView: React.FC<AdminSleepUserViewProps> = ({ userId }) => {
                   label={{ value: 'Bias (min)', angle: -90, position: 'insideLeft', style: { fontSize: 11 } }}
                 />
                 <Tooltip 
-                  formatter={(value: number) => `${value > 0 ? '+' : ''}${value.toFixed(1)} min`}
+                  formatter={(value: number | undefined) => value !== undefined ? `${value > 0 ? '+' : ''}${value.toFixed(1)} min` : 'N/A'}
                   labelFormatter={(label) => new Date(label).toLocaleDateString()}
                 />
                 <Legend />
@@ -501,7 +501,7 @@ const AdminSleepUserView: React.FC<AdminSleepUserViewProps> = ({ userId }) => {
                   label={{ value: 'Bias (min)', angle: -90, position: 'insideLeft', style: { fontSize: 11 } }}
                 />
                 <Tooltip 
-                  formatter={(value: number) => `${value > 0 ? '+' : ''}${value.toFixed(1)} min`}
+                  formatter={(value: number | undefined) => value !== undefined ? `${value > 0 ? '+' : ''}${value.toFixed(1)} min` : 'N/A'}
                   labelFormatter={(label) => new Date(label).toLocaleDateString()}
                 />
                 <Legend />

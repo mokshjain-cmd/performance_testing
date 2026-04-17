@@ -9,7 +9,7 @@ import {
   WorkoutHRChart,
   WorkoutComparisonCard 
 } from '../workout';
-import type { WorkoutSessionDetails, WorkoutReading, WorkoutStats, WorkoutReadingsResult } from '../../types';
+import type { WorkoutSessionDetails, WorkoutStats, WorkoutReadingsResult } from '../../types';
 import { Calendar, Clock, Cpu, MapPin, FileText, Trash2, Download } from 'lucide-react';
 import apiClient from '../../services/api';
 

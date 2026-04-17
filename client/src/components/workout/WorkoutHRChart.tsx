@@ -1,7 +1,5 @@
 import React, { useMemo } from 'react';
 import { 
-  LineChart, 
-  Line, 
   XAxis, 
   YAxis, 
   Tooltip, 
@@ -43,14 +41,14 @@ export const WorkoutHRChart: React.FC<WorkoutHRChartProps> = ({
   benchmarkReadings,
   benchmarkDeviceType,
   avgHr,
-  maxHr,
+  maxHr: _maxHr,
   showIntensity = false
 }) => {
   // Create a map for benchmark readings by time offset in seconds
   const benchmarkMap = useMemo(() => {
     const map = new Map<number, number>();
     if (benchmarkReadings && benchmarkReadings.length > 0 && readings.length > 0) {
-      const lunaStart = new Date(readings[0].timestamp).getTime();
+      const _lunaStart = new Date(readings[0].timestamp).getTime();
       const benchmarkStart = new Date(benchmarkReadings[0].timestamp).getTime();
       
       benchmarkReadings.forEach(r => {
@@ -160,7 +158,8 @@ export const WorkoutHRChart: React.FC<WorkoutHRChartProps> = ({
                 borderRadius: '8px',
                 padding: '10px',
               }}
-              formatter={(value: number, name: string) => {
+              formatter={(value: number | undefined, name: string) => {
+                if (value === undefined) return ['N/A', name];
                 if (name === 'heartRate') return [`${value.toFixed(0)} BPM`, 'Falcon HR'];
                 if (name === 'benchmarkHr') return [`${value.toFixed(0)} BPM`, `${benchmarkDeviceType || 'Benchmark'} HR`];
                 if (name === 'intensity') return [`${value}%`, 'Intensity'];

@@ -265,9 +265,9 @@ const AdminWorkoutOverviewTab: React.FC<AdminWorkoutOverviewTabProps> = ({ subTa
                     cx="50%"
                     cy="50%"
                     outerRadius={80}
-                    label={({ sportName, percent }) => `${sportName} (${(percent * 100).toFixed(0)}%)`}
+                    label={({ name, percent }: { name: string; percent?: number }) => `${name} (${((percent || 0) * 100).toFixed(0)}%)`}
                   >
-                    {globalSummary.sportTypeDistribution.map((entry, index) => (
+                    {globalSummary.sportTypeDistribution.map((_entry, index) => (
                       <Cell key={`cell-${index}`} fill={SPORT_COLORS[index % SPORT_COLORS.length]} />
                     ))}
                   </Pie>
@@ -369,7 +369,7 @@ const AdminWorkoutOverviewTab: React.FC<AdminWorkoutOverviewTabProps> = ({ subTa
                       border: '1px solid #e5e7eb',
                       borderRadius: '8px',
                     }}
-                    formatter={(value: number) => [value?.toFixed(3), selectedChartMetric === 'avgMae' ? 'MAE' : selectedChartMetric === 'avgRmse' ? 'RMSE' : 'Pearson R']}
+                    formatter={(value: number | undefined) => [value?.toFixed(3) ?? 'N/A', selectedChartMetric === 'avgMae' ? 'MAE' : selectedChartMetric === 'avgRmse' ? 'RMSE' : 'Pearson R']}
                   />
                   <Line 
                     type="monotone" 

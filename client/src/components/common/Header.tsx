@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LogIn, PlusCircle, LayoutDashboard, LogOut, Shield, Cpu, Settings, TrendingUp } from 'lucide-react';
+import { LogIn, PlusCircle, LayoutDashboard, LogOut, Shield, Cpu, Settings } from 'lucide-react';
 import { getUserRole } from '../../utils/auth';
 import DeviceManagement from '../admin/DeviceManagement';
 

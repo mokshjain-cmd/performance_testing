@@ -1,6 +1,5 @@
 import type { EngagementUser, UserOverview, DailyMetrics, EngagementStats } from '../types/engagement';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://performance-testing-326803110924.asia-south2.run.app/api';
+import { API_BASE_URL } from '../lib/config';
 
 interface ApiResponse<T> {
   success: boolean;

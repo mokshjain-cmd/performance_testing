@@ -9,7 +9,7 @@ import {
   WorkoutHRChart,
   WorkoutComparisonCard 
 } from '../components/workout';
-import type { WorkoutSessionDetails, WorkoutReading, WorkoutStats, WorkoutReadingsResult } from '../types';
+import type { WorkoutSessionDetails, WorkoutStats, WorkoutReadingsResult } from '../types';
 import { Calendar, Clock, Cpu, MapPin } from 'lucide-react';
 
 interface WorkoutSessionPageProps {

@@ -5,27 +5,7 @@ import { getWorkoutOverview, getWorkoutTrend } from '../services/workout.service
 import { WorkoutSportBadge, getSportName } from '../components/workout';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { Activity, Clock, Flame, TrendingUp } from 'lucide-react';
-
-interface WorkoutItem {
-  sessionId: string;
-  sportType: number;
-  startTime: string;
-  endTime: string;
-  durationSec: number;
-  hr: { avg: number; max: number; min: number };
-  calories: number;
-  steps: number;
-  distance: number;
-  lunaAccuracyPercent?: number;
-  benchmarkDevice?: string;
-}
-
-interface WorkoutOverviewData {
-  summary: any | null;  // UserAccuracySummary
-  totalWorkouts: number;
-  totalDurationSec: number;
-  workouts: WorkoutItem[];
-}
+import type { WorkoutOverviewData } from '../types';
 
 interface TrendData {
   sessionId: string;
@@ -188,7 +168,7 @@ export const WorkoutOverviewPage: React.FC = () => {
                     border: '1px solid #e5e7eb',
                     borderRadius: '8px',
                   }}
-                  formatter={(value: number) => [`${value?.toFixed(1)}%`, 'HR Accuracy']}
+                  formatter={(value: number | undefined) => [`${value?.toFixed(1) ?? 'N/A'}%`, 'HR Accuracy']}
                   labelFormatter={(label) => getSportName(label)}
                 />
                 <Line 

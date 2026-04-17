@@ -1,5 +1,5 @@
 import apiClient from './api';
-import type { WorkoutSessionDetails, WorkoutOverviewData, WorkoutReading, WorkoutReadingsResult } from '../types';
+import type { WorkoutSessionDetails, WorkoutOverviewData, WorkoutReadingsResult } from '../types';
 
 /**
  * Workout Service - API calls for workout metric

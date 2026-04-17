@@ -75,7 +75,7 @@ export const WorkoutZonesChart: React.FC<WorkoutZonesChartProps> = ({ zones }) =
               width={75}
             />
             <Tooltip
-              formatter={(value: number) => [formatTime(value), 'Duration']}
+              formatter={(value: number | undefined) => [value !== undefined ? formatTime(value) : 'N/A', 'Duration']}
               contentStyle={{
                 backgroundColor: 'rgba(255, 255, 255, 0.95)',
                 border: '1px solid #e5e7eb',
@@ -84,7 +84,7 @@ export const WorkoutZonesChart: React.FC<WorkoutZonesChartProps> = ({ zones }) =
               }}
             />
             <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-              {data.map((entry, index) => (
+              {data.map((entry, _index) => (
                 <Cell key={`cell-${index}`} fill={entry.color} />
               ))}
             </Bar>

@@ -348,6 +348,12 @@ export interface WorkoutSessionDetails {
 export interface WorkoutOverviewData {
   totalWorkouts: number;
   totalDurationSec: number;
+  summary?: {
+    avgMAE?: number;
+    avgRMSE?: number;
+    avgPearson?: number;
+    avgMAPE?: number;
+  } | null;
   avgHrAccuracy?: {
     mae?: number;
     rmse?: number;
@@ -365,6 +371,19 @@ export interface WorkoutOverviewData {
     date: string;
     durationSec: number;
     avgHr: number;
+  }[];
+  workouts?: {
+    sessionId: string;
+    sportType: number;
+    startTime: string;
+    endTime: string;
+    durationSec: number;
+    hr: { avg: number; max: number; min: number };
+    calories: number;
+    steps: number;
+    distance: number;
+    lunaAccuracyPercent?: number;
+    benchmarkDevice?: string;
   }[];
 }
 
