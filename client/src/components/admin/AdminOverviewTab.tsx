@@ -12,6 +12,7 @@ import AdminSleepOverviewTab from './AdminSleepOverviewTab';
 import AdminActivityOverviewTab from './AdminActivityOverviewTab';
 import AdminActivityBenchmarkTab from './AdminActivityBenchmarkTab';
 import AdminActivityFirmwareTab from './AdminActivityFirmwareTab';
+import AdminWorkoutOverviewTab from './AdminWorkoutOverviewTab';
 
 interface GlobalSummary {
   totalUsers: number;
@@ -81,6 +82,11 @@ const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({ metric, subTab }) =
     return <AdminActivityOverviewTab />;
   }
 
+  // Handle workout metric with dedicated components
+  if (metric === 'workout') {
+    return <AdminWorkoutOverviewTab subTab={subTab} />;
+  }
+
   const [globalSummary, setGlobalSummary] = useState<GlobalSummary | null>(null);
   const [dailyTrends, setDailyTrends] = useState<DailyTrend[]>([]);
   const [loading, setLoading] = useState(false);
@@ -93,7 +99,9 @@ const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({ metric, subTab }) =
     setDailyTrends([]);
     
     // Convert metric to backend format (HR, SPO2, SkinTemp)
-    const metricParam = metric === 'hr' ? 'HR' : metric === 'spo2' ? 'SPO2' : 'SkinTemp';
+    // Note: Sleep, Activity, and Workout have early returns above, so only hr/spo2/skintemp reach here
+    const metricParam = metric === 'hr' ? 'HR' : 
+                       metric === 'spo2' ? 'SPO2' : 'SkinTemp';
     
     // Fetch global summary
     setLoading(true);

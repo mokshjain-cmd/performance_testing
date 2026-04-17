@@ -43,9 +43,11 @@ export function calcDeviceStats(deviceType: string, readings: any[], metric: str
       .filter((v: number | null | undefined) => v !== null && v !== undefined);
   } else if (metric === 'SkinTemp') {
     metricKey = 'skinTemp';
+    // For SkinTemp, also filter out 0 values since Falcon only records during sleep
+    // 0 values indicate no recording (device not measuring)
     valueArr = readings
       .map(r => r.metrics?.skinTemp)
-      .filter((v: number | null | undefined) => v !== null && v !== undefined);
+      .filter((v: number | null | undefined) => v !== null && v !== undefined && v > 0);
   }
 
 
@@ -135,6 +137,11 @@ export function calcBlandAltman(values1: number[], values2: number[]) {
 
 /**
  * Pairwise device comparison with tolerance matching
+ * 
+ * Special case: For SkinTemp with Apple Health, Apple provides only 1 reading
+ * (average over sleep period). In this case, we compute BIAS ONLY:
+ * bias = Luna avg - Apple single value
+ * (MAE, RMSE, Pearson R are NOT meaningful with a single comparison point)
  */
 export function calcPairwiseStats(
   d1: string,
@@ -150,15 +157,6 @@ export function calcPairwiseStats(
     return [{ d1, d2, metric: metricLower, matchedTimestamps: 0 }];
   }
 
-  // Sort by timestamp
-  const sorted1 = [...arr1].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
-  const sorted2 = [...arr2].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
-
-  let i = 0;
-  let j = 0;
-
-  const matched: [number, number][] = [];
-
   // Determine which metric field to extract
   const getMetricValue = (reading: any) => {
     if (metric === 'HR') return reading.metrics?.heartRate;
@@ -169,6 +167,89 @@ export function calcPairwiseStats(
     if (metric === 'SkinTemp') return reading.metrics?.skinTemp;
     return null;
   };
+
+  // ==========================================
+  // SPECIAL CASE: SkinTemp with single-value benchmark (Apple Health)
+  // Apple provides ONE temperature reading per sleep session (avg over ~8 hours)
+  // We can only compute BIAS, not MAE/RMSE/Pearson R
+  // ==========================================
+  if (metric === 'SkinTemp' && (arr1.length === 1 || arr2.length === 1)) {
+    console.log(`🌡️ SkinTemp special case: ${d1} has ${arr1.length} readings, ${d2} has ${arr2.length} readings`);
+    
+    // Determine which is the single-value device and which has multiple
+    const isSingleValueD1 = arr1.length === 1;
+    const multiArr = isSingleValueD1 ? arr2 : arr1;
+    const singleArr = isSingleValueD1 ? arr1 : arr2;
+    const multiDevice = isSingleValueD1 ? d2 : d1;
+    const singleDevice = isSingleValueD1 ? d1 : d2;
+    
+    // Extract values
+    const multiValues = multiArr
+      .map(r => getMetricValue(r))
+      .filter((v): v is number => v !== null && v !== undefined);
+    
+    const singleValue = getMetricValue(singleArr[0]);
+    
+    if (multiValues.length === 0 || singleValue === null || singleValue === undefined) {
+      console.log(`⚠️ Cannot compute SkinTemp bias: no valid values`);
+      return [{ d1, d2, metric: metricLower, matchedTimestamps: 0 }];
+    }
+    
+    // Calculate averages
+    const multiAvg = ss.mean(multiValues);
+    const singleAvg = singleValue;
+    
+    // Calculate bias: d1 avg - d2 avg (Luna - Benchmark)
+    // If d1 is the single-value device, swap the calculation
+    const lunaAvg = isSingleValueD1 ? multiAvg : multiAvg;
+    const benchmarkAvg = isSingleValueD1 ? singleAvg : singleAvg;
+    const bias = d1 === 'luna' 
+      ? lunaAvg - benchmarkAvg 
+      : (isSingleValueD1 ? multiAvg - singleAvg : singleAvg - multiAvg);
+    
+    console.log(`🌡️ SkinTemp bias calculation:`);
+    console.log(`   - ${d1} avg: ${d1 === 'luna' ? lunaAvg.toFixed(2) : benchmarkAvg.toFixed(2)}°C (${d1 === 'luna' ? multiValues.length : 1} readings)`);
+    console.log(`   - ${d2} avg: ${d2 === 'luna' ? lunaAvg.toFixed(2) : benchmarkAvg.toFixed(2)}°C (${d2 === 'luna' ? multiValues.length : 1} readings)`);
+    console.log(`   - Bias (${d1} - ${d2}): ${bias.toFixed(2)}°C`);
+    
+    return [{
+      d1,
+      d2,
+      metric: metricLower,
+      matchedTimestamps: 1, // Special: indicates bias-only comparison
+      
+      // NOT computed for single-value comparison (not meaningful)
+      mae: undefined,
+      rmse: undefined,
+      mape: undefined,
+      pearsonR: undefined,
+      rSquared: undefined,
+      
+      // BIAS is the only meaningful metric
+      meanBias: Math.round(bias * 100) / 100,
+      
+      // Additional context for SkinTemp comparison
+      lunaAvg: Math.round((d1 === 'luna' ? lunaAvg : benchmarkAvg) * 100) / 100,
+      lunaReadingCount: d1 === 'luna' ? multiValues.length : 1,
+      benchmarkAvg: Math.round((d2 === 'luna' ? lunaAvg : benchmarkAvg) * 100) / 100,
+      benchmarkReadingCount: d2 === 'luna' ? multiValues.length : 1,
+      
+      // Flag to indicate this is a bias-only comparison
+      biasOnlyComparison: true,
+    }];
+  }
+  // ==========================================
+  // END SPECIAL CASE
+  // ==========================================
+
+  // Sort by timestamp
+  const sorted1 = [...arr1].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+  const sorted2 = [...arr2].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+
+  let i = 0;
+  let j = 0;
+
+  const matched: [number, number][] = [];
 
   while (i < sorted1.length && j < sorted2.length) {
     const t1 = sorted1[i].timestamp.getTime();

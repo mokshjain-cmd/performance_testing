@@ -208,7 +208,7 @@ export async function ingestSessionFiles({
         }
         
         // Update admin daily trend for session date
-        if (startTime) {
+        if (startTime && metric !== 'Workout') {
           await updateAdminDailyTrend(startTime, metric, true);
           console.log('Admin daily trend updated for session date, metric:', metric);
         }

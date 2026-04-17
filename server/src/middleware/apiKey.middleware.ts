@@ -40,7 +40,7 @@ export const validateApiKey = (req: Request, res: Response, next: NextFunction) 
   }
 
   // API key is valid, proceed to next middleware
-  next();
+  return next();
 };
 
 /**

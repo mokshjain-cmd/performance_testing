@@ -10,6 +10,8 @@ import { ActivityOverviewPage } from './ActivityOverviewPage';
 import { ActivitySessionPage } from './ActivitySessionPage';
 import { SkinTempOverviewPage } from './SkinTempOverviewPage';
 import { SkinTempSessionPage } from './SkinTempSessionPage';
+import { WorkoutOverviewPage } from './WorkoutOverviewPage';
+import { WorkoutSessionPage } from './WorkoutSessionPage';
 import type { Session, SessionFullDetails, UserSummary } from '../types';
 
 const DashboardPage: React.FC = () => {
@@ -99,6 +101,7 @@ const DashboardPage: React.FC = () => {
               <option value="SPO2">Blood Oxygen (SPO2)</option>
               <option value="Sleep">Sleep</option>
               <option value="Activity">Activity</option>
+              <option value="Workout">Workout</option>
               <option value="SkinTemp">Skin Temperature</option>
             </select>
           </div>
@@ -126,6 +129,13 @@ const DashboardPage: React.FC = () => {
           <ActivityOverviewPage />
         ) : (
           <ActivitySessionPage sessionId={selectedSessionId} />
+        )
+      ) : selectedMetric === 'Workout' ? (
+        // Workout-specific dashboard
+        activeTab === 'overview' ? (
+          <WorkoutOverviewPage />
+        ) : (
+          <WorkoutSessionPage sessionId={selectedSessionId} />
         )
       ) : selectedMetric === 'SkinTemp' ? (
         // SkinTemp-specific dashboard - uses same OverviewTab as HR/SPO2

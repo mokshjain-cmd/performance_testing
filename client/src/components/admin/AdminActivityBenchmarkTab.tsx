@@ -101,7 +101,7 @@ const AdminActivityBenchmarkTab: React.FC = () => {
                     {benchmark.totalSessions || 0}
                   </td>
                   <td className="py-3 px-4 text-center">
-                    {benchmark.activityStats?.steps ? (
+                    {benchmark.activityStats?.steps?.avgAccuracyPercent !== undefined ? (
                       <span className={`font-semibold ${
                         benchmark.activityStats.steps.avgAccuracyPercent >= 90 ? 'text-green-600' :
                         benchmark.activityStats.steps.avgAccuracyPercent >= 80 ? 'text-yellow-600' :
@@ -114,7 +114,7 @@ const AdminActivityBenchmarkTab: React.FC = () => {
                     )}
                   </td>
                   <td className="py-3 px-4 text-center">
-                    {benchmark.activityStats?.distance ? (
+                    {benchmark.activityStats?.distance?.avgAccuracyPercent !== undefined ? (
                       <span className={`font-semibold ${
                         benchmark.activityStats.distance.avgAccuracyPercent >= 90 ? 'text-green-600' :
                         benchmark.activityStats.distance.avgAccuracyPercent >= 80 ? 'text-yellow-600' :
@@ -127,7 +127,7 @@ const AdminActivityBenchmarkTab: React.FC = () => {
                     )}
                   </td>
                   <td className="py-3 px-4 text-center">
-                    {benchmark.activityStats?.calories ? (
+                    {benchmark.activityStats?.calories?.avgAccuracyPercent !== undefined ? (
                       <span className={`font-semibold ${
                         benchmark.activityStats.calories.avgAccuracyPercent >= 90 ? 'text-green-600' :
                         benchmark.activityStats.calories.avgAccuracyPercent >= 80 ? 'text-yellow-600' :
@@ -140,7 +140,7 @@ const AdminActivityBenchmarkTab: React.FC = () => {
                     )}
                   </td>
                   <td className="py-3 px-4 text-center">
-                    {benchmark.activityStats?.steps ? (
+                    {benchmark.activityStats?.steps?.avgDifference !== undefined ? (
                       <span className="font-semibold text-gray-700">
                         {benchmark.activityStats.steps.avgDifference > 0 ? '+' : ''}
                         {Math.round(benchmark.activityStats.steps.avgDifference)}

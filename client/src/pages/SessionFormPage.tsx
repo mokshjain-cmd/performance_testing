@@ -27,6 +27,7 @@ const METRIC_OPTIONS = [
   { value: 'SPO2', label: 'Blood Oxygen', icon: '🫁' },
   { value: 'Sleep', label: 'Sleep', icon: '😴' },
   { value: 'Activity', label: 'Activity', icon: '🏃' },
+  { value: 'Workout', label: 'Workout', icon: '💪' },
   { value: 'Stress', label: 'Stress (Beta)', icon: '😰' },
   { value: 'SkinTemp', label: 'Skin Temperature (Beta)', icon: '🌡️' },
 ];
@@ -189,6 +190,9 @@ export default function SessionFormPage() {
         } else if (metric === 'Activity') {
           form.append('activityType', 'daily');
           form.append('activityDate', dateForMetric || formData.date);
+        } else if (metric === 'Workout') {
+          form.append('activityType', 'daily');
+          form.append('workoutDate', dateForMetric || formData.date);
         } else if (shouldShowDateOnly) {
           form.append('activityType', formData.activityType);
           form.append('dailyDate', dateForMetric);

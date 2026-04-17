@@ -44,7 +44,7 @@ export interface ISessionAnalysis extends Document {
   sessionId: Types.ObjectId;
   userId: Types.ObjectId;
   activityType: string;
-  metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity' | 'SkinTemp';
+  metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity' | 'SkinTemp' | 'Workout';
   startTime: Date;
   endTime: Date;
   deviceStats: IDeviceStats[];
@@ -126,6 +126,103 @@ export interface ISessionAnalysis extends Document {
       bias?: number;
       mae?: number;
       mape?: number;
+    };
+  };
+  workoutStats?: {
+    // Identifiers
+    sportType: number;
+    workoutId: string;
+    
+    // Duration
+    startTime: Date;
+    endTime: Date;
+    durationSec: number;
+    
+    // HR Summary (from DevSportInfoBean)
+    hr: {
+      avg: number;
+      max: number;
+      min: number;
+    };
+    
+    // HR Zones (seconds in each zone)
+    hrZones: {
+      warmUp: number;
+      fatBurning: number;
+      aerobic: number;
+      anaerobic: number;
+    };
+    
+    // Activity metrics
+    calories: number;
+    steps: number;
+    distance: number;
+    
+    // Pace/Speed
+    pace: {
+      avg: number;
+      fast: number;
+      slowest: number;
+    };
+    speed: {
+      avg: number;
+      fast: number;
+    };
+    
+    // Step cadence
+    stepSpeed: {
+      avg: number;
+      max: number;
+    };
+    
+    // Training metrics
+    trainingEffect: number;
+    trainingLoad: number;
+    vo2max: number;
+    recoveryTime: number;
+    
+    // Computed from ringPointData (Luna)
+    computedHr?: {
+      avg: number;
+      max: number;
+      min: number;
+      stdDev: number;
+      readingCount: number;
+    };
+    
+    // Benchmark comparison (if benchmark provided)
+    benchmarkComparison?: {
+      benchmarkDevice: string;
+      // Luna HR summary
+      lunaHrAvg?: number;
+      lunaHrMax?: number;
+      lunaHrMin?: number;
+      // Benchmark HR summary
+      benchmarkHrAvg?: number;
+      benchmarkHrMax?: number;
+      benchmarkHrMin?: number;
+      // HR comparison metrics
+      hrMae: number;
+      hrRmse: number;
+      hrMape: number;
+      hrPearsonR: number;
+      hrMeanBias: number;
+      overlapCount: number;
+      overlapPercent: number;
+      // Workout-level comparisons
+      lunaCalories?: number;
+      benchmarkCalories?: number;
+      caloriesDifference?: number;
+      caloriesBias?: number;
+      caloriesAccuracyPercent?: number;
+      lunaDistance?: number;
+      benchmarkDistance?: number;
+      distanceDifference?: number;
+      distanceAccuracyPercent?: number;
+      lunaSteps?: number;
+      benchmarkSteps?: number;
+      stepsDifference?: number;
+      stepsAccuracyPercent?: number;
     };
   };
   isValid: boolean;
@@ -265,13 +362,114 @@ const ActivityStatsSchema = new Schema(
   { _id: false }
 );
 
+const WorkoutStatsSchema = new Schema(
+  {
+    // Identifiers
+    sportType: Number,
+    workoutId: String,
+    
+    // Duration
+    startTime: Date,
+    endTime: Date,
+    durationSec: Number,
+    
+    // HR Summary
+    hr: {
+      avg: Number,
+      max: Number,
+      min: Number,
+    },
+    
+    // HR Zones (seconds in each zone)
+    hrZones: {
+      warmUp: Number,
+      fatBurning: Number,
+      aerobic: Number,
+      anaerobic: Number,
+    },
+    
+    // Activity metrics
+    calories: Number,
+    steps: Number,
+    distance: Number,
+    
+    // Pace/Speed
+    pace: {
+      avg: Number,
+      fast: Number,
+      slowest: Number,
+    },
+    speed: {
+      avg: Number,
+      fast: Number,
+    },
+    
+    // Step cadence
+    stepSpeed: {
+      avg: Number,
+      max: Number,
+    },
+    
+    // Training metrics
+    trainingEffect: Number,
+    trainingLoad: Number,
+    vo2max: Number,
+    recoveryTime: Number,
+    
+    // Computed from ringPointData
+    computedHr: {
+      avg: Number,
+      max: Number,
+      min: Number,
+      stdDev: Number,
+      readingCount: Number,
+    },
+    
+    // Benchmark comparison
+    benchmarkComparison: {
+      benchmarkDevice: String,
+      // Luna HR summary
+      lunaHrAvg: Number,
+      lunaHrMax: Number,
+      lunaHrMin: Number,
+      // Benchmark HR summary
+      benchmarkHrAvg: Number,
+      benchmarkHrMax: Number,
+      benchmarkHrMin: Number,
+      // HR comparison metrics
+      hrMae: Number,
+      hrRmse: Number,
+      hrMape: Number,
+      hrPearsonR: Number,
+      hrMeanBias: Number,
+      overlapCount: Number,
+      overlapPercent: Number,
+      // Workout-level comparisons
+      lunaCalories: Number,
+      benchmarkCalories: Number,
+      caloriesDifference: Number,
+      caloriesBias: Number,
+      caloriesAccuracyPercent: Number,
+      lunaDistance: Number,
+      benchmarkDistance: Number,
+      distanceDifference: Number,
+      distanceAccuracyPercent: Number,
+      lunaSteps: Number,
+      benchmarkSteps: Number,
+      stepsDifference: Number,
+      stepsAccuracyPercent: Number,
+    },
+  },
+  { _id: false }
+);
+
 const SessionAnalysisSchema = new Schema<ISessionAnalysis>({
   sessionId: { type: Schema.Types.ObjectId, ref: "Session", index: true },
   userId: { type: Schema.Types.ObjectId, ref: "User", index: true },
   activityType: String,
   metric: { 
     type: String, 
-    enum: ['HR', 'SPO2', 'Sleep', 'Activity', 'SkinTemp'],
+    enum: ['HR', 'SPO2', 'Sleep', 'Activity', 'SkinTemp', 'Workout'],
     required: true,
     index: true 
   },
@@ -282,6 +480,7 @@ const SessionAnalysisSchema = new Schema<ISessionAnalysis>({
   lunaAccuracyPercent: Number,
   sleepStats: SleepStatsSchema,
   activityStats: ActivityStatsSchema,
+  workoutStats: WorkoutStatsSchema,
   isValid: { type: Boolean, default: true },
   computedAt: { type: Date, default: Date.now },
 });

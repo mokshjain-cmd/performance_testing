@@ -1,0 +1,613 @@
+import { Types } from "mongoose";
+import Session from "../../models/Session";
+import WorkoutReading from "../../models/WorkoutReading";
+import Device from "../../models/Devices";
+import User from "../../models/Users";
+import { LunaWorkoutParser, IParsedWorkout } from "../../parsers/workout";
+import { WorkoutAnalysisService, IBenchmarkWorkoutMeta } from "./WorkoutAnalysisService";
+import { AppleHealthWorkoutParser, IAppleWorkout } from "../../parsers/workout/AppleHealthWorkoutParser";
+import { PolarWorkoutParser, IPolarWorkout } from "../../parsers/workout/PolarWorkoutParser";
+import { extractHRForWorkoutComparison } from "../../parsers/appleHRparser";
+import { extractAppleHealthZip, deleteDirectory } from "../../tools/zipExtractor";
+import { mailService } from "../mail.service";
+import { updateUserAccuracySummary } from "../userAccuracySummary.service";
+import { updateFirmwarePerformanceForLuna } from "../firmwarePerformance.service";
+import { updateBenchmarkComparisonSummariesForSession } from "../benchmarkComparisonSummary.service";
+import { updateAdminGlobalSummary } from "../adminGlobalSummary.service";
+import { updateAdminDailyTrend } from "../adminDailyTrend.service";
+import fs from 'fs';
+import path from 'path';
+import { promisify } from 'util';
+
+const unlinkAsync = promisify(fs.unlink);
+
+export interface IWorkoutIngestionResult {
+  sessionsCreated: number;
+  sessionIds: string[];
+  workouts: Array<{
+    sessionId: string;
+    sportType: number;
+    startTime: Date;
+    endTime: Date;
+    durationSec: number;
+  }>;
+  status: 'processing' | 'completed' | 'failed';
+  message?: string;
+}
+
+interface IWorkoutSessionInfo {
+  sessionId: Types.ObjectId;
+  workout: IParsedWorkout;
+}
+
+/**
+ * IngestWorkoutService
+ * Handles parsing workout data from app logs and creating workout sessions
+ * 
+ * Uses async pattern: creates sessions quickly, processes in background
+ */
+export class IngestWorkoutService {
+  
+  /**
+   * Main entry point: Ingest workout day data (ASYNC - returns quickly)
+   * 
+   * Phase 1 (Sync): Parse Luna log, create sessions, return session IDs immediately
+   * Phase 2 (Async): Process readings, benchmark data, run analysis in background
+   * 
+   * @param userId - User ID
+   * @param workoutDate - Target date to extract workouts for
+   * @param firmwareVersion - Firmware version for Luna device
+   * @param lunaFile - Luna app log file
+   * @param benchmarkFile - Optional benchmark device file (Apple Health, etc.)
+   * @param benchmarkDeviceType - Type of benchmark device
+   * @param mobileType - Android/iOS
+   */
+  static async ingestWorkoutDay(
+    userId: Types.ObjectId | string,
+    workoutDate: Date,
+    firmwareVersion: string,
+    lunaFile: Express.Multer.File,
+    benchmarkFile?: Express.Multer.File,
+    benchmarkDeviceType?: string,
+    mobileType?: string
+  ): Promise<IWorkoutIngestionResult> {
+    console.log('\n🏋️🏋️🏋️ ============================================');
+    console.log('🏋️ WORKOUT INGESTION SERVICE (ASYNC MODE)');
+    console.log('🏋️🏋️🏋️ ============================================');
+    console.log('📊 Received Parameters:');
+    console.log('   - userId:', userId);
+    console.log('   - workoutDate:', workoutDate.toISOString().split('T')[0]);
+    console.log('   - firmwareVersion:', firmwareVersion);
+    console.log('   - mobileType:', mobileType);
+    console.log('   - benchmarkDeviceType:', benchmarkDeviceType);
+    console.log('   - lunaFile:', lunaFile?.filename);
+    console.log('   - benchmarkFile:', benchmarkFile?.filename);
+    console.log('🏋️🏋️🏋️ ============================================\n');
+    
+    const result: IWorkoutIngestionResult = {
+      sessionsCreated: 0,
+      sessionIds: [],
+      workouts: [],
+      status: 'processing',
+      message: 'Workout sessions created. Processing in background...',
+    };
+    
+    // Get Luna device
+    const lunaDevice = await Device.findOne({ deviceType: 'luna', firmwareVersion });
+    if (!lunaDevice) {
+      throw new Error(`Luna device with firmware ${firmwareVersion} not found. Register the device first.`);
+    }
+    
+    // Parse workouts from Luna log (quick operation)
+    console.log(`[IngestWorkoutService] Parsing Luna log for workouts on ${workoutDate.toISOString().split('T')[0]}`);
+    const parsedWorkouts = await LunaWorkoutParser.parseWorkoutsFromLog(
+      lunaFile.path,
+      workoutDate
+    );
+    
+    if (parsedWorkouts.length === 0) {
+      console.log(`[IngestWorkoutService] No workouts found for ${workoutDate.toISOString().split('T')[0]}`);
+      result.status = 'completed';
+      result.message = 'No workouts found for this date';
+      
+      // Clean up files immediately
+      this.cleanupFiles(lunaFile, benchmarkFile);
+      
+      return result;
+    }
+    
+    console.log(`[IngestWorkoutService] Found ${parsedWorkouts.length} workouts to process`);
+    
+    // PHASE 1: Create sessions quickly (sync) - NO readings yet
+    const sessionInfos: IWorkoutSessionInfo[] = [];
+    
+    for (const workout of parsedWorkouts) {
+      try {
+        const sessionId = await this.createWorkoutSessionOnly(
+          userId,
+          workout,
+          firmwareVersion,
+          lunaDevice._id,
+          benchmarkDeviceType
+        );
+        
+        sessionInfos.push({ sessionId, workout });
+        
+        result.sessionIds.push(sessionId.toString());
+        result.sessionsCreated++;
+        result.workouts.push({
+          sessionId: sessionId.toString(),
+          sportType: workout.sportType,
+          startTime: workout.startTime,
+          endTime: workout.endTime,
+          durationSec: workout.durationSec,
+        });
+        
+        console.log(`[IngestWorkoutService] Created session ${sessionId} for workout ${workout.workoutId}`);
+        
+      } catch (err) {
+        console.error(`[IngestWorkoutService] Error creating session for workout ${workout.workoutId}:`, err);
+      }
+    }
+    
+    // PHASE 2: Process readings, benchmark, analysis in background (async)
+    // This runs AFTER we return the response to the user
+    this.processWorkoutSessionsAsync(
+      userId,
+      workoutDate,
+      firmwareVersion,
+      lunaFile,
+      benchmarkFile,
+      benchmarkDeviceType,
+      sessionInfos,
+      parsedWorkouts
+    ).catch(err => {
+      console.error('[IngestWorkoutService] Background processing error:', err);
+    });
+    
+    console.log(`[IngestWorkoutService] Returning immediately with ${result.sessionsCreated} sessions - processing continues in background`);
+    
+    return result;
+  }
+  
+  /**
+   * Create a workout session WITHOUT inserting readings (for fast sync response)
+   */
+  private static async createWorkoutSessionOnly(
+    userId: Types.ObjectId | string,
+    workout: IParsedWorkout,
+    firmwareVersion: string,
+    lunaDeviceId: Types.ObjectId,
+    benchmarkDeviceType?: string
+  ): Promise<Types.ObjectId> {
+    
+    // Format session name as DD-MM-YY | HH:MM:SS from workout start time
+    const day = String(workout.startTime.getUTCDate()).padStart(2, '0');
+    const month = String(workout.startTime.getUTCMonth() + 1).padStart(2, '0');
+    const year = String(workout.startTime.getUTCFullYear()).slice(-2);
+    const hours = String(workout.startTime.getUTCHours()).padStart(2, '0');
+    const minutes = String(workout.startTime.getUTCMinutes()).padStart(2, '0');
+    const seconds = String(workout.startTime.getUTCSeconds()).padStart(2, '0');
+    const sessionName = `${day}-${month}-${year} | ${hours}:${minutes}:${seconds}`;
+    
+    // Create session document (no readings yet)
+    const session = await Session.create({
+      userId,
+      name: sessionName,
+      activityType: 'daily',
+      metric: 'Workout',
+      startTime: workout.startTime,
+      endTime: workout.endTime,
+      durationSec: workout.durationSec,
+      devices: [{
+        deviceId: lunaDeviceId,
+        deviceType: 'luna',
+        firmwareVersion: firmwareVersion,
+      }],
+      benchmarkDeviceType: benchmarkDeviceType || null,
+      bandPosition: 'wrist',
+      isValid: true,
+    });
+    
+    return session._id;
+  }
+  
+  /**
+   * Process workout sessions asynchronously (background)
+   * - Insert Luna readings
+   * - Parse and insert benchmark data
+   * - Run analysis
+   * - Update summaries
+   * - Send email notification
+   */
+  private static async processWorkoutSessionsAsync(
+    userId: Types.ObjectId | string,
+    workoutDate: Date,
+    firmwareVersion: string,
+    lunaFile: Express.Multer.File,
+    benchmarkFile: Express.Multer.File | undefined,
+    benchmarkDeviceType: string | undefined,
+    sessionInfos: IWorkoutSessionInfo[],
+    parsedWorkouts: IParsedWorkout[]
+  ): Promise<void> {
+    console.log(`[IngestWorkoutService] 🔄 Starting background processing for ${sessionInfos.length} sessions...`);
+    
+    let userEmail: string | undefined;
+    let userName: string | undefined;
+    let extractedFolder: string | undefined;
+    const metric = 'Workout';
+    
+    try {
+      // Fetch user details for email notification
+      const user = await User.findById(userId);
+      if (user) {
+        userEmail = user.email;
+        userName = user.name;
+      }
+      
+      // Parse benchmark file if provided
+      let appleWorkouts: IAppleWorkout[] = [];
+      let polarWorkout: IPolarWorkout | null = null;
+      let benchmarkFilePath: string | undefined;
+      
+      // Handle Apple Health benchmark file
+      if (benchmarkFile && benchmarkDeviceType === 'apple') {
+        console.log(`[IngestWorkoutService] 🍎 Parsing Apple Health benchmark file...`);
+        
+        const fileExtension = path.extname(benchmarkFile.path).toLowerCase();
+        if (fileExtension === '.zip') {
+          try {
+            const extracted = await extractAppleHealthZip(benchmarkFile.path);
+            benchmarkFilePath = extracted.exportXmlPath;
+            extractedFolder = extracted.extractedFolder;
+          } catch (zipError) {
+            console.error('[IngestWorkoutService] ❌ Error extracting Apple Health ZIP:', zipError);
+          }
+        } else {
+          benchmarkFilePath = benchmarkFile.path;
+        }
+        
+        if (benchmarkFilePath) {
+          const minStartTime = new Date(Math.min(...parsedWorkouts.map(w => w.startTime.getTime())) - 3600000);
+          const maxEndTime = new Date(Math.max(...parsedWorkouts.map(w => w.endTime.getTime())) + 3600000);
+          
+          appleWorkouts = await AppleHealthWorkoutParser.parseWorkouts(
+            benchmarkFilePath,
+            minStartTime,
+            maxEndTime
+          );
+          console.log(`[IngestWorkoutService] Found ${appleWorkouts.length} Apple workouts in time range`);
+        }
+      }
+      
+      // Handle Polar benchmark file
+      if (benchmarkFile && benchmarkDeviceType === 'polar') {
+        console.log(`[IngestWorkoutService] 🏃 Parsing Polar workout CSV file...`);
+        benchmarkFilePath = benchmarkFile.path;
+        
+        try {
+          polarWorkout = await PolarWorkoutParser.parseWorkout(benchmarkFilePath);
+          if (polarWorkout) {
+            console.log(`[IngestWorkoutService] 🏃 Polar workout parsed: ${polarWorkout.hrReadings.length} HR readings`);
+          }
+        } catch (polarError) {
+          console.error('[IngestWorkoutService] ❌ Error parsing Polar CSV:', polarError);
+        }
+      }
+      
+      // Process each session
+      for (const { sessionId, workout } of sessionInfos) {
+        try {
+          // Insert Luna workout readings
+          await this.insertWorkoutReadings(sessionId, userId, workout, firmwareVersion);
+          
+          // Find matching benchmark workout
+          let benchmarkWorkoutMeta: IBenchmarkWorkoutMeta | undefined;
+          
+          // Match Apple workout
+          if (appleWorkouts.length > 0 && benchmarkDeviceType === 'apple' && benchmarkFilePath) {
+            const match = AppleHealthWorkoutParser.findMatchingWorkout(
+              appleWorkouts,
+              workout.startTime,
+              workout.endTime,
+              50
+            );
+            
+            if (match) {
+              benchmarkWorkoutMeta = {
+                activeCalories: match.workout.activeCalories,
+                totalCalories: match.workout.totalCalories,
+                distance: match.workout.distance,
+              };
+              
+              // Process Apple HR data
+              await this.processBenchmarkHR(
+                sessionId,
+                userId,
+                workout,
+                benchmarkFilePath,
+                benchmarkDeviceType
+              );
+              
+              console.log(`[IngestWorkoutService] Matched Apple workout: ${match.overlapPercent.toFixed(1)}% overlap`);
+            }
+          }
+          
+          // Match Polar workout
+          if (polarWorkout && benchmarkDeviceType === 'polar') {
+            const overlap = PolarWorkoutParser.findWorkoutOverlap(
+              polarWorkout,
+              workout.startTime,
+              workout.endTime,
+              50
+            );
+            
+            if (overlap?.isMatch) {
+              benchmarkWorkoutMeta = {
+                activeCalories: polarWorkout.calories,
+                distance: polarWorkout.totalDistanceKm ? polarWorkout.totalDistanceKm * 1000 : undefined,
+              };
+              
+              // Process Polar HR data
+              await this.processPolarBenchmarkHR(
+                sessionId,
+                userId,
+                workout,
+                polarWorkout
+              );
+              
+              console.log(`[IngestWorkoutService] 🏃 Matched Polar workout: ${overlap.overlapPercent.toFixed(1)}% overlap`);
+            }
+          }
+          
+          // Run analysis
+          await WorkoutAnalysisService.analyzeSession(sessionId.toString(), workout, benchmarkWorkoutMeta);
+          
+          // Update summaries
+          await this.updateSummaries(sessionId.toString(), userId.toString(), firmwareVersion, workout.startTime);
+          
+          console.log(`[IngestWorkoutService] ✅ Completed processing for session ${sessionId}`);
+          
+        } catch (sessionError) {
+          console.error(`[IngestWorkoutService] Error processing session ${sessionId}:`, sessionError);
+        }
+      }
+      
+      // Send success email
+      if (sessionInfos.length > 0 && userEmail && userName) {
+        await mailService.sendSessionAnalysisNotification(
+          userEmail,
+          userName,
+          sessionInfos[0].sessionId.toString(),
+          `Workout Day - ${workoutDate.toISOString().split('T')[0]}`,
+          'success',
+          metric
+        );
+      }
+      
+      console.log(`[IngestWorkoutService] ✅ Background processing complete for ${sessionInfos.length} sessions`);
+      
+    } catch (error) {
+      console.error('[IngestWorkoutService] ❌ Error in background processing:', error);
+      
+      // Send failure email
+      if (userEmail && userName) {
+        await mailService.sendSessionAnalysisNotification(
+          userEmail,
+          userName,
+          'N/A',
+          `Workout Day - ${workoutDate.toISOString().split('T')[0]}`,
+          'failed',
+          metric,
+          error instanceof Error ? error.message : 'Unknown error occurred'
+        );
+      }
+      
+    } finally {
+      // Clean up temp files
+      await this.cleanupFiles(lunaFile, benchmarkFile, extractedFolder);
+    }
+  }
+  
+  /**
+   * Insert workout readings for a session
+   */
+  private static async insertWorkoutReadings(
+    sessionId: Types.ObjectId,
+    userId: Types.ObjectId | string,
+    workout: IParsedWorkout,
+    firmwareVersion: string
+  ): Promise<void> {
+    if (workout.readings && workout.readings.length > 0) {
+      const readings = workout.readings.map(reading => ({
+        meta: {
+          sessionId: sessionId,
+          workoutId: workout.workoutId,
+          userId: new Types.ObjectId(userId.toString()),
+          deviceType: 'luna',
+          firmwareVersion: firmwareVersion,
+        },
+        timestamp: reading.timestamp,
+        heartRate: reading.heartRate,
+        heartRateConfidence: reading.heartRateConfidence,
+        exerciseIntensity: reading.exerciseIntensity,
+        isValid: true,
+      }));
+      
+      await WorkoutReading.insertMany(readings);
+      console.log(`[IngestWorkoutService] Inserted ${readings.length} workout readings for session ${sessionId}`);
+    } else {
+      console.warn(`[IngestWorkoutService] No ringPointData readings for workout ${workout.workoutId}`);
+    }
+  }
+  
+  /**
+   * Clean up temp files and extracted folders
+   */
+  private static async cleanupFiles(
+    lunaFile?: Express.Multer.File,
+    benchmarkFile?: Express.Multer.File,
+    extractedFolder?: string
+  ): Promise<void> {
+    try {
+      if (lunaFile?.path) {
+        await unlinkAsync(lunaFile.path);
+        console.log(`✅ Deleted temp file: ${lunaFile.filename}`);
+      }
+      if (benchmarkFile?.path) {
+        await unlinkAsync(benchmarkFile.path);
+        console.log(`✅ Deleted temp file: ${benchmarkFile.filename}`);
+      }
+      if (extractedFolder) {
+        await deleteDirectory(extractedFolder);
+        console.log(`✅ Deleted extracted folder: ${extractedFolder}`);
+      }
+    } catch (deleteError) {
+      console.warn('⚠️ Error deleting temp files:', deleteError);
+    }
+  }
+  
+  /**
+   * Update all summary collections after session analysis
+   */
+  private static async updateSummaries(
+    sessionId: string,
+    userId: string,
+    firmwareVersion: string,
+    sessionStartTime: Date
+  ): Promise<void> {
+    try {
+      console.log(`[IngestWorkoutService] Updating summaries for session ${sessionId}`);
+      
+      // Update user accuracy summary
+      await updateUserAccuracySummary(userId, 'Workout');
+      
+      // Update firmware performance
+      await updateFirmwarePerformanceForLuna(firmwareVersion, 'Workout');
+      
+      // Update benchmark comparison summaries
+      await updateBenchmarkComparisonSummariesForSession(sessionId);
+      
+      // Update admin global summary
+      await updateAdminGlobalSummary('Workout', true);
+      
+      // Update admin daily trend
+      await updateAdminDailyTrend(sessionStartTime, 'Workout', true);
+      
+      console.log(`[IngestWorkoutService] Summaries updated for session ${sessionId}`);
+      
+    } catch (error) {
+      console.error(`[IngestWorkoutService] Error updating summaries for session ${sessionId}:`, error);
+      // Don't throw - summaries can be recalculated later
+    }
+  }
+  
+  /**
+   * Process benchmark HR data for a workout session
+   * Extracts HR readings from Apple Health for the workout time window
+   */
+  private static async processBenchmarkHR(
+    sessionId: Types.ObjectId,
+    userId: Types.ObjectId | string,
+    workout: IParsedWorkout,
+    benchmarkFilePath: string,
+    benchmarkDeviceType: string
+  ): Promise<void> {
+    try {
+      console.log(`[IngestWorkoutService] Extracting ${benchmarkDeviceType} HR for workout ${workout.workoutId}`);
+      
+      let hrReadings: Array<{ timestamp: Date; heartRate: number }> = [];
+      
+      if (benchmarkDeviceType === 'apple') {
+        hrReadings = await extractHRForWorkoutComparison(
+          benchmarkFilePath,
+          workout.startTime,
+          workout.endTime
+        );
+      }
+      // Add other benchmark device types here as needed
+      
+      if (hrReadings.length === 0) {
+        console.log(`[IngestWorkoutService] No benchmark HR readings found in workout time range`);
+        return;
+      }
+      
+      console.log(`[IngestWorkoutService] Extracted ${hrReadings.length} ${benchmarkDeviceType} HR readings`);
+      
+      // Insert benchmark readings
+      const benchmarkReadings = hrReadings.map(reading => ({
+        meta: {
+          sessionId: sessionId,
+          workoutId: workout.workoutId,
+          userId: new Types.ObjectId(userId.toString()),
+          deviceType: benchmarkDeviceType,
+          firmwareVersion: undefined,
+        },
+        timestamp: reading.timestamp,
+        heartRate: reading.heartRate,
+        heartRateConfidence: 100, // Apple Watch typically has high confidence
+        exerciseIntensity: 0,
+        isValid: true,
+      }));
+      
+      await WorkoutReading.insertMany(benchmarkReadings);
+      console.log(`[IngestWorkoutService] Inserted ${benchmarkReadings.length} benchmark readings for session ${sessionId}`);
+      
+    } catch (error) {
+      console.error(`[IngestWorkoutService] Error processing benchmark HR:`, error);
+      // Don't throw - we still want the session to be created even without benchmark
+    }
+  }
+  
+  /**
+   * Process Polar HR data for a workout session
+   * Uses pre-parsed Polar workout data (already in memory from CSV parsing)
+   */
+  private static async processPolarBenchmarkHR(
+    sessionId: Types.ObjectId,
+    userId: Types.ObjectId | string,
+    workout: IParsedWorkout,
+    polarWorkout: IPolarWorkout
+  ): Promise<void> {
+    try {
+      console.log(`[IngestWorkoutService] 🏃 Processing Polar HR for workout ${workout.workoutId}`);
+      
+      // Extract Polar HR readings within the Luna workout time window
+      const hrReadings = PolarWorkoutParser.extractHRInTimeWindow(
+        polarWorkout,
+        workout.startTime,
+        workout.endTime
+      );
+      
+      if (hrReadings.length === 0) {
+        console.log(`[IngestWorkoutService] No Polar HR readings found in workout time range`);
+        return;
+      }
+      
+      console.log(`[IngestWorkoutService] 🏃 Found ${hrReadings.length} Polar HR readings in workout window`);
+      
+      // Insert benchmark readings
+      const benchmarkReadings = hrReadings.map(reading => ({
+        meta: {
+          sessionId: sessionId,
+          workoutId: workout.workoutId,
+          userId: new Types.ObjectId(userId.toString()),
+          deviceType: 'polar',
+          firmwareVersion: undefined,
+        },
+        timestamp: reading.timestamp,
+        heartRate: reading.heartRate,
+        heartRateConfidence: 100, // Polar chest strap has high confidence
+        exerciseIntensity: 0,
+        isValid: true,
+      }));
+      
+      await WorkoutReading.insertMany(benchmarkReadings);
+      console.log(`[IngestWorkoutService] 🏃 Inserted ${benchmarkReadings.length} Polar readings for session ${sessionId}`);
+      
+    } catch (error) {
+      console.error(`[IngestWorkoutService] ❌ Error processing Polar HR:`, error);
+      // Don't throw - we still want the session to be created even without benchmark
+    }
+  }
+}

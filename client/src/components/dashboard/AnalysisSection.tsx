@@ -36,7 +36,11 @@ const AnalysisSection: React.FC<Props> = ({ analysis, isAdmin = false }) => {
       {analysis?.pairwiseComparisons && analysis.pairwiseComparisons.length > 0 ? (
         <div>
           <div className="space-y-3">
-            {analysis.pairwiseComparisons.map((pair, idx) => (
+            {analysis.pairwiseComparisons.map((pair, idx) => {
+              // Check if this is a bias-only comparison (SkinTemp with Apple single value)
+              const isBiasOnly = (pair as any).biasOnlyComparison === true;
+              
+              return (
               <div
                 key={idx}
                 className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-5 border border-purple-200 shadow-sm hover:shadow-md transition-all duration-200"
@@ -49,36 +53,77 @@ const AnalysisSection: React.FC<Props> = ({ analysis, isAdmin = false }) => {
                     </span>
                   </div>
                   
-                  {/* Stats spread across full width */}
-                  <div className="flex items-center justify-around flex-1 gap-6 text-sm">
-                    <div className="flex flex-col items-center gap-1">
-                      <span className="text-gray-600 text-xs font-medium">MAE</span>
-                      <span className="font-semibold text-gray-800 text-base">
-                        {pair.mae != null ? pair.mae.toFixed(2) : '--'} <span className="text-xs text-gray-500 font-normal">{unit}</span>
-                      </span>
+                  {/* Stats - Different layout for bias-only comparison */}
+                  {isBiasOnly ? (
+                    // Bias-only comparison (SkinTemp with Apple single value)
+                    <div className="flex items-center justify-around flex-1 gap-6 text-sm">
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="text-gray-600 text-xs font-medium">{getDeviceDisplayName(pair.d1)} Avg</span>
+                        <span className="font-semibold text-gray-800 text-base">
+                          {(pair as any).lunaAvg != null ? (pair as any).lunaAvg.toFixed(2) : '--'} <span className="text-xs text-gray-500 font-normal">{unit}</span>
+                        </span>
+                        <span className="text-xs text-gray-400">({(pair as any).lunaReadingCount || 0} readings)</span>
+                      </div>
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="text-gray-600 text-xs font-medium">{getDeviceDisplayName(pair.d2)} Avg</span>
+                        <span className="font-semibold text-gray-800 text-base">
+                          {(pair as any).benchmarkAvg != null ? (pair as any).benchmarkAvg.toFixed(2) : '--'} <span className="text-xs text-gray-500 font-normal">{unit}</span>
+                        </span>
+                        <span className="text-xs text-gray-400">({(pair as any).benchmarkReadingCount || 0} readings)</span>
+                      </div>
+                      <div className="flex flex-col items-center gap-1 bg-purple-100 px-4 py-2 rounded-lg">
+                        <span className="text-purple-700 text-xs font-medium">Bias</span>
+                        <span className={`font-bold text-lg ${
+                          pair.meanBias != null && Math.abs(pair.meanBias) <= 0.5 
+                            ? 'text-green-600' 
+                            : pair.meanBias != null && Math.abs(pair.meanBias) <= 1.0 
+                              ? 'text-yellow-600' 
+                              : 'text-red-600'
+                        }`}>
+                          {pair.meanBias != null ? (pair.meanBias > 0 ? '+' : '') + pair.meanBias.toFixed(2) : '--'} <span className="text-sm font-normal">{unit}</span>
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex flex-col items-center gap-1">
-                      <span className="text-gray-600 text-xs font-medium">RMSE</span>
-                      <span className="font-semibold text-gray-800 text-base">
-                        {pair.rmse != null ? pair.rmse.toFixed(2) : '--'} <span className="text-xs text-gray-500 font-normal">{unit}</span>
-                      </span>
+                  ) : (
+                    // Standard comparison with all metrics
+                    <div className="flex items-center justify-around flex-1 gap-6 text-sm">
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="text-gray-600 text-xs font-medium">MAE</span>
+                        <span className="font-semibold text-gray-800 text-base">
+                          {pair.mae != null ? pair.mae.toFixed(2) : '--'} <span className="text-xs text-gray-500 font-normal">{unit}</span>
+                        </span>
+                      </div>
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="text-gray-600 text-xs font-medium">RMSE</span>
+                        <span className="font-semibold text-gray-800 text-base">
+                          {pair.rmse != null ? pair.rmse.toFixed(2) : '--'} <span className="text-xs text-gray-500 font-normal">{unit}</span>
+                        </span>
+                      </div>
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="text-gray-600 text-xs font-medium">Pearson R</span>
+                        <span className="font-semibold text-gray-800 text-base">
+                          {pair.pearsonR != null ? pair.pearsonR.toFixed(3) : '--'}
+                        </span>
+                      </div>
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="text-gray-600 text-xs font-medium">Mean Bias</span>
+                        <span className="font-semibold text-gray-800 text-base">
+                          {pair.meanBias != null ? pair.meanBias.toFixed(2) : '--'} <span className="text-xs text-gray-500 font-normal">{unit}</span>
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex flex-col items-center gap-1">
-                      <span className="text-gray-600 text-xs font-medium">Pearson R</span>
-                      <span className="font-semibold text-gray-800 text-base">
-                        {pair.pearsonR != null ? pair.pearsonR.toFixed(3) : '--'}
-                      </span>
-                    </div>
-                    <div className="flex flex-col items-center gap-1">
-                      <span className="text-gray-600 text-xs font-medium">Mean Bias</span>
-                      <span className="font-semibold text-gray-800 text-base">
-                        {pair.meanBias != null ? pair.meanBias.toFixed(2) : '--'} <span className="text-xs text-gray-500 font-normal">{unit}</span>
-                      </span>
-                    </div>
-                  </div>
+                  )}
                 </div>
+                
+                {/* Info note for bias-only comparison */}
+                {isBiasOnly && (
+                  <div className="mt-3 text-xs text-gray-500 bg-gray-50 px-3 py-2 rounded-lg">
+                    <span className="font-medium">Note:</span> Apple Health provides a single average temperature per sleep session. 
+                    MAE, RMSE, and Pearson R require paired time-series data and are not applicable.
+                  </div>
+                )}
               </div>
-            ))}
+            )})}
           </div>
           
           {/* Metric Info */}

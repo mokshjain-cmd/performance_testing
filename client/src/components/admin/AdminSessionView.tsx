@@ -8,6 +8,7 @@ import HeartRateChart from '../dashboard/HeartrateChart';
 import AnalysisSection from '../dashboard/AnalysisSection';
 import AdminSleepSessionView from './AdminSleepSessionView';
 import AdminActivitySessionView from './AdminActivitySessionView';
+import AdminWorkoutSessionView from './AdminWorkoutSessionView';
 import { Download } from 'lucide-react';
 
 interface AdminSessionViewProps {
@@ -25,6 +26,11 @@ const AdminSessionView: React.FC<AdminSessionViewProps> = ({ sessionId, userId: 
   // Handle activity metric separately
   if (metric === 'activity') {
     return <AdminActivitySessionView sessionId={sessionId} />;
+  }
+
+  // Handle workout metric separately
+  if (metric === 'workout') {
+    return <AdminWorkoutSessionView sessionId={sessionId} />;
   }
 
   // Handle skintemp metric - use the user SkinTempSessionPage component

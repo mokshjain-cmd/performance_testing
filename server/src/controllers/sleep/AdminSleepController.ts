@@ -212,4 +212,30 @@ export class AdminSleepController {
       });
     }
   }
+
+  /**
+   * GET /api/admin/sleep/user/:userId/daily-bias-trend
+   * Get daily bias trend for a specific user
+   * Query params: startDate, endDate
+   */
+  static async getUserDailyBiasTrend(req: Request, res: Response): Promise<void> {
+    try {
+      const { userId } = req.params;
+      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
+      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+
+      const trend = await AdminSleepSummaryService.getUserDailyBiasTrend(userId, startDate, endDate);
+      
+      res.json({
+        success: true,
+        data: trend,
+      });
+    } catch (error: any) {
+      console.error("[AdminSleepController] Error getting user daily bias trend:", error);
+      res.status(500).json({
+        success: false,
+        error: error.message || "Failed to get user daily bias trend",
+      });
+    }
+  }
 }

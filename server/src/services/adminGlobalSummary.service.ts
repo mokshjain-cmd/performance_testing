@@ -1,6 +1,7 @@
 import Session from '../models/Session';
 import SessionAnalysis from '../models/SessionAnalysis';
 import NormalizedReading from '../models/NormalizedReadings';
+import WorkoutReading from '../models/WorkoutReading';
 import AdminGlobalSummary from '../models/AdminGlobalSummary';
 import { getLatestFirmwareVersion } from '../controllers/firmwareConfig.controller';
 
@@ -12,7 +13,7 @@ import { getLatestFirmwareVersion } from '../controllers/firmwareConfig.controll
  * @param latestFirmwareOnly - Whether to filter by latest firmware version only (default: true)
  */
 export async function updateAdminGlobalSummary(
-  metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity' | 'SkinTemp' = 'HR',
+  metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity' | 'SkinTemp' | 'Workout' = 'HR',
   latestFirmwareOnly: boolean = true
 ) {
   console.log(`\n🔄 ========================================`);
@@ -203,6 +204,66 @@ export async function updateAdminGlobalSummary(
     console.log(`[AdminGlobalSummary]    - Firmware: ${summary.latestFirmwareVersion || 'NONE'}`);
     console.log(`[AdminGlobalSummary]  ias  - Avg Accuracy: ${summary.sleepStats.avgAccuracyPercent?.toFixed(2)}%`);
     console.log(`[AdminGlobalSummary] ========================================\n`);
+
+    return result;
+  }
+
+  // Handle Workout metric (uses workoutStats.benchmarkComparison)
+  if (metric === 'Workout') {
+    const sessionIds = sessions.map(s => s._id);
+    
+    // Count workout readings (stored in WorkoutReading, not NormalizedReading)
+    const workoutTotalReadings = await WorkoutReading.countDocuments({
+      'meta.deviceType': 'luna',
+      'meta.sessionId': { $in: sessionIds }
+    });
+    
+    const analyses = await SessionAnalysis.find({
+      sessionId: { $in: sessionIds },
+      isValid: true,
+      'workoutStats': { $exists: true },
+    });
+
+    let totalMAE = 0, totalRMSE = 0, totalMAPE = 0, totalPearson = 0, totalBias = 0;
+    let countComparison = 0;
+    let totalWorkouts = analyses.length;
+
+    analyses.forEach((analysis) => {
+      const workoutStats = (analysis as any).workoutStats;
+      if (workoutStats?.benchmarkComparison) {
+        const bc = workoutStats.benchmarkComparison;
+        totalMAE += bc.hrMae || 0;
+        totalRMSE += bc.hrRmse || 0;
+        totalMAPE += bc.hrMape || 0;
+        totalPearson += bc.hrPearsonR || 0;
+        totalBias += bc.hrMeanBias || 0;
+        countComparison++;
+      }
+    });
+
+    const summary = {
+      metric,
+      totalUsers: uniqueUserIds.size,
+      totalSessions: totalWorkouts,
+      totalReadings: workoutTotalReadings,
+      lunaStats: countComparison > 0 ? {
+        avgMAE: totalMAE / countComparison,
+        avgRMSE: totalRMSE / countComparison,
+        avgMAPE: totalMAPE / countComparison,
+        avgPearson: totalPearson / countComparison,
+        avgBias: totalBias / countComparison,
+      } : undefined,
+      latestFirmwareVersion: latestFirmware || undefined,
+      computedAt: new Date(),
+    };
+
+    console.log(`[AdminGlobalSummary] 💾 Saving Workout summary to database...`);
+    await AdminGlobalSummary.deleteOne({ metric });
+    const result = await AdminGlobalSummary.create(summary);
+    console.log(`[AdminGlobalSummary] ✅ AdminGlobalSummary (Workout) SAVED!`);
+    console.log(`[AdminGlobalSummary]    - Total Users: ${summary.totalUsers}`);
+    console.log(`[AdminGlobalSummary]    - Total Sessions: ${summary.totalSessions}`);
+    console.log(`[AdminGlobalSummary]    - Avg MAPE: ${summary.lunaStats?.avgMAPE?.toFixed(2)}%`);
 
     return result;
   }

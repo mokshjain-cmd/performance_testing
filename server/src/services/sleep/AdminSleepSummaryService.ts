@@ -29,7 +29,10 @@ interface IAdminGlobalSummary {
   avgKappaScore: number;
   avgDeepBiasSec: number;
   avgRemBiasSec: number;
+  avgLightBiasSec: number;
   avgTotalSleepBiasSec: number;
+  avgSleepOnsetBiasSec: number;
+  avgFinalWakeBiasSec: number;
   
   // Stage sensitivity
   stageSensitivity: {
@@ -152,7 +155,10 @@ interface IAdminUserSummary {
   avgKappaScore: number;
   avgDeepBiasSec: number;
   avgRemBiasSec: number;
+  avgLightBiasSec: number;
   avgTotalSleepBiasSec: number;
+  avgSleepOnsetBiasSec: number;
+  avgFinalWakeBiasSec: number;
   bestSession?: {
     sessionId: string;
     sessionName: string;
@@ -172,6 +178,17 @@ interface IAccuracyTrend {
   avgAccuracyPercent: number;
   avgKappaScore: number;
   avgBiasSec: number;
+  sessionCount: number;
+}
+
+interface IDailyBiasTrend {
+  date: string;
+  onsetBiasSec: number;
+  wakeBiasSec: number;
+  totalBiasSec: number;
+  lightBiasSec: number;
+  deepBiasSec: number;
+  remBiasSec: number;
   sessionCount: number;
 }
 
@@ -246,7 +263,11 @@ export class AdminSleepSummaryService {
       let kappaSum = 0;
       let deepBiasSum = 0;
       let remBiasSum = 0;
+      let lightBiasSum = 0;
       let totalSleepBiasSum = 0;
+      let sleepOnsetBiasSum = 0;
+      let finalWakeBiasSum = 0;
+      let timingBiasCount = 0; // Count sessions with timing comparison data
       
       let validationCount = 0; // Count sessions with comparison data
       
@@ -277,7 +298,19 @@ export class AdminSleepSummaryService {
           kappaSum += sleepStats.kappaScore || 0;
           deepBiasSum += sleepStats.deepDiffSec || 0;
           remBiasSum += sleepStats.remDiffSec || 0;
+          lightBiasSum += sleepStats.lightDiffSec || 0;
           totalSleepBiasSum += sleepStats.totalSleepDiffSec || 0;
+
+          // Calculate timing biases if both luna and benchmark times are available
+          if (sleepStats.lunaSleepOnsetTime && sleepStats.benchmarkSleepOnsetTime) {
+            const onsetBias = (new Date(sleepStats.lunaSleepOnsetTime).getTime() - new Date(sleepStats.benchmarkSleepOnsetTime).getTime()) / 1000;
+            sleepOnsetBiasSum += onsetBias;
+            timingBiasCount++;
+          }
+          if (sleepStats.lunaFinalWakeTime && sleepStats.benchmarkFinalWakeTime) {
+            const wakeBias = (new Date(sleepStats.lunaFinalWakeTime).getTime() - new Date(sleepStats.benchmarkFinalWakeTime).getTime()) / 1000;
+            finalWakeBiasSum += wakeBias;
+          }
 
           // Aggregate confusion matrix
           if (sleepStats.confusionMatrix) {
@@ -319,7 +352,10 @@ export class AdminSleepSummaryService {
         avgKappaScore: validationCount > 0 ? kappaSum / validationCount : 0,
         avgDeepBiasSec: validationCount > 0 ? deepBiasSum / validationCount : 0,
         avgRemBiasSec: validationCount > 0 ? remBiasSum / validationCount : 0,
+        avgLightBiasSec: validationCount > 0 ? lightBiasSum / validationCount : 0,
         avgTotalSleepBiasSec: validationCount > 0 ? totalSleepBiasSum / validationCount : 0,
+        avgSleepOnsetBiasSec: timingBiasCount > 0 ? sleepOnsetBiasSum / timingBiasCount : 0,
+        avgFinalWakeBiasSec: timingBiasCount > 0 ? finalWakeBiasSum / timingBiasCount : 0,
         stageSensitivity,
         latestFirmwareVersion: latestFirmware,
       };
@@ -781,7 +817,11 @@ export class AdminSleepSummaryService {
       let kappaSum = 0;
       let deepBiasSum = 0;
       let remBiasSum = 0;
+      let lightBiasSum = 0;
       let totalSleepBiasSum = 0;
+      let sleepOnsetBiasSum = 0;
+      let finalWakeBiasSum = 0;
+      let timingBiasCount = 0;
       let validationCount = 0;
 
       // For best/worst sessions
@@ -817,7 +857,19 @@ export class AdminSleepSummaryService {
           kappaSum += sleepStats.kappaScore || 0;
           deepBiasSum += sleepStats.deepDiffSec || 0;
           remBiasSum += sleepStats.remDiffSec || 0;
+          lightBiasSum += sleepStats.lightDiffSec || 0;
           totalSleepBiasSum += sleepStats.totalSleepDiffSec || 0;
+
+          // Calculate timing biases if both luna and benchmark times are available
+          if (sleepStats.lunaSleepOnsetTime && sleepStats.benchmarkSleepOnsetTime) {
+            const onsetBias = (new Date(sleepStats.lunaSleepOnsetTime).getTime() - new Date(sleepStats.benchmarkSleepOnsetTime).getTime()) / 1000;
+            sleepOnsetBiasSum += onsetBias;
+            timingBiasCount++;
+          }
+          if (sleepStats.lunaFinalWakeTime && sleepStats.benchmarkFinalWakeTime) {
+            const wakeBias = (new Date(sleepStats.lunaFinalWakeTime).getTime() - new Date(sleepStats.benchmarkFinalWakeTime).getTime()) / 1000;
+            finalWakeBiasSum += wakeBias;
+          }
 
           // Track best/worst sessions
           const session = sessions.find(s => s._id.toString() === analysis.sessionId.toString());
@@ -865,7 +917,10 @@ export class AdminSleepSummaryService {
         avgKappaScore: validationCount > 0 ? kappaSum / validationCount : 0,
         avgDeepBiasSec: validationCount > 0 ? deepBiasSum / validationCount : 0,
         avgRemBiasSec: validationCount > 0 ? remBiasSum / validationCount : 0,
+        avgLightBiasSec: validationCount > 0 ? lightBiasSum / validationCount : 0,
         avgTotalSleepBiasSec: validationCount > 0 ? totalSleepBiasSum / validationCount : 0,
+        avgSleepOnsetBiasSec: timingBiasCount > 0 ? sleepOnsetBiasSum / timingBiasCount : 0,
+        avgFinalWakeBiasSec: timingBiasCount > 0 ? finalWakeBiasSum / timingBiasCount : 0,
         bestSession,
         worstSession,
       };
@@ -1046,6 +1101,110 @@ export class AdminSleepSummaryService {
       return trendData.sort((a, b) => a.date.getTime() - b.date.getTime());
     } catch (error) {
       console.error("[AdminSleepSummaryService] Error getting accuracy trend:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get daily bias trend for a specific user
+   * Returns per-day average biases for onset, wake, total, light, deep, REM
+   */
+  static async getUserDailyBiasTrend(
+    userId: Types.ObjectId | string,
+    startDate?: Date,
+    endDate?: Date
+  ): Promise<IDailyBiasTrend[]> {
+    try {
+      const dateFilter: any = {};
+      if (startDate) dateFilter.$gte = startDate;
+      if (endDate) dateFilter.$lte = endDate;
+
+      const sessions = await Session.find({
+        userId,
+        metric: "Sleep",
+        isValid: true,
+        ...(Object.keys(dateFilter).length > 0 ? { startTime: dateFilter } : {}),
+      }).sort({ startTime: 1 });
+
+      if (sessions.length === 0) {
+        return [];
+      }
+
+      const sessionIds = sessions.map((s) => s._id);
+
+      const analyses = await SessionAnalysis.find({
+        sessionId: { $in: sessionIds },
+        isValid: true,
+      });
+
+      // Group by date
+      const dateGroups = new Map<string, any[]>();
+
+      analyses.forEach((analysis) => {
+        const session = sessions.find((s) => s._id.toString() === analysis.sessionId.toString());
+        if (!session) return;
+
+        const dateKey = session.startTime.toISOString().split("T")[0];
+
+        if (!dateGroups.has(dateKey)) {
+          dateGroups.set(dateKey, []);
+        }
+        dateGroups.get(dateKey)!.push(analysis);
+      });
+
+      const trendData: IDailyBiasTrend[] = [];
+
+      for (const [dateKey, dayAnalyses] of dateGroups.entries()) {
+        let onsetBiasSum = 0;
+        let wakeBiasSum = 0;
+        let totalBiasSum = 0;
+        let lightBiasSum = 0;
+        let deepBiasSum = 0;
+        let remBiasSum = 0;
+        let timingCount = 0;
+        let validationCount = 0;
+
+        dayAnalyses.forEach((analysis: any) => {
+          const sleepStats = analysis.sleepStats;
+          if (!sleepStats) return;
+
+          if (sleepStats.epochAccuracyPercent !== undefined) {
+            validationCount++;
+            totalBiasSum += sleepStats.totalSleepDiffSec || 0;
+            lightBiasSum += sleepStats.lightDiffSec || 0;
+            deepBiasSum += sleepStats.deepDiffSec || 0;
+            remBiasSum += sleepStats.remDiffSec || 0;
+
+            // Calculate timing biases
+            if (sleepStats.lunaSleepOnsetTime && sleepStats.benchmarkSleepOnsetTime) {
+              const onsetBias = (new Date(sleepStats.lunaSleepOnsetTime).getTime() - new Date(sleepStats.benchmarkSleepOnsetTime).getTime()) / 1000;
+              onsetBiasSum += onsetBias;
+              timingCount++;
+            }
+            if (sleepStats.lunaFinalWakeTime && sleepStats.benchmarkFinalWakeTime) {
+              const wakeBias = (new Date(sleepStats.lunaFinalWakeTime).getTime() - new Date(sleepStats.benchmarkFinalWakeTime).getTime()) / 1000;
+              wakeBiasSum += wakeBias;
+            }
+          }
+        });
+
+        if (validationCount > 0) {
+          trendData.push({
+            date: dateKey,
+            onsetBiasSec: timingCount > 0 ? onsetBiasSum / timingCount : 0,
+            wakeBiasSec: timingCount > 0 ? wakeBiasSum / timingCount : 0,
+            totalBiasSec: totalBiasSum / validationCount,
+            lightBiasSec: lightBiasSum / validationCount,
+            deepBiasSec: deepBiasSum / validationCount,
+            remBiasSec: remBiasSum / validationCount,
+            sessionCount: validationCount,
+          });
+        }
+      }
+
+      return trendData.sort((a, b) => a.date.localeCompare(b.date));
+    } catch (error) {
+      console.error("[AdminSleepSummaryService] Error getting user daily bias trend:", error);
       throw error;
     }
   }

@@ -33,7 +33,7 @@ export interface Session {
   _id: string;
   userId: User;
   activityType: string;
-  metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity' | 'SkinTemp';
+  metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity' | 'SkinTemp' | 'Workout';
   startTime: string;
   endTime: string;
   durationSec: number;
@@ -129,7 +129,7 @@ export interface Analysis {
   sessionId: string;
   userId: string;
   activityType: string;
-  metric?: 'HR' | 'SPO2' | 'Sleep' | 'Activity' | 'SkinTemp';
+  metric?: 'HR' | 'SPO2' | 'Sleep' | 'Activity' | 'SkinTemp' | 'Workout';
   startTime: string;
   endTime: string;
   deviceStats: DeviceStats[];
@@ -169,6 +169,7 @@ export interface Analysis {
       bias?: number;
     };
   };
+  workoutStats?: WorkoutStats;
   isValid: boolean;
   computedAt: string;
 }
@@ -232,6 +233,139 @@ export interface UserSummary {
     _id: string;
   }[];
   lastUpdated: string;
+}
+
+// ========================
+// WORKOUT TYPES
+// ========================
+export interface WorkoutStats {
+  // Identifiers
+  sportType: number;
+  workoutId: string;
+  
+  // Duration
+  startTime: string;
+  endTime: string;
+  durationSec: number;
+  
+  // HR Summary (from DevSportInfoBean)
+  hr: {
+    avg: number;
+    max: number;
+    min: number;
+  };
+  
+  // HR Zones (seconds in each zone)
+  hrZones: {
+    warmUp: number;
+    fatBurning: number;
+    aerobic: number;
+    anaerobic: number;
+  };
+  
+  // Activity metrics
+  calories: number;
+  steps: number;
+  distance: number;
+  
+  // Pace/Speed
+  pace: {
+    avg: number;
+    fast: number;
+    slowest: number;
+  };
+  speed: {
+    avg: number;
+    fast: number;
+  };
+  
+  // Step cadence
+  stepSpeed: {
+    avg: number;
+    max: number;
+  };
+  
+  // Training metrics
+  trainingEffect: number;
+  trainingLoad: number;
+  vo2max: number;
+  recoveryTime: number;
+  
+  // Computed from ringPointData (Luna)
+  computedHr?: {
+    avg: number;
+    max: number;
+    min: number;
+    stdDev: number;
+    readingCount: number;
+  };
+  
+  // Benchmark comparison (if benchmark provided)
+  benchmarkComparison?: {
+    benchmarkDevice: string;
+    hrMae: number;
+    hrRmse: number;
+    hrMape: number;
+    hrPearsonR: number;
+    hrMeanBias: number;
+    overlapCount: number;
+    overlapPercent: number;
+    // Workout-level comparisons
+    lunaCalories?: number;
+    benchmarkCalories?: number;
+    caloriesDifference?: number;
+    caloriesAccuracyPercent?: number;
+    lunaDistance?: number;
+    benchmarkDistance?: number;
+    distanceDifference?: number;
+    distanceAccuracyPercent?: number;
+    lunaSteps?: number;
+    benchmarkSteps?: number;
+    stepsDifference?: number;
+    stepsAccuracyPercent?: number;
+  };
+}
+
+export interface WorkoutReading {
+  timestamp: string;
+  heartRate: number;
+  heartRateConfidence?: number;
+  exerciseIntensity?: number;
+}
+
+export interface WorkoutReadingsResult {
+  luna: WorkoutReading[];
+  benchmark: WorkoutReading[] | null;
+  benchmarkDeviceType?: string;
+}
+
+export interface WorkoutSessionDetails {
+  session: Session;
+  analysis: Analysis & { workoutStats?: WorkoutStats };
+  readings: WorkoutReading[];
+}
+
+export interface WorkoutOverviewData {
+  totalWorkouts: number;
+  totalDurationSec: number;
+  avgHrAccuracy?: {
+    mae?: number;
+    rmse?: number;
+    pearsonR?: number;
+    mape?: number;
+  };
+  sportTypeBreakdown: {
+    sportType: number;
+    count: number;
+    totalDurationSec: number;
+  }[];
+  recentWorkouts: {
+    sessionId: string;
+    sportType: number;
+    date: string;
+    durationSec: number;
+    avgHr: number;
+  }[];
 }
 
 // ========================

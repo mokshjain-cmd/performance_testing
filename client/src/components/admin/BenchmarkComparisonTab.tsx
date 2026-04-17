@@ -29,7 +29,7 @@ const BenchmarkComparisonTab: React.FC<BenchmarkComparisonTabProps> = ({ metric 
   const [selectedBenchmarkMetric, setSelectedBenchmarkMetric] = useState<BenchmarkMetric>('avgMAE');
 
   useEffect(() => {
-    const metricParam = metric === 'hr' ? 'HR' : 'SPO2';
+    const metricParam = metric === 'hr' ? 'HR' : metric === 'spo2' ? 'SPO2' : 'SkinTemp';
     apiClient.get(`/benchmark-comparisons?metric=${metricParam}`)
       .then(res => {
         setBenchmarkComparisons(res.data.data || []);
@@ -145,19 +145,19 @@ const BenchmarkComparisonTab: React.FC<BenchmarkComparisonTabProps> = ({ metric 
                           {comp.totalSessions}
                         </td>
                         <td className={`py-3 px-4 text-center font-semibold ${bestMAE ? 'bg-green-50 text-green-700' : 'text-gray-700'}`}>
-                          {comp.hrStats.avgMAE.toFixed(2)}
+                          {comp.hrStats?.avgMAE?.toFixed(2) ?? 'N/A'}
                         </td>
                         <td className={`py-3 px-4 text-center font-semibold ${bestRMSE ? 'bg-green-50 text-green-700' : 'text-gray-700'}`}>
-                          {comp.hrStats.avgRMSE.toFixed(2)}
+                          {comp.hrStats?.avgRMSE?.toFixed(2) ?? 'N/A'}
                         </td>
                         <td className={`py-3 px-4 text-center font-semibold ${bestMAPE ? 'bg-green-50 text-green-700' : 'text-gray-700'}`}>
-                          {comp.hrStats.avgMAPE.toFixed(2)}%
+                          {comp.hrStats?.avgMAPE !== undefined ? `${comp.hrStats.avgMAPE.toFixed(2)}%` : 'N/A'}
                         </td>
                         <td className={`py-3 px-4 text-center font-semibold ${bestPearson ? 'bg-green-50 text-green-700' : 'text-gray-700'}`}>
-                          {comp.hrStats.avgPearson.toFixed(3)}
+                          {comp.hrStats?.avgPearson?.toFixed(3) ?? 'N/A'}
                         </td>
                         <td className={`py-3 px-4 text-center font-semibold ${bestBias ? 'bg-green-50 text-green-700' : 'text-gray-700'}`}>
-                          {comp.hrStats.avgBias.toFixed(2)}
+                          {comp.hrStats?.avgBias?.toFixed(2) ?? 'N/A'}
                         </td>
                       </tr>
                     );

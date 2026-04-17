@@ -9,7 +9,7 @@ import { Types } from 'mongoose';
  * @param userId - The user ID to update summary for
  * @param metric - The metric to calculate summary for (HR, SPO2, etc.)
  */
-export async function updateUserAccuracySummary(userId: Types.ObjectId | string, metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity' | 'SkinTemp' = 'HR') {
+export async function updateUserAccuracySummary(userId: Types.ObjectId | string, metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity' | 'SkinTemp' | 'Workout' = 'HR') {
   // Get all sessions for the user with this metric
   const sessions = await Session.find({ userId, metric }).lean();
   
@@ -66,6 +66,66 @@ export async function updateUserAccuracySummary(userId: Types.ObjectId | string,
     const session = sessionMap.get(String(analysis.sessionId));
     if (!session) continue;
     const duration = (new Date(session.endTime).getTime() - new Date(session.startTime).getTime()) / 1000;
+    
+    // For Workout metric, use workoutStats.benchmarkComparison
+    if (metric === 'Workout') {
+      const workoutStats = (analysis as any).workoutStats;
+      if (workoutStats?.benchmarkComparison) {
+        const bc = workoutStats.benchmarkComparison;
+        totalMAE += bc.hrMae || 0;
+        totalRMSE += bc.hrRmse || 0;
+        totalPearson += bc.hrPearsonR || 0;
+        totalMAPE += bc.hrMape || 0;
+        count++;
+        
+        const sessionAccuracy = 100 - (bc.hrMape || 0);
+        
+        // Best/worst tracking
+        if (bc.hrMape < bestAccuracy) {
+          bestAccuracy = bc.hrMape;
+          bestSession = {
+            sessionId: analysis.sessionId,
+            activityType: `sport_${workoutStats.sportType}`,
+            accuracyPercent: sessionAccuracy,
+          };
+        }
+        if (bc.hrMape > worstAccuracy) {
+          worstAccuracy = bc.hrMape;
+          worstSession = {
+            sessionId: analysis.sessionId,
+            activityType: `sport_${workoutStats.sportType}`,
+            accuracyPercent: sessionAccuracy,
+          };
+        }
+        
+        // Activity (sport type)
+        const sportType = `sport_${workoutStats.sportType}`;
+        const a = activityMap.get(sportType) || { sum: 0, count: 0, duration: 0 };
+        a.sum += sessionAccuracy;
+        a.count++;
+        a.duration += duration;
+        activityMap.set(sportType, a);
+        
+        // Firmware
+        const lunaDevice = session.devices?.find((d: any) => d.deviceType === 'luna');
+        if (lunaDevice?.firmwareVersion) {
+          const f = firmwareMap.get(lunaDevice.firmwareVersion) || { sum: 0, count: 0 };
+          f.sum += sessionAccuracy;
+          f.count++;
+          firmwareMap.set(lunaDevice.firmwareVersion, f);
+        }
+        
+        // Band position
+        if (session.bandPosition) {
+          const b = bandMap.get(session.bandPosition) || { sum: 0, count: 0, duration: 0 };
+          b.sum += sessionAccuracy;
+          b.count++;
+          b.duration += duration;
+          bandMap.set(session.bandPosition, b);
+        }
+      }
+      continue; // Skip pairwiseComparisons logic for Workout
+    }
     
     // Find the Luna vs benchmark device comparison for this metric
     const pair = analysis.pairwiseComparisons?.find(

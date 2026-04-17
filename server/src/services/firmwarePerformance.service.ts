@@ -9,7 +9,7 @@ import { Types } from 'mongoose';
  * @param firmwareVersion - The firmware version to update
  * @param metric - The metric to calculate performance for (HR, SPO2, etc.)
  */
-export async function updateFirmwarePerformanceForLuna(firmwareVersion: string, metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity' | 'SkinTemp' = 'HR') {
+export async function updateFirmwarePerformanceForLuna(firmwareVersion: string, metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity' | 'SkinTemp' | 'Workout' = 'HR') {
   // Find all sessions and analyses for Luna with this firmware and metric
   const sessions = await Session.find({ 'devices.deviceType': 'luna', 'devices.firmwareVersion': firmwareVersion, metric }).lean();
   if (!sessions.length) return;
@@ -68,6 +68,73 @@ export async function updateFirmwarePerformanceForLuna(firmwareVersion: string, 
       console.log('Firmware performance (Sleep) updated for Luna version:', firmwareVersion);
     } catch (err) {
       console.error('Error updating firmware performance for Luna version:', firmwareVersion, err);
+      return;
+    }
+    
+    return;
+  }
+
+  // Handle Workout metric (uses workoutStats)
+  if (metric === 'Workout') {
+    let totalMAE = 0, totalRMSE = 0, totalPearson = 0, totalMAPE = 0;
+    let countComparison = 0;
+    const userSet = new Set<string>();
+    const activityMap = new Map<string, { sum: number, count: number }>();
+
+    for (const analysis of analyses) {
+      if (!analysis.workoutStats) continue;
+      
+      const workoutStats = analysis.workoutStats as any;
+      
+      // Count sessions with benchmark comparison
+      if (workoutStats.benchmarkComparison) {
+        const comparison = workoutStats.benchmarkComparison;
+        totalMAE += comparison.hrMae || 0;
+        totalRMSE += comparison.hrRmse || 0;
+        totalPearson += comparison.hrPearsonR || 0;
+        totalMAPE += comparison.hrMape || 0;
+        countComparison++;
+        
+        // Track by sport type (as activityType)
+        const sportType = `sport_${workoutStats.sportType}`;
+        const a = activityMap.get(sportType) || { sum: 0, count: 0 };
+        const sessionAccuracy = 100 - (comparison.hrMape || 0);
+        a.sum += sessionAccuracy;
+        a.count++;
+        activityMap.set(sportType, a);
+      }
+      
+      if (analysis.userId) userSet.add(String(analysis.userId));
+    }
+
+    const doc: Partial<IFirmwarePerformance> = {
+      firmwareVersion,
+      metric,
+      totalSessions: analyses.length,
+      totalUsers: userSet.size,
+      overallAccuracy: countComparison > 0 ? {
+        avgMAE: totalMAE / countComparison,
+        avgRMSE: totalRMSE / countComparison,
+        avgMAPE: totalMAPE / countComparison,
+        avgPearson: totalPearson / countComparison,
+      } : undefined,
+      activityWise: Array.from(activityMap.entries()).map(([activityType, { sum, count }]) => ({
+        activityType,
+        avgAccuracy: count ? sum / count : 0,
+        totalSessions: count,
+      })),
+      computedAt: new Date(),
+    };
+
+    try {
+      await FirmwarePerformance.findOneAndUpdate(
+        { firmwareVersion, metric },
+        doc,
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+      console.log('Firmware performance (Workout) updated for Luna version:', firmwareVersion);
+    } catch (err) {
+      console.error('Error updating firmware performance (Workout) for Luna version:', firmwareVersion, err);
       return;
     }
     

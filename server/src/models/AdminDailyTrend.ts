@@ -2,7 +2,7 @@ import { Schema, model, Document } from "mongoose";
 
 export interface IAdminDailyTrend extends Document {
   date: Date; // store date as midnight UTC
-  metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity' | 'SkinTemp';
+  metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity' | 'SkinTemp' | 'Workout';
 
   totalSessions: number;
   totalUsers: number;
@@ -58,7 +58,7 @@ const AdminDailyTrendSchema = new Schema<IAdminDailyTrend>({
   date: { type: Date, required: true, index: true },
   metric: { 
     type: String, 
-    enum: ['HR', 'SPO2', 'Sleep', 'Activity', 'SkinTemp'],
+    enum: ['HR', 'SPO2', 'Sleep', 'Activity', 'SkinTemp', 'Workout'],
     required: true,
     index: true 
   },

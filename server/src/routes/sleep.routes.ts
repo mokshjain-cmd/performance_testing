@@ -91,6 +91,14 @@ router.get("/admin/user/:userId/firmware-comparison", AdminSleepController.getUs
 router.get("/admin/user/:userId/benchmark-comparison", AdminSleepController.getUserBenchmarkComparison);
 
 /**
+ * @route   GET /api/sleep/admin/user/:userId/daily-bias-trend
+ * @desc    Get daily bias trend for specific user
+ * @query   startDate, endDate
+ * @access  Private (Admin)
+ */
+router.get("/admin/user/:userId/daily-bias-trend", AdminSleepController.getUserDailyBiasTrend);
+
+/**
  * @route   GET /api/sleep/admin/session/:sessionId
  * @desc    Admin Session Level Summary (2E - most technical)
  * @access  Private (Admin)

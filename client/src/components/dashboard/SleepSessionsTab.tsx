@@ -62,16 +62,29 @@ const SleepSessionsTab: React.FC<SleepSessionsTabProps> = ({ sessionId }) => {
     );
   }
 
-  const formatTime = (seconds: number) => {
+  const formatTime = (seconds: number | undefined | null) => {
+    if (seconds === undefined || seconds === null) return 'N/A';
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     return `${hours}h ${minutes}m`;
   };
 
-  const formatDateTime = (dateString: string) => {
+  const safePercent = (value: number | undefined | null, total: number | undefined | null) => {
+    if (value === undefined || value === null || total === undefined || total === null || total === 0) return 'N/A';
+    return ((value / total) * 100).toFixed(1);
+  };
+
+  const safeFixed = (value: number | undefined | null, decimals: number = 1) => {
+    if (value === undefined || value === null) return 'N/A';
+    return value.toFixed(decimals);
+  };
+
+  const formatDateTime = (dateString: string | undefined | null) => {
+    if (!dateString) return 'N/A';
     // Extract date and time from ISO string without timezone conversion
     // Format: 2026-03-03T00:26:00.000Z -> Mar 3, 00:26
     const [datePart, timePart] = dateString.split('T');
+    if (!timePart) return 'N/A';
     const timeOnly = timePart.split('.')[0]; // Remove milliseconds and Z
     const [, month, day] = datePart.split('-');
     const [hours, minutes] = timeOnly.split(':');
@@ -82,10 +95,13 @@ const SleepSessionsTab: React.FC<SleepSessionsTabProps> = ({ sessionId }) => {
     return `${monthName} ${parseInt(day, 10)}, ${hours}:${minutes}`;
   };
 
-  const formatUTCTime = (dateString: string) => {
+  const formatUTCTime = (dateString: string | undefined | null) => {
+    if (!dateString) return 'N/A';
     // Extract time from ISO string without timezone conversion
     // Format: 2026-03-03T05:56:00.000Z -> 05:56 AM
-    const timePart = dateString.split('T')[1];
+    const parts = dateString.split('T');
+    if (parts.length < 2 || !parts[1]) return 'N/A';
+    const timePart = parts[1];
     const timeOnly = timePart.split('.')[0]; // Remove milliseconds and Z
     const [hours, minutes] = timeOnly.split(':');
     const hour24 = parseInt(hours, 10);
@@ -98,6 +114,18 @@ const SleepSessionsTab: React.FC<SleepSessionsTabProps> = ({ sessionId }) => {
 
   const { luna, benchmark } = sessionData;
   const hasBenchmark = !!benchmark;
+
+  // Check if luna has essential data
+  if (!luna || luna.totalSleepTimeSec === undefined || luna.totalSleepTimeSec === null) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="text-center">
+          <Moon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+          <p className="text-gray-600 text-lg">No sleep data available for this session</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -161,31 +189,31 @@ const SleepSessionsTab: React.FC<SleepSessionsTabProps> = ({ sessionId }) => {
                   <div className="flex flex-col items-center gap-1">
                     <span className="text-gray-600 text-xs font-medium">Deep</span>
                     <span className="font-semibold text-gray-800 text-base">
-                      {formatTime(luna.deepSec)} <span className="text-xs text-gray-500">({((luna.deepSec / luna.totalSleepTimeSec) * 100).toFixed(1)}%)</span>
+                      {formatTime(luna.deepSec)} <span className="text-xs text-gray-500">({safePercent(luna.deepSec, luna.totalSleepTimeSec)}%)</span>
                     </span>
                   </div>
                   <div className="flex flex-col items-center gap-1">
                     <span className="text-gray-600 text-xs font-medium">REM</span>
                     <span className="font-semibold text-gray-800 text-base">
-                      {formatTime(luna.remSec)} <span className="text-xs text-gray-500">({((luna.remSec / luna.totalSleepTimeSec) * 100).toFixed(1)}%)</span>
+                      {formatTime(luna.remSec)} <span className="text-xs text-gray-500">({safePercent(luna.remSec, luna.totalSleepTimeSec)}%)</span>
                     </span>
                   </div>
                   <div className="flex flex-col items-center gap-1">
                     <span className="text-gray-600 text-xs font-medium">Light</span>
                     <span className="font-semibold text-gray-800 text-base">
-                      {formatTime(luna.lightSec)} <span className="text-xs text-gray-500">({((luna.lightSec / luna.totalSleepTimeSec) * 100).toFixed(1)}%)</span>
+                      {formatTime(luna.lightSec)} <span className="text-xs text-gray-500">({safePercent(luna.lightSec, luna.totalSleepTimeSec)}%)</span>
                     </span>
                   </div>
                   <div className="flex flex-col items-center gap-1">
                     <span className="text-gray-600 text-xs font-medium">Awake</span>
                     <span className="font-semibold text-gray-800 text-base">
-                      {formatTime(luna.awakeSec)} <span className="text-xs text-gray-500">({((luna.awakeSec / luna.timeInBedSec) * 100).toFixed(1)}%)</span>
+                      {formatTime(luna.awakeSec)} <span className="text-xs text-gray-500">({safePercent(luna.awakeSec, luna.timeInBedSec)}%)</span>
                     </span>
                   </div>
                   <div className="flex flex-col items-center gap-1">
                     <span className="text-gray-600 text-xs font-medium">Efficiency</span>
                     <span className="font-semibold text-gray-800 text-base">
-                      {luna.sleepEfficiencyPercent.toFixed(1)}%
+                      {safeFixed(luna.sleepEfficiencyPercent)}%
                     </span>
                   </div>
                 </div>
@@ -222,31 +250,31 @@ const SleepSessionsTab: React.FC<SleepSessionsTabProps> = ({ sessionId }) => {
                   <div className="flex flex-col items-center gap-1">
                     <span className="text-gray-600 text-xs font-medium">Deep</span>
                     <span className="font-semibold text-gray-800 text-base">
-                      {formatTime(benchmark.deepSec)} <span className="text-xs text-gray-500">({((benchmark.deepSec / benchmark.totalSleepTimeSec) * 100).toFixed(1)}%)</span>
+                      {formatTime(benchmark.deepSec)} <span className="text-xs text-gray-500">({safePercent(benchmark.deepSec, benchmark.totalSleepTimeSec)}%)</span>
                     </span>
                   </div>
                   <div className="flex flex-col items-center gap-1">
                     <span className="text-gray-600 text-xs font-medium">REM</span>
                     <span className="font-semibold text-gray-800 text-base">
-                      {formatTime(benchmark.remSec)} <span className="text-xs text-gray-500">({((benchmark.remSec / benchmark.totalSleepTimeSec) * 100).toFixed(1)}%)</span>
+                      {formatTime(benchmark.remSec)} <span className="text-xs text-gray-500">({safePercent(benchmark.remSec, benchmark.totalSleepTimeSec)}%)</span>
                     </span>
                   </div>
                   <div className="flex flex-col items-center gap-1">
                     <span className="text-gray-600 text-xs font-medium">Light</span>
                     <span className="font-semibold text-gray-800 text-base">
-                      {formatTime(benchmark.lightSec)} <span className="text-xs text-gray-500">({((benchmark.lightSec / benchmark.totalSleepTimeSec) * 100).toFixed(1)}%)</span>
+                      {formatTime(benchmark.lightSec)} <span className="text-xs text-gray-500">({safePercent(benchmark.lightSec, benchmark.totalSleepTimeSec)}%)</span>
                     </span>
                   </div>
                   <div className="flex flex-col items-center gap-1">
                     <span className="text-gray-600 text-xs font-medium">Awake</span>
                     <span className="font-semibold text-gray-800 text-base">
-                      {formatTime(benchmark.awakeSec)} <span className="text-xs text-gray-500">({((benchmark.awakeSec / benchmark.timeInBedSec) * 100).toFixed(1)}%)</span>
+                      {formatTime(benchmark.awakeSec)} <span className="text-xs text-gray-500">({safePercent(benchmark.awakeSec, benchmark.timeInBedSec)}%)</span>
                     </span>
                   </div>
                   <div className="flex flex-col items-center gap-1">
                     <span className="text-gray-600 text-xs font-medium">Efficiency</span>
                     <span className="font-semibold text-gray-800 text-base">
-                      {benchmark.sleepEfficiencyPercent.toFixed(1)}%
+                      {safeFixed(benchmark.sleepEfficiencyPercent)}%
                     </span>
                   </div>
                 </div>
@@ -323,8 +351,8 @@ const SleepSessionsTab: React.FC<SleepSessionsTabProps> = ({ sessionId }) => {
                   <div className="flex flex-col items-center gap-1">
                     <span className="text-gray-600 text-xs font-medium">Efficiency Δ</span>
                     <span className="font-semibold text-gray-800 text-base">
-                      {luna.sleepEfficiencyPercent > benchmark.sleepEfficiencyPercent ? '+' : ''}
-                      {Math.abs(luna.sleepEfficiencyPercent - benchmark.sleepEfficiencyPercent).toFixed(1)}%
+                      {(luna.sleepEfficiencyPercent ?? 0) > (benchmark.sleepEfficiencyPercent ?? 0) ? '+' : ''}
+                      {safeFixed(Math.abs((luna.sleepEfficiencyPercent ?? 0) - (benchmark.sleepEfficiencyPercent ?? 0)))}%
                     </span>
                   </div>
                 </div>
@@ -364,31 +392,31 @@ const SleepSessionsTab: React.FC<SleepSessionsTabProps> = ({ sessionId }) => {
                 <div className="flex flex-col items-center gap-1">
                   <span className="text-gray-600 text-xs font-medium">Deep</span>
                   <span className="font-semibold text-gray-800 text-base">
-                    {formatTime(luna.deepSec)} <span className="text-xs text-gray-500">({((luna.deepSec / luna.totalSleepTimeSec) * 100).toFixed(1)}%)</span>
+                    {formatTime(luna.deepSec)} <span className="text-xs text-gray-500">({safePercent(luna.deepSec, luna.totalSleepTimeSec)}%)</span>
                   </span>
                 </div>
                 <div className="flex flex-col items-center gap-1">
                   <span className="text-gray-600 text-xs font-medium">REM</span>
                   <span className="font-semibold text-gray-800 text-base">
-                    {formatTime(luna.remSec)} <span className="text-xs text-gray-500">({((luna.remSec / luna.totalSleepTimeSec) * 100).toFixed(1)}%)</span>
+                    {formatTime(luna.remSec)} <span className="text-xs text-gray-500">({safePercent(luna.remSec, luna.totalSleepTimeSec)}%)</span>
                   </span>
                 </div>
                 <div className="flex flex-col items-center gap-1">
                   <span className="text-gray-600 text-xs font-medium">Light</span>
                   <span className="font-semibold text-gray-800 text-base">
-                    {formatTime(luna.lightSec)} <span className="text-xs text-gray-500">({((luna.lightSec / luna.totalSleepTimeSec) * 100).toFixed(1)}%)</span>
+                    {formatTime(luna.lightSec)} <span className="text-xs text-gray-500">({safePercent(luna.lightSec, luna.totalSleepTimeSec)}%)</span>
                   </span>
                 </div>
                 <div className="flex flex-col items-center gap-1">
                   <span className="text-gray-600 text-xs font-medium">Awake</span>
                   <span className="font-semibold text-gray-800 text-base">
-                    {formatTime(luna.awakeSec)} <span className="text-xs text-gray-500">({((luna.awakeSec / luna.timeInBedSec) * 100).toFixed(1)}%)</span>
+                    {formatTime(luna.awakeSec)} <span className="text-xs text-gray-500">({safePercent(luna.awakeSec, luna.timeInBedSec)}%)</span>
                   </span>
                 </div>
                 <div className="flex flex-col items-center gap-1">
                   <span className="text-gray-600 text-xs font-medium">Efficiency</span>
                   <span className="font-semibold text-gray-800 text-base">
-                    {luna.sleepEfficiencyPercent.toFixed(1)}%
+                    {safeFixed(luna.sleepEfficiencyPercent)}%
                   </span>
                 </div>
               </div>

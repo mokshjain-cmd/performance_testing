@@ -60,7 +60,9 @@ const AdminDashboardPage: React.FC = () => {
       try {
         const metricParam = selectedMetric === 'hr' ? 'HR' : 
                            selectedMetric === 'spo2' ? 'SPO2' : 
-                           selectedMetric === 'sleep' ? 'Sleep' : 'Activity';
+                           selectedMetric === 'sleep' ? 'Sleep' : 
+                           selectedMetric === 'activity' ? 'Activity' : 
+                           selectedMetric === 'workout' ? 'Workout' : 'SkinTemp';
         
         const res = await apiClient.get(`/admin/global-summary?metric=${metricParam}`);
         const firmware = res.data.data?.latestFirmwareVersion;
@@ -100,12 +102,14 @@ const AdminDashboardPage: React.FC = () => {
   // Fetch sessions for a specific user
   const fetchUserSessions = async (userId: string) => {
     try {
-      // Convert metric to backend format (hr -> HR, spo2 -> SPO2, sleep -> Sleep, activity -> Activity, skintemp -> SkinTemp)
+      // Convert metric to backend format (hr -> HR, spo2 -> SPO2, sleep -> Sleep, activity -> Activity, workout -> Workout, skintemp -> SkinTemp)
       let metricParam = selectedMetric.toUpperCase();
       if (selectedMetric === 'sleep') {
         metricParam = 'Sleep';
       } else if (selectedMetric === 'activity') {
         metricParam = 'Activity';
+      } else if (selectedMetric === 'workout') {
+        metricParam = 'Workout';
       } else if (selectedMetric === 'skintemp') {
         metricParam = 'SkinTemp';
       }

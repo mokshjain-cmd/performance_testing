@@ -10,6 +10,7 @@ import { IngestActivityService } from '../services/activity/IngestActivityServic
 import { ActivityAnalysisService } from '../services/activity/ActivityAnalysisService';
 import { ActivitySummaryService } from '../services/activity/ActivitySummaryService';
 import { ingestSkinTempSessionFiles } from '../services/ingestSkinTempSession.service';
+import { IngestWorkoutService } from '../services/workout/IngestWorkoutService';
 import { deleteSession as deleteSessionService } from '../services/sessionDeletion.service';
 import storageService from '../services/storage.service';
 import { updateAdminGlobalSummary } from '../services/adminGlobalSummary.service';
@@ -62,6 +63,7 @@ export const createSession = async (
       endTime,
       sleepDate, // For sleep sessions: user provides just the date, we calculate the range
       activityDate, // For activity sessions: user provides just the date, we calculate the range
+      workoutDate, // For workout sessions: user provides just the date, we extract all workouts
       dailyDate, // For HR/SPO2 daily sessions: user provides just the date, we calculate the range
       benchmarkDeviceType,
       bandPosition,
@@ -71,6 +73,7 @@ export const createSession = async (
     } = req.body;
 
     // For Activity metric, activityType is optional (tracks daily totals)
+    // For Workout metric, activityType is auto-set to 'daily'
     // For other metrics, activityType is required
     if (!userId || !metric) {
       res.status(400).json({
@@ -80,7 +83,7 @@ export const createSession = async (
       return;
     }
 
-    if (metric !== 'Activity' && !activityType) {
+    if (metric !== 'Activity' && metric !== 'Workout' && !activityType) {
       res.status(400).json({
         success: false,
         message: "activityType is required for non-Activity sessions"
@@ -89,11 +92,87 @@ export const createSession = async (
     }
 
     // Validate metric value
-    const validMetrics = ['HR', 'SPO2', 'Sleep', 'Activity', 'SkinTemp', 'Stress'];
+    const validMetrics = ['HR', 'SPO2', 'Sleep', 'Activity', 'SkinTemp', 'Stress', 'Workout'];
     if (!validMetrics.includes(metric)) {
       res.status(400).json({
         success: false,
         message: `Invalid metric. Must be one of: ${validMetrics.join(', ')}`
+      });
+      return;
+    }
+
+    // For Workout metric, handle separately - it creates multiple sessions internally
+    if (metric === 'Workout') {
+      if (!workoutDate) {
+        res.status(400).json({
+          success: false,
+          message: "workoutDate is required for Workout sessions (format: YYYY-MM-DD)"
+        });
+        return;
+      }
+
+      if (!firmwareVersion) {
+        res.status(400).json({
+          success: false,
+          message: "firmwareVersion is required"
+        });
+        return;
+      }
+
+      const files = req.files as Express.Multer.File[];
+      if (!files || files.length === 0) {
+        res.status(400).json({
+          success: false,
+          message: "No files uploaded"
+        });
+        return;
+      }
+
+      // Find Luna file
+      const lunaFile = files.find(f => f.fieldname === 'luna');
+      if (!lunaFile) {
+        res.status(400).json({
+          success: false,
+          message: "Luna app log file is required (fieldname: 'luna')"
+        });
+        return;
+      }
+
+      // Find benchmark file if specified
+      const benchmarkFile = benchmarkDeviceType 
+        ? files.find(f => f.fieldname === benchmarkDeviceType)
+        : undefined;
+
+      // Parse workout date
+      const [year, month, day] = workoutDate.split("-").map(Number);
+      const targetDate = new Date(Date.UTC(year, month - 1, day, 0, 0, 0));
+
+      console.log(`\n🏋️ ========================================`);
+      console.log(`🏋️ Processing Workout session:`);
+      console.log(`🏋️    - Date: ${workoutDate}`);
+      console.log(`🏋️    - Firmware: ${firmwareVersion}`);
+      console.log(`🏋️    - Mobile Type: ${mobileType}`);
+      console.log(`🏋️ ========================================\n`);
+
+      // Call workout ingestion service - it handles session creation internally
+      const result = await IngestWorkoutService.ingestWorkoutDay(
+        userId,
+        targetDate,
+        firmwareVersion,
+        lunaFile,
+        benchmarkFile,
+        benchmarkDeviceType,
+        mobileType
+      );
+
+      res.status(201).json({
+        success: true,
+        message: `Found ${result.sessionsCreated} workouts`,
+        data: {
+          sessionsCreated: result.sessionsCreated,
+          sessionIds: result.sessionIds,
+          workouts: result.workouts,
+        }
       });
       return;
     }

@@ -51,10 +51,21 @@ const SleepOverviewTab: React.FC<SleepOverviewTabProps> = () => {
     );
   }
 
-  const formatTime = (seconds: number) => {
+  const formatTime = (seconds: number | null | undefined) => {
+    if (seconds === null || seconds === undefined) return 'N/A';
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     return `${hours}h ${minutes}m`;
+  };
+
+  const safeFixed = (value: number | null | undefined, decimals: number = 1): string => {
+    if (value === null || value === undefined) return 'N/A';
+    return value.toFixed(decimals);
+  };
+
+  const safeValue = (value: number | null | undefined, defaultVal: number = 0): number => {
+    if (value === null || value === undefined) return defaultVal;
+    return value;
   };
 
   return (
@@ -83,31 +94,31 @@ const SleepOverviewTab: React.FC<SleepOverviewTabProps> = () => {
             </div>
             <p className="text-2xl font-bold text-gray-900">{formatTime(overview.avgTotalSleepTimeSec)}</p>
             <p className="text-xs text-gray-500 mt-1">
-              {overview.avgTotalSleepTimeSec >= 25200 ? '✓ Healthy range' : 
-               overview.avgTotalSleepTimeSec >= 21600 ? '△ Borderline' : '⚠ Below recommended'}
+              {safeValue(overview.avgTotalSleepTimeSec) >= 25200 ? '✓ Healthy range' : 
+               safeValue(overview.avgTotalSleepTimeSec) >= 21600 ? '△ Borderline' : '⚠ Below recommended'}
             </p>
           </div>
           
           <div className={`p-4 rounded-lg border ${
-            overview.avgSleepEfficiency >= 85 ? 'bg-green-50 border-green-200' :
-            overview.avgSleepEfficiency >= 75 ? 'bg-yellow-50 border-yellow-200' : 'bg-red-50 border-red-200'
+            safeValue(overview.avgSleepEfficiency) >= 85 ? 'bg-green-50 border-green-200' :
+            safeValue(overview.avgSleepEfficiency) >= 75 ? 'bg-yellow-50 border-yellow-200' : 'bg-red-50 border-red-200'
           }`}>
             <div className="flex items-center justify-between mb-2">
               <p className="text-sm font-medium text-gray-600">Avg Sleep Efficiency</p>
               <Zap className={`w-5 h-5 ${
-                overview.avgSleepEfficiency >= 85 ? 'text-green-500' :
-                overview.avgSleepEfficiency >= 75 ? 'text-yellow-500' : 'text-red-500'
+                safeValue(overview.avgSleepEfficiency) >= 85 ? 'text-green-500' :
+                safeValue(overview.avgSleepEfficiency) >= 75 ? 'text-yellow-500' : 'text-red-500'
               }`} />
             </div>
             <p className={`text-2xl font-bold ${
-              overview.avgSleepEfficiency >= 85 ? 'text-green-700' :
-              overview.avgSleepEfficiency >= 75 ? 'text-yellow-700' : 'text-red-700'
+              safeValue(overview.avgSleepEfficiency) >= 85 ? 'text-green-700' :
+              safeValue(overview.avgSleepEfficiency) >= 75 ? 'text-yellow-700' : 'text-red-700'
             }`}>
-              {overview.avgSleepEfficiency.toFixed(1)}%
+              {safeFixed(overview.avgSleepEfficiency)}%
             </p>
             <p className="text-xs text-gray-600 mt-1">
-              {overview.avgSleepEfficiency >= 85 ? '✓ Excellent' : 
-               overview.avgSleepEfficiency >= 75 ? '△ Good' : '⚠ Needs improvement'}
+              {safeValue(overview.avgSleepEfficiency) >= 85 ? '✓ Excellent' : 
+               safeValue(overview.avgSleepEfficiency) >= 75 ? '△ Good' : '⚠ Needs improvement'}
             </p>
           </div>
           
@@ -118,8 +129,8 @@ const SleepOverviewTab: React.FC<SleepOverviewTabProps> = () => {
             </div>
             <p className="text-2xl font-bold text-indigo-700">{formatTime(overview.avgDeepSleepSec)}</p>
             <p className="text-xs text-gray-600 mt-1">
-              {overview.avgDeepPercent.toFixed(1)}% of sleep
-              {overview.avgDeepPercent >= 15 && overview.avgDeepPercent <= 25 ? ' ✓' : ''}
+              {safeFixed(overview.avgDeepPercent)}% of sleep
+              {safeValue(overview.avgDeepPercent) >= 15 && safeValue(overview.avgDeepPercent) <= 25 ? ' ✓' : ''}
             </p>
           </div>
           
@@ -130,8 +141,8 @@ const SleepOverviewTab: React.FC<SleepOverviewTabProps> = () => {
             </div>
             <p className="text-2xl font-bold text-purple-700">{formatTime(overview.avgRemSleepSec)}</p>
             <p className="text-xs text-gray-600 mt-1">
-              {overview.avgRemPercent.toFixed(1)}% of sleep
-              {overview.avgRemPercent >= 20 && overview.avgRemPercent <= 25 ? ' ✓' : ''}
+              {safeFixed(overview.avgRemPercent)}% of sleep
+              {safeValue(overview.avgRemPercent) >= 20 && safeValue(overview.avgRemPercent) <= 25 ? ' ✓' : ''}
             </p>
           </div>
           
@@ -141,7 +152,7 @@ const SleepOverviewTab: React.FC<SleepOverviewTabProps> = () => {
             </div>
             <p className="text-2xl font-bold text-blue-700">{formatTime(overview.avgLightSleepSec)}</p>
             <p className="text-xs text-gray-600 mt-1">
-              {overview.avgLightPercent.toFixed(1)}% of sleep
+              {safeFixed(overview.avgLightPercent)}% of sleep
             </p>
           </div>
           
@@ -151,7 +162,7 @@ const SleepOverviewTab: React.FC<SleepOverviewTabProps> = () => {
             </div>
             <p className="text-2xl font-bold text-gray-700">{formatTime(overview.avgAwakeSec)}</p>
             <p className="text-xs text-gray-600 mt-1">
-              {overview.avgTimeInBedSec > 0 ? ((overview.avgAwakeSec / overview.avgTimeInBedSec) * 100).toFixed(1) : '0.0'}% of time in bed
+              {safeValue(overview.avgTimeInBedSec) > 0 ? ((safeValue(overview.avgAwakeSec) / safeValue(overview.avgTimeInBedSec)) * 100).toFixed(1) : '0.0'}% of time in bed
             </p>
           </div>
           
@@ -175,9 +186,9 @@ const SleepOverviewTab: React.FC<SleepOverviewTabProps> = () => {
           <div className="mb-6">
             <div 
               className={`inline-block px-6 py-3 rounded-lg ${
-                overview.comparison.avgAccuracyPercent >= 80 
+                safeValue(overview.comparison.avgAccuracyPercent) >= 80 
                   ? 'bg-green-100 text-green-800 border-2 border-green-300' 
-                  : overview.comparison.avgAccuracyPercent >= 70 
+                  : safeValue(overview.comparison.avgAccuracyPercent) >= 70 
                   ? 'bg-yellow-100 text-yellow-800 border-2 border-yellow-300' 
                   : 'bg-red-100 text-red-800 border-2 border-red-300'
               }`}
@@ -186,13 +197,13 @@ const SleepOverviewTab: React.FC<SleepOverviewTabProps> = () => {
                 <div className="flex items-center gap-2">
                   <span className="font-semibold">Average Accuracy:</span>
                   <span className="text-2xl font-bold">
-                    {overview.comparison.avgAccuracyPercent.toFixed(1)}%
+                    {safeFixed(overview.comparison.avgAccuracyPercent)}%
                   </span>
                 </div>
                 <p className="text-xs">
-                  {overview.comparison.avgAccuracyPercent >= 80 
+                  {safeValue(overview.comparison.avgAccuracyPercent) >= 80 
                     ? '✓ Excellent - Falcon closely matches benchmark' 
-                    : overview.comparison.avgAccuracyPercent >= 70 
+                    : safeValue(overview.comparison.avgAccuracyPercent) >= 70 
                     ? '△ Good - Minor differences expected' 
                     : '⚠ Needs review - Consider recalibration'}
                 </p>
@@ -212,18 +223,18 @@ const SleepOverviewTab: React.FC<SleepOverviewTabProps> = () => {
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Avg Difference:</span>
                   <span className={`font-bold text-base ${
-                    Math.abs(overview.comparison.avgTotalSleepDiffSec) < 600 
+                    Math.abs(safeValue(overview.comparison.avgTotalSleepDiffSec)) < 600 
                       ? 'text-green-600' 
-                      : Math.abs(overview.comparison.avgTotalSleepDiffSec) < 1200 
+                      : Math.abs(safeValue(overview.comparison.avgTotalSleepDiffSec)) < 1200 
                       ? 'text-yellow-600' 
                       : 'text-red-600'
                   }`}>
-                    {overview.comparison.avgTotalSleepDiffSec > 0 ? '+' : ''}
-                    {formatTime(Math.abs(overview.comparison.avgTotalSleepDiffSec))}
+                    {safeValue(overview.comparison.avgTotalSleepDiffSec) > 0 ? '+' : ''}
+                    {formatTime(Math.abs(safeValue(overview.comparison.avgTotalSleepDiffSec)))}
                   </span>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
-                  {overview.comparison.avgTotalSleepDiffSec > 0 ? 'Falcon detects more sleep' : 'Falcon detects less sleep'}
+                  {safeValue(overview.comparison.avgTotalSleepDiffSec) > 0 ? 'Falcon detects more sleep' : 'Falcon detects less sleep'}
                 </p>
               </div>
             </div>
@@ -234,18 +245,18 @@ const SleepOverviewTab: React.FC<SleepOverviewTabProps> = () => {
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Avg Difference:</span>
                   <span className={`font-bold text-base ${
-                    Math.abs(overview.comparison.avgDeepDiffSec) < 300 
+                    Math.abs(safeValue(overview.comparison.avgDeepDiffSec)) < 300 
                       ? 'text-green-600' 
-                      : Math.abs(overview.comparison.avgDeepDiffSec) < 600 
+                      : Math.abs(safeValue(overview.comparison.avgDeepDiffSec)) < 600 
                       ? 'text-yellow-600' 
                       : 'text-red-600'
                   }`}>
-                    {overview.comparison.avgDeepDiffSec > 0 ? '+' : ''}
-                    {formatTime(Math.abs(overview.comparison.avgDeepDiffSec))}
+                    {safeValue(overview.comparison.avgDeepDiffSec) > 0 ? '+' : ''}
+                    {formatTime(Math.abs(safeValue(overview.comparison.avgDeepDiffSec)))}
                   </span>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
-                  {overview.comparison.avgDeepDiffSec > 0 ? 'Falcon detects more' : 'Falcon detects less'}
+                  {safeValue(overview.comparison.avgDeepDiffSec) > 0 ? 'Falcon detects more' : 'Falcon detects less'}
                 </p>
               </div>
             </div>
@@ -256,18 +267,18 @@ const SleepOverviewTab: React.FC<SleepOverviewTabProps> = () => {
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Avg Difference:</span>
                   <span className={`font-bold text-base ${
-                    Math.abs(overview.comparison.avgRemDiffSec) < 300 
+                    Math.abs(safeValue(overview.comparison.avgRemDiffSec)) < 300 
                       ? 'text-green-600' 
-                      : Math.abs(overview.comparison.avgRemDiffSec) < 600 
+                      : Math.abs(safeValue(overview.comparison.avgRemDiffSec)) < 600 
                       ? 'text-yellow-600' 
                       : 'text-red-600'
                   }`}>
-                    {overview.comparison.avgRemDiffSec > 0 ? '+' : ''}
-                    {formatTime(Math.abs(overview.comparison.avgRemDiffSec))}
+                    {safeValue(overview.comparison.avgRemDiffSec) > 0 ? '+' : ''}
+                    {formatTime(Math.abs(safeValue(overview.comparison.avgRemDiffSec)))}
                   </span>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
-                  {overview.comparison.avgRemDiffSec > 0 ? 'Falcon detects more' : 'Falcon detects less'}
+                  {safeValue(overview.comparison.avgRemDiffSec) > 0 ? 'Falcon detects more' : 'Falcon detects less'}
                 </p>
               </div>
             </div>

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Card } from '../common';
 import apiClient from '../../services/api';
+import { XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LineChart, Line, Legend } from 'recharts';
 
 interface UserSleepSummary {
   userId: string;
@@ -20,7 +21,10 @@ interface UserSleepSummary {
   avgKappaScore: number;
   avgDeepBiasSec: number;
   avgRemBiasSec: number;
+  avgLightBiasSec: number;
   avgTotalSleepBiasSec: number;
+  avgSleepOnsetBiasSec: number;
+  avgFinalWakeBiasSec: number;
   bestSession?: {
     sessionId: string;
     sessionName: string;
@@ -33,6 +37,17 @@ interface UserSleepSummary {
     accuracyPercent: number;
     date: string;
   };
+}
+
+interface DailyBiasTrend {
+  date: string;
+  onsetBiasSec: number;
+  wakeBiasSec: number;
+  totalBiasSec: number;
+  lightBiasSec: number;
+  deepBiasSec: number;
+  remBiasSec: number;
+  sessionCount: number;
 }
 
 interface FirmwarePerformance {
@@ -73,6 +88,7 @@ const AdminSleepUserView: React.FC<AdminSleepUserViewProps> = ({ userId }) => {
   const [userSummary, setUserSummary] = useState<UserSleepSummary | null>(null);
   const [firmwareData, setFirmwareData] = useState<FirmwarePerformance[]>([]);
   const [benchmarkData, setBenchmarkData] = useState<BenchmarkComparison[]>([]);
+  const [dailyBiasTrend, setDailyBiasTrend] = useState<DailyBiasTrend[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -86,12 +102,24 @@ const AdminSleepUserView: React.FC<AdminSleepUserViewProps> = ({ userId }) => {
     
     // Fetch benchmark comparison
     const benchmarkPromise = apiClient.get(`/sleep/admin/user/${userId}/benchmark-comparison`);
+
+    // Fetch daily bias trend (last 30 days)
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 30);
+    const biasTrendPromise = apiClient.get(`/sleep/admin/user/${userId}/daily-bias-trend`, {
+      params: {
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString()
+      }
+    });
     
-    Promise.all([summaryPromise, firmwarePromise, benchmarkPromise])
-      .then(([summaryRes, firmwareRes, benchmarkRes]) => {
+    Promise.all([summaryPromise, firmwarePromise, benchmarkPromise, biasTrendPromise])
+      .then(([summaryRes, firmwareRes, benchmarkRes, biasTrendRes]) => {
         setUserSummary(summaryRes.data.data);
         setFirmwareData(firmwareRes.data.data || []);
         setBenchmarkData(benchmarkRes.data.data || []);
+        setDailyBiasTrend(biasTrendRes.data.data || []);
       })
       .catch(err => {
         console.error('Error fetching user sleep data:', err);
@@ -310,17 +338,50 @@ const AdminSleepUserView: React.FC<AdminSleepUserViewProps> = ({ userId }) => {
             <div className="ml-3 flex-1">
               <h4 className="text-sm font-semibold text-purple-900 mb-2">Understanding Bias</h4>
               <div className="text-sm text-purple-800 space-y-1">
-                <p><strong>Bias Direction:</strong> Up arrow (↑) means Falcon overestimates (detects more of that stage). Down arrow (↓) means Falcon underestimates (detects less).</p>
-                <p><strong>Magnitude:</strong> Larger time differences indicate systematic bias. Small differences (&lt;10 min) are typically acceptable.</p>
+                <p><strong>Timing Bias:</strong> ↑ = Falcon detects event later, ↓ = earlier. Target: ±5 min.</p>
+                <p><strong>Duration Bias:</strong> ↑ = Falcon overestimates (detects more), ↓ = underestimates.</p>
               </div>
             </div>
           </div>
         </div>
 
+        {/* Sleep Timing Biases */}
+        <div className="mb-6">
+          <h4 className="text-md font-medium mb-3 text-gray-700">Sleep Timing Bias</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="text-center p-4 bg-amber-50 rounded-lg border border-amber-200">
+              <p className="text-sm text-amber-700 mb-1">Sleep Onset</p>
+              <p className="text-xl font-bold text-amber-900">
+                {formatTime(Math.abs(userSummary.avgSleepOnsetBiasSec))}
+                <span className="text-lg ml-2 text-amber-600">
+                  {userSummary.avgSleepOnsetBiasSec > 0 ? '↑' : '↓'}
+                </span>
+              </p>
+              <p className="text-xs text-amber-600 mt-1">
+                {userSummary.avgSleepOnsetBiasSec > 0 ? 'Falcon detects later' : 'Falcon detects earlier'}
+              </p>
+            </div>
+            <div className="text-center p-4 bg-orange-50 rounded-lg border border-orange-200">
+              <p className="text-sm text-orange-700 mb-1">Final Wake</p>
+              <p className="text-xl font-bold text-orange-900">
+                {formatTime(Math.abs(userSummary.avgFinalWakeBiasSec))}
+                <span className="text-lg ml-2 text-orange-600">
+                  {userSummary.avgFinalWakeBiasSec > 0 ? '↑' : '↓'}
+                </span>
+              </p>
+              <p className="text-xs text-orange-600 mt-1">
+                {userSummary.avgFinalWakeBiasSec > 0 ? 'Falcon detects later' : 'Falcon detects earlier'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Stage Duration Biases */}
         <div className="bg-gradient-to-br from-gray-50 to-purple-50 border border-gray-200 rounded-lg p-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <h4 className="text-md font-medium mb-3 text-gray-700">Stage Duration Bias</h4>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="text-center p-4 bg-white rounded-lg border border-gray-200">
-              <p className="text-sm text-gray-600 mb-2">Total Sleep Bias</p>
+              <p className="text-sm text-gray-600 mb-2">Total Sleep</p>
               <p className="text-2xl font-bold text-gray-900">
                 {formatTime(Math.abs(userSummary.avgTotalSleepBiasSec))}
                 <span className="text-lg ml-2 text-gray-600">
@@ -332,8 +393,21 @@ const AdminSleepUserView: React.FC<AdminSleepUserViewProps> = ({ userId }) => {
               </p>
             </div>
 
+            <div className="text-center p-4 bg-white rounded-lg border border-blue-200">
+              <p className="text-sm text-blue-600 mb-2">Light Sleep</p>
+              <p className="text-2xl font-bold text-blue-900">
+                {formatTime(Math.abs(userSummary.avgLightBiasSec))}
+                <span className="text-lg ml-2 text-blue-600">
+                  {userSummary.avgLightBiasSec > 0 ? '↑' : '↓'}
+                </span>
+              </p>
+              <p className="text-xs text-blue-600 mt-1">
+                {userSummary.avgLightBiasSec > 0 ? 'Over-estimation' : 'Under-estimation'}
+              </p>
+            </div>
+
             <div className="text-center p-4 bg-white rounded-lg border border-indigo-200">
-              <p className="text-sm text-indigo-600 mb-2">Deep Sleep Bias</p>
+              <p className="text-sm text-indigo-600 mb-2">Deep Sleep</p>
               <p className="text-2xl font-bold text-indigo-900">
                 {formatTime(Math.abs(userSummary.avgDeepBiasSec))}
                 <span className="text-lg ml-2 text-indigo-600">
@@ -346,7 +420,7 @@ const AdminSleepUserView: React.FC<AdminSleepUserViewProps> = ({ userId }) => {
             </div>
 
             <div className="text-center p-4 bg-white rounded-lg border border-purple-200">
-              <p className="text-sm text-purple-600 mb-2">REM Sleep Bias</p>
+              <p className="text-sm text-purple-600 mb-2">REM Sleep</p>
               <p className="text-2xl font-bold text-purple-900">
                 {formatTime(Math.abs(userSummary.avgRemBiasSec))}
                 <span className="text-lg ml-2 text-purple-600">
@@ -360,6 +434,91 @@ const AdminSleepUserView: React.FC<AdminSleepUserViewProps> = ({ userId }) => {
           </div>
         </div>
       </Card>
+
+      {/* Daily Bias Trend Chart */}
+      {dailyBiasTrend.length > 0 && (
+        <Card>
+          <h3 className="text-lg font-semibold mb-4">Daily Bias Trend (Last 30 Days)</h3>
+          <p className="text-sm text-gray-600 mb-6">
+            Track how bias varies day-to-day. Consistent patterns suggest systematic calibration opportunities.
+          </p>
+          
+          {/* Timing Biases Chart */}
+          <div className="mb-8">
+            <h4 className="text-md font-medium mb-3 text-gray-700">Sleep Timing Bias (minutes)</h4>
+            <ResponsiveContainer width="100%" height={250}>
+              <LineChart data={dailyBiasTrend.map(d => ({
+                ...d,
+                onsetBiasMin: d.onsetBiasSec / 60,
+                wakeBiasMin: d.wakeBiasSec / 60,
+              }))}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis 
+                  dataKey="date" 
+                  stroke="#6b7280"
+                  tick={{ fontSize: 11 }}
+                  tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                />
+                <YAxis 
+                  stroke="#6b7280"
+                  tick={{ fontSize: 11 }}
+                  tickFormatter={(value) => `${value > 0 ? '+' : ''}${value.toFixed(0)}`}
+                  label={{ value: 'Bias (min)', angle: -90, position: 'insideLeft', style: { fontSize: 11 } }}
+                />
+                <Tooltip 
+                  formatter={(value: number) => `${value > 0 ? '+' : ''}${value.toFixed(1)} min`}
+                  labelFormatter={(label) => new Date(label).toLocaleDateString()}
+                />
+                <Legend />
+                <Line type="monotone" dataKey="onsetBiasMin" stroke="#f59e0b" strokeWidth={2} dot={{ r: 3 }} name="Sleep Onset" />
+                <Line type="monotone" dataKey="wakeBiasMin" stroke="#ea580c" strokeWidth={2} dot={{ r: 3 }} name="Final Wake" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Duration Biases Chart */}
+          <div>
+            <h4 className="text-md font-medium mb-3 text-gray-700">Stage Duration Bias (minutes)</h4>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={dailyBiasTrend.map(d => ({
+                ...d,
+                totalBiasMin: d.totalBiasSec / 60,
+                lightBiasMin: d.lightBiasSec / 60,
+                deepBiasMin: d.deepBiasSec / 60,
+                remBiasMin: d.remBiasSec / 60,
+              }))}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis 
+                  dataKey="date" 
+                  stroke="#6b7280"
+                  tick={{ fontSize: 11 }}
+                  tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                />
+                <YAxis 
+                  stroke="#6b7280"
+                  tick={{ fontSize: 11 }}
+                  tickFormatter={(value) => `${value > 0 ? '+' : ''}${value.toFixed(0)}`}
+                  label={{ value: 'Bias (min)', angle: -90, position: 'insideLeft', style: { fontSize: 11 } }}
+                />
+                <Tooltip 
+                  formatter={(value: number) => `${value > 0 ? '+' : ''}${value.toFixed(1)} min`}
+                  labelFormatter={(label) => new Date(label).toLocaleDateString()}
+                />
+                <Legend />
+                <Line type="monotone" dataKey="totalBiasMin" stroke="#6b7280" strokeWidth={2} dot={{ r: 3 }} name="Total Sleep" />
+                <Line type="monotone" dataKey="lightBiasMin" stroke="#3b82f6" strokeWidth={2} dot={{ r: 3 }} name="Light" />
+                <Line type="monotone" dataKey="deepBiasMin" stroke="#6366f1" strokeWidth={2} dot={{ r: 3 }} name="Deep" />
+                <Line type="monotone" dataKey="remBiasMin" stroke="#a855f7" strokeWidth={2} dot={{ r: 3 }} name="REM" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Summary stats */}
+          <div className="mt-4 pt-4 border-t border-gray-200 text-center text-sm text-gray-600">
+            <p>Total sessions analyzed: {dailyBiasTrend.reduce((sum, item) => sum + item.sessionCount, 0)} over {dailyBiasTrend.length} days</p>
+          </div>
+        </Card>
+      )}
 
       {/* Performance Range - Best and Worst Sessions */}
       {(userSummary.bestSession || userSummary.worstSession) && (

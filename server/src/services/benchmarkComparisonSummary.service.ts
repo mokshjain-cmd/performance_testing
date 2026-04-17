@@ -8,7 +8,7 @@ import BenchmarkComparisonSummary from '../models/BenchmarkComparisonSummary';
  * @param benchmarkDeviceType - The device type to compare against Luna (e.g., 'polar', 'coros')
  * @param metric - The metric to calculate comparison for (HR, SPO2, etc.)
  */
-export async function updateBenchmarkComparisonSummary(benchmarkDeviceType: string, metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity' | 'SkinTemp' = 'HR') {
+export async function updateBenchmarkComparisonSummary(benchmarkDeviceType: string, metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity' | 'SkinTemp' | 'Workout' = 'HR') {
   console.log(`\n🔄 Updating BenchmarkComparisonSummary for: ${benchmarkDeviceType}, metric: ${metric}`);
 
   // Handle Sleep metric differently (uses sleepStats instead of pairwiseComparisons)
@@ -79,6 +79,73 @@ export async function updateBenchmarkComparisonSummary(benchmarkDeviceType: stri
       totalSessions: summary.totalSessions,
       avgAccuracyPercent: summary.sleepStats?.avgAccuracyPercent?.toFixed(2),
       avgKappa: summary.sleepStats?.avgKappa?.toFixed(3),
+    });
+
+    return result;
+  }
+
+  // Handle Workout metric (uses workoutStats.benchmarkComparison)
+  if (metric === 'Workout') {
+    const analyses = await SessionAnalysis.find({
+      isValid: true,
+      metric: 'Workout',
+      'workoutStats.benchmarkComparison': { $exists: true },
+    }).populate('sessionId');
+
+    // Filter for sessions with this benchmark device
+    const filteredAnalyses = [];
+    for (const analysis of analyses) {
+      const session: any = analysis.sessionId;
+      if (session && session.benchmarkDeviceType === benchmarkDeviceType) {
+        filteredAnalyses.push(analysis);
+      }
+    }
+
+    if (filteredAnalyses.length === 0) {
+      console.log(`⚠️ No workout sessions found with benchmark device: ${benchmarkDeviceType}`);
+      return null;
+    }
+
+    let totalMAE = 0, totalRMSE = 0, totalMAPE = 0, totalPearson = 0, totalBias = 0;
+    let count = 0;
+
+    filteredAnalyses.forEach((analysis) => {
+      const workoutStats = (analysis as any).workoutStats;
+      if (workoutStats?.benchmarkComparison) {
+        const bc = workoutStats.benchmarkComparison;
+        totalMAE += bc.hrMae || 0;
+        totalRMSE += bc.hrRmse || 0;
+        totalMAPE += bc.hrMape || 0;
+        totalPearson += bc.hrPearsonR || 0;
+        totalBias += bc.hrMeanBias || 0;
+        count++;
+      }
+    });
+
+    const summary = {
+      benchmarkDeviceType,
+      metric,
+      totalSessions: filteredAnalyses.length,
+      hrStats: count > 0 ? {
+        avgMAE: totalMAE / count,
+        avgRMSE: totalRMSE / count,
+        avgMAPE: totalMAPE / count,
+        avgPearson: totalPearson / count,
+        avgBias: totalBias / count,
+      } : undefined,
+      lastUpdated: new Date(),
+    };
+
+    const result = await BenchmarkComparisonSummary.findOneAndUpdate(
+      { benchmarkDeviceType, metric },
+      summary,
+      { upsert: true, new: true }
+    );
+
+    console.log(`✅ BenchmarkComparisonSummary (Workout) updated for ${benchmarkDeviceType}:`, {
+      totalSessions: summary.totalSessions,
+      avgMAE: summary.hrStats?.avgMAE?.toFixed(2),
+      avgMAPE: summary.hrStats?.avgMAPE?.toFixed(2),
     });
 
     return result;
@@ -204,6 +271,12 @@ export async function updateBenchmarkComparisonSummariesForSession(sessionId: an
   // Handle Sleep metric
   if (metric === 'Sleep' && session && session.benchmarkDeviceType) {
     const result = await updateBenchmarkComparisonSummary(session.benchmarkDeviceType, metric);
+    return result ? [result] : [];
+  }
+
+  // Handle Workout metric
+  if (metric === 'Workout' && session && session.benchmarkDeviceType) {
+    const result = await updateBenchmarkComparisonSummary(session.benchmarkDeviceType, 'Workout');
     return result ? [result] : [];
   }
 

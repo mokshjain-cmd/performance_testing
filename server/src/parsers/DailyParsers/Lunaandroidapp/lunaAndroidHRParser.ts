@@ -222,6 +222,11 @@ export class LunaAndroidHRParser {
 
           inRangeCount++;
 
+          // Skip invalid HR values (0 = no data, 255 = sensor error/placeholder)
+          if (hrValue <= 0 || hrValue === 255) {
+            continue;
+          }
+
           // Create normalized reading
           const reading: NormalizedReadingInput = {
             meta: {
@@ -234,9 +239,9 @@ export class LunaAndroidHRParser {
             },
             timestamp: timestamp,
             metrics: {
-              heartRate: hrValue > 0 ? hrValue : null,
+              heartRate: hrValue,
             },
-            isValid: hrValue > 0, // Mark as invalid if HR is 0 (no data)
+            isValid: true,
           };
 
           normalizedReadings.push(reading);

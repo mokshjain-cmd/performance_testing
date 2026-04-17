@@ -491,3 +491,118 @@ function createNormalizedReadings(
 
   return normalizedReadings;
 }
+
+/**
+ * Extract raw HR readings for workout comparison (no bucketing)
+ * Returns per-second readings for accurate benchmark comparison
+ * 
+ * @param filePath Path to Apple Health export.xml
+ * @param startTime Start of workout time range
+ * @param endTime End of workout time range
+ * @returns Array of raw HR readings with timestamps
+ */
+export async function extractHRForWorkoutComparison(
+  filePath: string,
+  startTime: Date,
+  endTime: Date
+): Promise<Array<{ timestamp: Date; heartRate: number }>> {
+  console.log(`\n🍎 ========================================`);
+  console.log(`🍎 Apple HR Extraction for Workout Comparison`);
+  console.log(`🍎 Time range: ${startTime.toISOString()} to ${endTime.toISOString()}`);
+  console.log(`🍎 ========================================\n`);
+  
+  return new Promise((resolve, reject) => {
+    const readings: Array<{ timestamp: Date; heartRate: number }> = [];
+    let lineCount = 0;
+    let recordCount = 0;
+    let matchedCount = 0;
+    
+    // Apply IST offset to comparison times
+    const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+    
+    const fileStream = fs.createReadStream(filePath, { encoding: 'utf-8' });
+    const rl = readline.createInterface({
+      input: fileStream,
+      crlfDelay: Infinity,
+    });
+    
+    rl.on('line', (line: string) => {
+      lineCount++;
+      
+      // Look for HR records
+      if (line.includes('<Record') && line.includes('type="HKQuantityTypeIdentifierHeartRate"')) {
+        recordCount++;
+        
+        // Extract attributes
+        const sourceNameMatch = line.match(/sourceName="([^"]+)"/);
+        const startDateMatch = line.match(/startDate="([^"]+)"/);
+        const valueMatch = line.match(/value="([^"]+)"/);
+        
+        if (sourceNameMatch && startDateMatch && valueMatch) {
+          const sourceName = sourceNameMatch[1];
+          const startDateStr = startDateMatch[1];
+          const valueStr = valueMatch[1];
+          
+          // Check if from Apple Watch
+          const normalizedSource = sourceName.replace(/\xa0/g, ' ').replace(/\u00A0/g, ' ');
+          const isAppleWatch = normalizedSource.includes('Apple Watch');
+          
+          if (isAppleWatch) {
+            // Parse timestamp - extract datetime part and add IST offset
+            const dateTimePart = startDateStr.substring(0, 19); // "2026-03-16 11:01:29"
+            const timestamp = new Date(dateTimePart.replace(' ', 'T') + 'Z');
+            const timestampIST = new Date(timestamp.getTime() + IST_OFFSET_MS);
+            
+            // Check if within workout time range
+            if (timestampIST >= startTime && timestampIST <= endTime) {
+              const heartRate = parseFloat(valueStr);
+              
+              if (!isNaN(heartRate) && heartRate > 0) {
+                readings.push({
+                  timestamp: timestampIST,
+                  heartRate: Math.round(heartRate),
+                });
+                matchedCount++;
+                
+                // Debug first few readings
+                if (matchedCount <= 5) {
+                  console.log(`🍎 HR Reading ${matchedCount}: ${timestampIST.toISOString()} → ${heartRate} BPM`);
+                }
+              }
+            }
+          }
+        }
+      }
+      
+      // Progress logging
+      if (lineCount % 500000 === 0) {
+        console.log(`🍎 Processed ${lineCount} lines... (${matchedCount} HR in range)`);
+      }
+    });
+    
+    rl.on('close', () => {
+      console.log(`\n🍎 Extraction complete:`);
+      console.log(`🍎   - Scanned ${lineCount} lines`);
+      console.log(`🍎   - Found ${recordCount} total HR records`);
+      console.log(`🍎   - Matched ${matchedCount} records in workout time range`);
+      
+      // Sort by timestamp
+      readings.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+      
+      if (readings.length > 0) {
+        const hrValues = readings.map(r => r.heartRate);
+        const avgHr = hrValues.reduce((a, b) => a + b, 0) / hrValues.length;
+        console.log(`🍎   - HR range: ${Math.min(...hrValues)} - ${Math.max(...hrValues)} BPM`);
+        console.log(`🍎   - Avg HR: ${avgHr.toFixed(1)} BPM`);
+      }
+      
+      console.log(`🍎 ========================================\n`);
+      resolve(readings);
+    });
+    
+    rl.on('error', (error) => {
+      console.error(`🍎 Error extracting HR:`, error);
+      reject(error);
+    });
+  });
+}

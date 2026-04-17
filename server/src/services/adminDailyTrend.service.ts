@@ -12,7 +12,7 @@ import { getLatestFirmwareVersion } from '../controllers/firmwareConfig.controll
  */
 export async function updateAdminDailyTrend(
   date: Date, 
-  metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity' | 'SkinTemp' = 'HR',
+  metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity' | 'SkinTemp' | 'Workout' = 'HR',
   latestFirmwareOnly: boolean = true
 ) {
   // Normalize to midnight UTC
@@ -145,6 +145,65 @@ export async function updateAdminDailyTrend(
       totalSessions: trend.totalSessions,
       totalUsers: trend.totalUsers,
       avgAccuracyPercent: trend.sleepStats?.avgAccuracyPercent?.toFixed(2),
+    });
+
+    return result;
+  }
+
+  // Handle Workout metric
+  if (metric === 'Workout') {
+    const analyses = await SessionAnalysis.find({
+      sessionId: { $in: sessionIds },
+      isValid: true,
+      'workoutStats.benchmarkComparison': { $exists: true },
+    });
+
+    if (analyses.length === 0) {
+      console.log('⚠️ No workout analysis data available for this date');
+      return null;
+    }
+
+    let totalMAE = 0, totalRMSE = 0, totalMAPE = 0, totalPearson = 0;
+    let count = 0;
+
+    analyses.forEach((analysis) => {
+      const workoutStats = (analysis as any).workoutStats;
+      if (workoutStats?.benchmarkComparison) {
+        const bc = workoutStats.benchmarkComparison;
+        totalMAE += bc.hrMae || 0;
+        totalRMSE += bc.hrRmse || 0;
+        totalMAPE += bc.hrMape || 0;
+        totalPearson += bc.hrPearsonR || 0;
+        count++;
+      }
+    });
+
+    const trend = {
+      date: dateOnly,
+      metric,
+      totalSessions: sessions.length,
+      totalUsers: uniqueUserIds.size,
+      lunaStats: count > 0 ? {
+        avgMAE: totalMAE / count,
+        avgRMSE: totalRMSE / count,
+        avgMAPE: totalMAPE / count,
+        avgPearson: totalPearson / count,
+      } : undefined,
+      latestFirmwareVersion: latestFirmware || undefined,
+      computedAt: new Date(),
+    };
+
+    const result = await AdminDailyTrend.findOneAndUpdate(
+      { date: dateOnly, metric },
+      trend,
+      { upsert: true, new: true }
+    );
+
+    console.log(`✅ AdminDailyTrend (Workout) updated for ${dateOnly.toISOString().split('T')[0]}:`, {
+      totalSessions: trend.totalSessions,
+      totalUsers: trend.totalUsers,
+      avgMAE: trend.lunaStats?.avgMAE?.toFixed(2),
+      avgPearson: trend.lunaStats?.avgPearson?.toFixed(3),
     });
 
     return result;

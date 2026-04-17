@@ -3,6 +3,8 @@ import Device from '../models/Devices';
 import User from '../models/Users';
 import NormalizedReading from '../models/NormalizedReadings';
 import { LunaAndroidSkinTempParser } from '../parsers/DailyParsers/Lunaandroidapp';
+import { AppleHealthSkinTempParser, IAppleSkinTempRecord } from '../parsers/AppleHealthSkinTempParser';
+import { extractAppleHealthZip, deleteDirectory } from '../tools/zipExtractor';
 import { analyzeSession } from './sessionAnalysis.service';
 import { updateUserAccuracySummary } from './userAccuracySummary.service';
 import { updateLunaFirmwarePerformanceForSession } from './lunaFirmwarePerformanceUpdate.service';
@@ -11,6 +13,7 @@ import { updateAdminGlobalSummary } from './adminGlobalSummary.service';
 import { updateBenchmarkComparisonSummariesForSession } from './benchmarkComparisonSummary.service';
 import { mailService } from './mail.service';
 import fs from 'fs';
+import path from 'path';
 import { promisify } from 'util';
 
 const unlinkAsync = promisify(fs.unlink);
@@ -94,6 +97,7 @@ export async function ingestSkinTempSessionFiles({
     }
 
     let anyInserted = false;
+    let extractedFolder: string | undefined; // Track extracted ZIP folder for cleanup
 
     for (const file of files) {
       const deviceType = file.fieldname;
@@ -138,8 +142,77 @@ export async function ingestSkinTempSessionFiles({
         }
         
         console.log(`✅ Parsed ${readings.length} SkinTemp readings from Luna file.`);
+      } else if (deviceType === "apple") {
+        // Handle Apple Health skin temp (ZIP or XML)
+        console.log("🍎 Parsing Apple Health SkinTemp file...");
+        
+        let appleFilePath = filePath;
+        const fileExtension = path.extname(filePath).toLowerCase();
+        
+        // Handle ZIP extraction
+        if (fileExtension === '.zip') {
+          console.log("🍎 Detected Apple Health ZIP file, extracting...");
+          try {
+            const extracted = await extractAppleHealthZip(filePath);
+            appleFilePath = extracted.exportXmlPath;
+            extractedFolder = extracted.extractedFolder;
+            console.log(`🍎 Using export.xml from: ${appleFilePath}`);
+          } catch (zipError) {
+            console.error("❌ Error extracting Apple Health ZIP:", zipError);
+            continue;
+          }
+        }
+        
+        try {
+          // Parse Apple skin temp records
+          const appleTempRecords = await AppleHealthSkinTempParser.parseSkinTempRecords(
+            appleFilePath,
+            startTime,
+            endTime
+          );
+          
+          if (appleTempRecords.length > 0) {
+            // Find the record that best matches our session time window
+            const matchedRecord = AppleHealthSkinTempParser.findMatchingRecord(
+              appleTempRecords,
+              startTime,
+              endTime
+            );
+            
+            if (matchedRecord) {
+              console.log(`🍎 Using Apple skin temp: ${matchedRecord.temperatureCelsius.toFixed(2)}°C`);
+              console.log(`🍎 Sleep period: ${matchedRecord.startTime.toISOString()} to ${matchedRecord.endTime.toISOString()}`);
+              
+              // Store as a SINGLE reading with the average temperature
+              // Note: Apple only provides ONE value per sleep session
+              readings = [{
+                meta: {
+                  sessionId: sessionId,
+                  userId: userId,
+                  deviceType: 'apple',
+                  activityType: activityType,
+                  bandPosition: undefined,
+                  firmwareVersion: undefined,
+                },
+                timestamp: matchedRecord.startTime, // Use sleep start as timestamp
+                metrics: {
+                  skinTemp: matchedRecord.temperatureCelsius,
+                },
+                isValid: true,
+              }];
+              
+              console.log(`✅ Created 1 Apple SkinTemp reading (avg over ${(matchedRecord.durationSec / 3600).toFixed(1)} hours sleep)`);
+            } else {
+              console.warn("⚠️ No Apple skin temp record found matching session time window");
+            }
+          } else {
+            console.warn("⚠️ No Apple skin temp records found in file");
+          }
+        } catch (parseError) {
+          console.error("❌ Error parsing Apple Health skin temp:", parseError);
+        }
       } else {
-        // Future: Add benchmark device parsers (Apple Watch, etc.)
+        // Future: Add other benchmark device parsers
         console.warn(`⚠️ SkinTemp parser not yet implemented for device: ${deviceType}`);
       }
 
@@ -210,6 +283,16 @@ export async function ingestSkinTempSessionFiles({
         }
       })
     );
+    
+    // Clean up extracted ZIP folder if any
+    if (extractedFolder) {
+      try {
+        await deleteDirectory(extractedFolder);
+        console.log(`✅ Deleted extracted folder: ${extractedFolder}`);
+      } catch (deleteError) {
+        console.warn(`⚠️ Could not delete extracted folder:`, deleteError);
+      }
+    }
 
     console.log("\n===============================");
     console.log("✅ SkinTemp Session Ingestion Complete!");

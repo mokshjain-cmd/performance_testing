@@ -32,13 +32,23 @@ export const HypnogramChart: React.FC<HypnogramChartProps> = ({
   benchmarkEpochs,
   showComparison = false,
 }) => {
+  // Helper to extract time from ISO string (show UTC, no timezone conversion)
+  const formatTimeFromISO = (timestamp: string | Date): string => {
+    const isoString = typeof timestamp === 'string' ? timestamp : timestamp.toISOString();
+    const match = isoString.match(/T(\d{2}:\d{2})/);
+    if (match) {
+      // Convert 24h to 12h format with AM/PM
+      const [hours, minutes] = match[1].split(':').map(Number);
+      const period = hours >= 12 ? 'PM' : 'AM';
+      const hour12 = hours % 12 || 12;
+      return `${hour12.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')} ${period}`;
+    }
+    return 'N/A';
+  };
+
   // Prepare data for the chart
   const chartData = lunaEpochs.map((epoch, index) => {
-    const time = new Date(epoch.timestamp);
-    const timeStr = time.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    const timeStr = formatTimeFromISO(epoch.timestamp);
 
     const dataPoint: any = {
       time: timeStr,
