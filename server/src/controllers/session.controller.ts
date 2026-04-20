@@ -28,11 +28,11 @@ import { updateAdminDailyTrend } from '../services/adminDailyTrend.service';
 
 
 function parseISTString(dateStr: string): Date {
-  // Expecting: "2026-02-13T15:20:50"
+  // Expecting: "2026-02-13T15:20:50" or "2026-02-13T15:20" (without seconds)
   const [datePart, timePart] = dateStr.split("T");
 
   const [year, month, day] = datePart.split("-").map(Number);
-  const [hour, minute, second] = timePart.split(":").map(Number);
+  const [hour, minute, second = 0] = timePart.split(":").map(Number);
 
   // Create date as IST but store correct UTC equivalent
   // IST = UTC + 5:30 → so subtract 5:30 to get UTC

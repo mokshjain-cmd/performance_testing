@@ -16,6 +16,80 @@ type NormalizedReadingInput = {
   isValid: boolean;
 };
 
+/**
+ * Get the next 30-second boundary timestamp (:00 or :30)
+ */
+function getNextBucketBoundary(timestamp: Date): Date {
+  const ts = new Date(timestamp);
+  const seconds = ts.getUTCSeconds();
+  
+  if (seconds < 30) {
+    ts.setUTCSeconds(30, 0);
+  } else {
+    ts.setUTCSeconds(0, 0);
+    ts.setUTCMinutes(ts.getUTCMinutes() + 1);
+  }
+  
+  return ts;
+}
+
+/**
+ * Get the bucket start time for a given timestamp (floor to :00 or :30)
+ */
+function getBucketStart(timestamp: Date): Date {
+  const ts = new Date(timestamp);
+  const seconds = ts.getUTCSeconds();
+  
+  if (seconds < 30) {
+    ts.setUTCSeconds(0, 0);
+  } else {
+    ts.setUTCSeconds(30, 0);
+  }
+  
+  return ts;
+}
+
+/**
+ * Bucket per-second readings into 30-second averages aligned to clock time
+ */
+function bucketReadingsTo30Sec(
+  readings: { timestamp: Date; hr: number }[],
+  startTime: Date,
+  endTime: Date
+): { timestamp: Date; avgHr: number }[] {
+  if (readings.length === 0) return [];
+
+  const buckets = new Map<number, number[]>(); // bucketStartMs -> HR values
+
+  for (const reading of readings) {
+    const bucketStart = getBucketStart(reading.timestamp);
+    const bucketKey = bucketStart.getTime();
+
+    if (!buckets.has(bucketKey)) {
+      buckets.set(bucketKey, []);
+    }
+    buckets.get(bucketKey)!.push(reading.hr);
+  }
+
+  // Convert buckets to output format
+  const result: { timestamp: Date; avgHr: number }[] = [];
+  const sortedKeys = Array.from(buckets.keys()).sort((a, b) => a - b);
+
+  for (const bucketKey of sortedKeys) {
+    const hrValues = buckets.get(bucketKey)!;
+    const avgHr = hrValues.reduce((sum, hr) => sum + hr, 0) / hrValues.length;
+
+    result.push({
+      timestamp: new Date(bucketKey),
+      avgHr: Math.round(avgHr * 100) / 100,
+    });
+  }
+
+  console.log(`📊 Bucketed ${readings.length} per-second readings into ${result.length} 30-second buckets`);
+
+  return result;
+}
+
 function parseElapsedTimeToSeconds(timeStr: string): number | null {
   const parts = timeStr.split(":").map((x) => x.trim());
 
@@ -146,7 +220,8 @@ export async function parsePolarCsv(
   console.log("📌 Time column index:", timeIndex);
   console.log("📌 HR column index:", hrIndex);
 
-  const normalized: NormalizedReadingInput[] = [];
+  // First, collect all per-second readings
+  const perSecondReadings: { timestamp: Date; hr: number }[] = [];
 
   let totalRows = 0;
   let acceptedRows = 0;
@@ -175,7 +250,7 @@ export async function parsePolarCsv(
     }
 
     const hr = parseFloat(hrStr);
-    if (isNaN(hr)) {
+    if (isNaN(hr) || hr <= 0) {
       skippedRows++;
       continue;
     }
@@ -189,40 +264,42 @@ export async function parsePolarCsv(
     }
 
     acceptedRows++;
-
-    normalized.push({
-      meta: {
-        sessionId: meta.sessionId,
-        userId: meta.userId,
-        deviceType: "polar",
-        activityType: meta.activityType,
-        bandPosition: meta.bandPosition,
-        firmwareVersion: meta.firmwareVersion,
-      },
-      timestamp: ts,
-      metrics: {
-        heartRate: Math.round(hr * 100) / 100,
-      },
-      isValid: true,
-    });
-
-    // Debug first few
-    if (acceptedRows <= 5) {
-      //console.log(`✅ Accepted: ts=${ts.toISOString()} hr=${hr}`);
-    }
+    perSecondReadings.push({ timestamp: ts, hr });
   }
 
   console.log("\n===============================");
-  console.log("📌 Polar Parsing Completed");
+  console.log("📌 Polar Per-Second Parsing Completed");
   console.log("===============================");
   console.log("📌 Total Rows Read:", totalRows);
   console.log("📌 Accepted Rows:", acceptedRows);
   console.log("📌 Skipped Rows:", skippedRows);
-  console.log("📌 Final Normalized Points:", normalized.length);
+  console.log("📌 Per-Second Readings:", perSecondReadings.length);
+
+  // Bucket into 30-second intervals
+  const bucketedReadings = bucketReadingsTo30Sec(perSecondReadings, startTime, endTime);
+
+  // Convert to normalized format
+  const normalized: NormalizedReadingInput[] = bucketedReadings.map((bucket) => ({
+    meta: {
+      sessionId: meta.sessionId,
+      userId: meta.userId,
+      deviceType: "polar",
+      activityType: meta.activityType,
+      bandPosition: meta.bandPosition,
+      firmwareVersion: meta.firmwareVersion,
+    },
+    timestamp: bucket.timestamp,
+    metrics: {
+      heartRate: bucket.avgHr,
+    },
+    isValid: true,
+  }));
+
+  console.log("📌 Final 30-Second Buckets:", normalized.length);
 
   if (normalized.length > 0) {
-    console.log("📌 First Point:", normalized[0]);
-    console.log("📌 Last Point:", normalized[normalized.length - 1]);
+    console.log("📌 First Bucket:", normalized[0].timestamp.toISOString(), "HR:", normalized[0].metrics.heartRate);
+    console.log("📌 Last Bucket:", normalized[normalized.length - 1].timestamp.toISOString(), "HR:", normalized[normalized.length - 1].metrics.heartRate);
   }
 
   console.log("===============================\n");

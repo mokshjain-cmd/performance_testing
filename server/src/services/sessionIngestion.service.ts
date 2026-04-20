@@ -103,9 +103,9 @@ export async function ingestSessionFiles({
       let readings: any[] = [];
 
       if (deviceType === "luna") {
-        // Check if it's iOS daily activity - use iOS-specific parser
-        if (activityType === "daily" && mobileType === "iOS") {
-          console.log('Using Luna iOS HR parser for daily activity');
+        // Check if it's iOS - use iOS-specific parser
+        if (mobileType === "iOS") {
+          console.log('Using Luna iOS HR parser');
           try {
             readings = await LunaIOSHRParser.parse(filePath, meta, startTime, endTime);
             console.log(`Parsed ${readings.length} readings from Luna iOS file.`);
@@ -116,9 +116,10 @@ export async function ingestSessionFiles({
             readings = await parseLunaCsv(csvFilePath, meta, startTime, endTime);
             console.log(`Parsed ${readings.length} readings from Luna file (fallback).`);
           }
-        } else if (activityType === "daily" && mobileType === "Android") {
-          // Use Android-specific parser for daily activity
-          console.log('Using Luna Android HR parser for daily activity');
+        } else if (mobileType === "Android") {
+          // Use Android-specific parser for ALL Android activities
+          // This parser uses onContinuousHeartRateData JSON format (30-sec intervals)
+          console.log('Using Luna Android HR parser (onContinuousHeartRateData format)');
           try {
             readings = await LunaAndroidHRParser.parse(filePath, meta, startTime, endTime);
             console.log(`Parsed ${readings.length} readings from Luna Android file.`);
@@ -130,8 +131,8 @@ export async function ingestSessionFiles({
             console.log(`Parsed ${readings.length} readings from Luna file (fallback).`);
           }
         } else {
-          // Use standard Luna parser for non-daily activities
-          console.log('Using standard Luna HR parser');
+          // No mobileType specified - use standard Luna parser (fallback)
+          console.log('Using standard Luna HR parser (no mobileType specified)');
           const csvFilePath = await convertLunaTxtToCsv(filePath);
           readings = await parseLunaCsv(csvFilePath, meta, startTime, endTime);
           console.log(`Parsed ${readings.length} readings from Luna file.`);
