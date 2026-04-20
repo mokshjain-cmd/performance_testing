@@ -6,3 +6,4 @@
 export { LunaWorkoutParser, IParsedWorkout } from './LunaWorkoutParser';
 export { AppleHealthWorkoutParser, IAppleWorkout } from './AppleHealthWorkoutParser';
 export { PolarWorkoutParser, IPolarWorkout } from './PolarWorkoutParser';
+export { CorosWorkoutParser, ICorosWorkout } from './CorosWorkoutParser';

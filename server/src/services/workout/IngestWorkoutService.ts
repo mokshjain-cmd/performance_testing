@@ -7,6 +7,7 @@ import { LunaWorkoutParser, IParsedWorkout } from "../../parsers/workout";
 import { WorkoutAnalysisService, IBenchmarkWorkoutMeta } from "./WorkoutAnalysisService";
 import { AppleHealthWorkoutParser, IAppleWorkout } from "../../parsers/workout/AppleHealthWorkoutParser";
 import { PolarWorkoutParser, IPolarWorkout } from "../../parsers/workout/PolarWorkoutParser";
+import { CorosWorkoutParser, ICorosWorkout } from "../../parsers/workout/CorosWorkoutParser";
 import { extractHRForWorkoutComparison } from "../../parsers/appleHRparser";
 import { extractAppleHealthZip, deleteDirectory } from "../../tools/zipExtractor";
 import { mailService } from "../mail.service";
@@ -248,6 +249,7 @@ export class IngestWorkoutService {
       // Parse benchmark file if provided
       let appleWorkouts: IAppleWorkout[] = [];
       let polarWorkout: IPolarWorkout | null = null;
+      let corosWorkout: ICorosWorkout | null = null;
       let benchmarkFilePath: string | undefined;
       
       // Handle Apple Health benchmark file
@@ -292,6 +294,21 @@ export class IngestWorkoutService {
           }
         } catch (polarError) {
           console.error('[IngestWorkoutService] ❌ Error parsing Polar CSV:', polarError);
+        }
+      }
+      
+      // Handle Coros benchmark file (.fit format)
+      if (benchmarkFile && benchmarkDeviceType === 'coros') {
+        console.log(`[IngestWorkoutService] ⌚ Parsing Coros workout FIT file...`);
+        benchmarkFilePath = benchmarkFile.path;
+        
+        try {
+          corosWorkout = await CorosWorkoutParser.parseWorkout(benchmarkFilePath);
+          if (corosWorkout) {
+            console.log(`[IngestWorkoutService] ⌚ Coros workout parsed: ${corosWorkout.hrReadings.length} HR readings`);
+          }
+        } catch (corosError) {
+          console.error('[IngestWorkoutService] ❌ Error parsing Coros FIT:', corosError);
         }
       }
       
@@ -357,6 +374,33 @@ export class IngestWorkoutService {
               );
               
               console.log(`[IngestWorkoutService] 🏃 Matched Polar workout: ${overlap.overlapPercent.toFixed(1)}% overlap`);
+            }
+          }
+          
+          // Match Coros workout
+          if (corosWorkout && benchmarkDeviceType === 'coros') {
+            const overlap = CorosWorkoutParser.findWorkoutOverlap(
+              corosWorkout,
+              workout.startTime,
+              workout.endTime,
+              50
+            );
+            
+            if (overlap?.isMatch) {
+              benchmarkWorkoutMeta = {
+                // Coros doesn't provide calories or steps, only distance
+                distance: corosWorkout.totalDistanceKm ? corosWorkout.totalDistanceKm * 1000 : undefined,
+              };
+              
+              // Process Coros HR data
+              await this.processCorosBenchmarkHR(
+                sessionId,
+                userId,
+                workout,
+                corosWorkout
+              );
+              
+              console.log(`[IngestWorkoutService] ⌚ Matched Coros workout: ${overlap.overlapPercent.toFixed(1)}% overlap`);
             }
           }
           
@@ -607,6 +651,58 @@ export class IngestWorkoutService {
       
     } catch (error) {
       console.error(`[IngestWorkoutService] ❌ Error processing Polar HR:`, error);
+      // Don't throw - we still want the session to be created even without benchmark
+    }
+  }
+  
+  /**
+   * Process Coros HR data for a workout session
+   * Uses pre-parsed Coros workout data (already in memory from FIT parsing)
+   */
+  private static async processCorosBenchmarkHR(
+    sessionId: Types.ObjectId,
+    userId: Types.ObjectId | string,
+    workout: IParsedWorkout,
+    corosWorkout: ICorosWorkout
+  ): Promise<void> {
+    try {
+      console.log(`[IngestWorkoutService] ⌚ Processing Coros HR for workout ${workout.workoutId}`);
+      
+      // Extract Coros HR readings within the Luna workout time window
+      const hrReadings = CorosWorkoutParser.extractHRInTimeWindow(
+        corosWorkout,
+        workout.startTime,
+        workout.endTime
+      );
+      
+      if (hrReadings.length === 0) {
+        console.log(`[IngestWorkoutService] No Coros HR readings found in workout time range`);
+        return;
+      }
+      
+      console.log(`[IngestWorkoutService] ⌚ Found ${hrReadings.length} Coros HR readings in workout window`);
+      
+      // Insert benchmark readings
+      const benchmarkReadings = hrReadings.map(reading => ({
+        meta: {
+          sessionId: sessionId,
+          workoutId: workout.workoutId,
+          userId: new Types.ObjectId(userId.toString()),
+          deviceType: 'coros',
+          firmwareVersion: undefined,
+        },
+        timestamp: reading.timestamp,
+        heartRate: reading.heartRate,
+        heartRateConfidence: 95, // Coros optical HR has good confidence
+        exerciseIntensity: 0,
+        isValid: true,
+      }));
+      
+      await WorkoutReading.insertMany(benchmarkReadings);
+      console.log(`[IngestWorkoutService] ⌚ Inserted ${benchmarkReadings.length} Coros readings for session ${sessionId}`);
+      
+    } catch (error) {
+      console.error(`[IngestWorkoutService] ❌ Error processing Coros HR:`, error);
       // Don't throw - we still want the session to be created even without benchmark
     }
   }
