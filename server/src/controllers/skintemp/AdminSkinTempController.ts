@@ -54,4 +54,46 @@ export class AdminSkinTempController {
       });
     }
   }
+
+  /**
+   * GET /api/skintemp/admin/firmware
+   * Get firmware comparison for SkinTemp (bias-only)
+   */
+  static async getFirmwareComparison(req: Request, res: Response): Promise<void> {
+    try {
+      const firmwareData = await AdminSkinTempSummaryService.getFirmwareComparison();
+      
+      res.json({
+        success: true,
+        data: firmwareData,
+      });
+    } catch (error: any) {
+      console.error("[AdminSkinTempController] Error getting firmware comparison:", error);
+      res.status(500).json({
+        success: false,
+        error: error.message || "Failed to get firmware comparison",
+      });
+    }
+  }
+
+  /**
+   * GET /api/skintemp/admin/benchmark
+   * Get benchmark comparison for SkinTemp (bias-only)
+   */
+  static async getBenchmarkComparison(req: Request, res: Response): Promise<void> {
+    try {
+      const benchmarkData = await AdminSkinTempSummaryService.getBenchmarkComparison();
+      
+      res.json({
+        success: true,
+        data: benchmarkData,
+      });
+    } catch (error: any) {
+      console.error("[AdminSkinTempController] Error getting benchmark comparison:", error);
+      res.status(500).json({
+        success: false,
+        error: error.message || "Failed to get benchmark comparison",
+      });
+    }
+  }
 }

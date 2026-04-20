@@ -56,6 +56,11 @@ export async function updateUserAccuracySummary(userId: Types.ObjectId | string,
   let bestAccuracy = Infinity; // Lower MAPE is better
   let worstAccuracy = -Infinity; // Higher MAPE is worse
 
+  // For workout bias aggregation
+  let totalCaloriesBias = 0, caloriesBiasCount = 0;
+  let totalStepsBias = 0, stepsBiasCount = 0;
+  let totalDistanceBias = 0, distanceBiasCount = 0;
+
   // For activity, firmware, band position
   const activityMap = new Map<string, { sum: number, count: number, duration: number }>();
   const firmwareMap = new Map<string, { sum: number, count: number }>();
@@ -77,6 +82,20 @@ export async function updateUserAccuracySummary(userId: Types.ObjectId | string,
         totalPearson += bc.hrPearsonR || 0;
         totalMAPE += bc.hrMape || 0;
         count++;
+        
+        // Accumulate workout-level bias
+        if (typeof bc.caloriesBias === 'number') {
+          totalCaloriesBias += bc.caloriesBias;
+          caloriesBiasCount++;
+        }
+        if (typeof bc.stepsBias === 'number') {
+          totalStepsBias += bc.stepsBias;
+          stepsBiasCount++;
+        }
+        if (typeof bc.distanceBias === 'number') {
+          totalDistanceBias += bc.distanceBias;
+          distanceBiasCount++;
+        }
         
         const sessionAccuracy = 100 - (bc.hrMape || 0);
         
@@ -210,6 +229,13 @@ export async function updateUserAccuracySummary(userId: Types.ObjectId | string,
       avgRMSE: totalRMSE / count,
       avgPearson: totalPearson / count,
       avgMAPE: totalMAPE / count,
+    } : undefined,
+    workoutOverview: metric === 'Workout' ? {
+      avgHrMae: count ? totalMAE / count : undefined,
+      avgHrPearson: count ? totalPearson / count : undefined,
+      avgCaloriesBias: caloriesBiasCount ? totalCaloriesBias / caloriesBiasCount : undefined,
+      avgStepsBias: stepsBiasCount ? totalStepsBias / stepsBiasCount : undefined,
+      avgDistanceBias: distanceBiasCount ? totalDistanceBias / distanceBiasCount : undefined,
     } : undefined,
     bestSession: bestSession || undefined,
     worstSession: worstSession || undefined,

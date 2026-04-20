@@ -22,6 +22,13 @@ interface GlobalSummary {
     avgPearson?: number;
     avgBias?: number;
   };
+  workoutStats?: {
+    avgHrMae?: number;
+    avgHrPearson?: number;
+    avgCaloriesBias?: number;
+    avgStepsBias?: number;
+    avgDistanceBias?: number;
+  };
   sportTypeDistribution?: {
     sportType: number;
     count: number;
@@ -245,6 +252,63 @@ const AdminWorkoutOverviewTab: React.FC<AdminWorkoutOverviewTabProps> = ({ subTa
                 </span>
               </div>
               <p className="text-xs text-gray-500">Systematic error. Target: ±2 BPM</p>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Workout Bias Stats (Calories, Steps, Distance) */}
+      {globalSummary?.workoutStats && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card>
+            <div className="space-y-1">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600 font-medium">Avg Calories Bias</span>
+                <span className={`text-lg font-semibold ${
+                  globalSummary.workoutStats.avgCaloriesBias !== undefined 
+                    ? (globalSummary.workoutStats.avgCaloriesBias >= 0 ? 'text-red-500' : 'text-blue-500')
+                    : 'text-gray-400'
+                }`}>
+                  {globalSummary.workoutStats.avgCaloriesBias !== undefined 
+                    ? `${globalSummary.workoutStats.avgCaloriesBias >= 0 ? '+' : ''}${globalSummary.workoutStats.avgCaloriesBias.toFixed(1)} kcal`
+                    : '--'}
+                </span>
+              </div>
+              <p className="text-xs text-gray-500">Falcon - Benchmark. Positive = Falcon higher</p>
+            </div>
+          </Card>
+          <Card>
+            <div className="space-y-1">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600 font-medium">Avg Steps Bias</span>
+                <span className={`text-lg font-semibold ${
+                  globalSummary.workoutStats.avgStepsBias !== undefined 
+                    ? (globalSummary.workoutStats.avgStepsBias >= 0 ? 'text-red-500' : 'text-blue-500')
+                    : 'text-gray-400'
+                }`}>
+                  {globalSummary.workoutStats.avgStepsBias !== undefined 
+                    ? `${globalSummary.workoutStats.avgStepsBias >= 0 ? '+' : ''}${Math.round(globalSummary.workoutStats.avgStepsBias)}`
+                    : '--'}
+                </span>
+              </div>
+              <p className="text-xs text-gray-500">Falcon - Benchmark. Positive = Falcon higher</p>
+            </div>
+          </Card>
+          <Card>
+            <div className="space-y-1">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600 font-medium">Avg Distance Bias</span>
+                <span className={`text-lg font-semibold ${
+                  globalSummary.workoutStats.avgDistanceBias !== undefined 
+                    ? (globalSummary.workoutStats.avgDistanceBias >= 0 ? 'text-red-500' : 'text-blue-500')
+                    : 'text-gray-400'
+                }`}>
+                  {globalSummary.workoutStats.avgDistanceBias !== undefined 
+                    ? `${globalSummary.workoutStats.avgDistanceBias >= 0 ? '+' : ''}${globalSummary.workoutStats.avgDistanceBias.toFixed(0)} m`
+                    : '--'}
+                </span>
+              </div>
+              <p className="text-xs text-gray-500">Falcon - Benchmark. Positive = Falcon higher</p>
             </div>
           </Card>
         </div>

@@ -14,6 +14,13 @@ interface FirmwareData {
     avgMAPE?: number;
     avgPearson?: number;
   };
+  workoutStats?: {
+    avgHrMae?: number;
+    avgHrPearson?: number;
+    avgCaloriesBias?: number;
+    avgStepsBias?: number;
+    avgDistanceBias?: number;
+  };
   sportTypeBreakdown?: {
     sportType: number;
     sportName: string;
@@ -131,6 +138,15 @@ const AdminWorkoutFirmwareTab: React.FC = () => {
                   Pearson R
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Cal Bias
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Steps Bias
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Dist Bias
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Details
                 </th>
               </tr>
@@ -148,6 +164,9 @@ const AdminWorkoutFirmwareTab: React.FC = () => {
                 const prevRmse = prevFw?.overallAccuracy?.avgRMSE;
                 const prevMape = prevFw?.overallAccuracy?.avgMAPE;
                 const prevPearson = prevFw?.overallAccuracy?.avgPearson;
+                const calBias = fw.workoutStats?.avgCaloriesBias;
+                const stepsBias = fw.workoutStats?.avgStepsBias;
+                const distBias = fw.workoutStats?.avgDistanceBias;
                 
                 return (
                   <React.Fragment key={fw.firmwareVersion}>
@@ -203,6 +222,21 @@ const AdminWorkoutFirmwareTab: React.FC = () => {
                           {pearson !== undefined && getTrendIcon(pearson, prevPearson, false)}
                         </div>
                       </td>
+                      <td className={`px-4 py-4 whitespace-nowrap text-sm font-medium ${
+                        calBias !== undefined ? (calBias >= 0 ? 'text-red-500' : 'text-blue-500') : 'text-gray-400'
+                      }`}>
+                        {calBias !== undefined ? `${calBias >= 0 ? '+' : ''}${calBias.toFixed(1)}` : '--'}
+                      </td>
+                      <td className={`px-4 py-4 whitespace-nowrap text-sm font-medium ${
+                        stepsBias !== undefined ? (stepsBias >= 0 ? 'text-red-500' : 'text-blue-500') : 'text-gray-400'
+                      }`}>
+                        {stepsBias !== undefined ? `${stepsBias >= 0 ? '+' : ''}${Math.round(stepsBias)}` : '--'}
+                      </td>
+                      <td className={`px-4 py-4 whitespace-nowrap text-sm font-medium ${
+                        distBias !== undefined ? (distBias >= 0 ? 'text-red-500' : 'text-blue-500') : 'text-gray-400'
+                      }`}>
+                        {distBias !== undefined ? `${distBias >= 0 ? '+' : ''}${distBias.toFixed(0)}m` : '--'}
+                      </td>
                       <td className="px-4 py-4 whitespace-nowrap">
                         {fw.sportTypeBreakdown && fw.sportTypeBreakdown.length > 0 && (
                           <button
@@ -218,7 +252,7 @@ const AdminWorkoutFirmwareTab: React.FC = () => {
                     {/* Expanded sport type breakdown */}
                     {isExpanded && fw.sportTypeBreakdown && (
                       <tr>
-                        <td colSpan={8} className="px-4 py-4 bg-gray-50">
+                        <td colSpan={11} className="px-4 py-4 bg-gray-50">
                           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
                             {fw.sportTypeBreakdown.map((sport) => (
                               <div 

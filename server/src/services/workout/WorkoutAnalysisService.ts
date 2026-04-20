@@ -252,10 +252,12 @@ export class WorkoutAnalysisService {
     lunaDistance?: number;
     benchmarkDistance?: number;
     distanceDifference?: number;
+    distanceBias?: number;
     distanceAccuracyPercent?: number;
     lunaSteps?: number;
     benchmarkSteps?: number;
     stepsDifference?: number;
+    stepsBias?: number;
     stepsAccuracyPercent?: number;
   } | undefined {
     
@@ -381,6 +383,7 @@ export class WorkoutAnalysisService {
       }
       if (workoutStats.lunaDistance !== undefined && workoutStats.benchmarkDistance !== undefined && workoutStats.benchmarkDistance > 0) {
         result.distanceDifference = Math.round((workoutStats.lunaDistance - workoutStats.benchmarkDistance) * 100) / 100;
+        result.distanceBias = result.distanceDifference; // Alias for aggregation
         result.distanceAccuracyPercent = Math.round(
           Math.max(0, 100 - Math.abs((workoutStats.lunaDistance - workoutStats.benchmarkDistance) / workoutStats.benchmarkDistance * 100)) * 100
         ) / 100;
@@ -395,6 +398,7 @@ export class WorkoutAnalysisService {
       }
       if (workoutStats.lunaSteps !== undefined && workoutStats.benchmarkSteps !== undefined && workoutStats.benchmarkSteps > 0) {
         result.stepsDifference = Math.round(workoutStats.lunaSteps - workoutStats.benchmarkSteps);
+        result.stepsBias = result.stepsDifference; // Alias for aggregation
         result.stepsAccuracyPercent = Math.round(
           Math.max(0, 100 - Math.abs((workoutStats.lunaSteps - workoutStats.benchmarkSteps) / workoutStats.benchmarkSteps * 100)) * 100
         ) / 100;

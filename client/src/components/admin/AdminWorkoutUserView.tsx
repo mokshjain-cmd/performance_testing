@@ -19,7 +19,21 @@ interface WorkoutSession {
 }
 
 interface UserWorkoutData {
-  summary: any | null;  // UserAccuracySummary
+  summary: {
+    overallAccuracy?: {
+      avgMAE?: number;
+      avgRMSE?: number;
+      avgPearson?: number;
+      avgMAPE?: number;
+    };
+    workoutOverview?: {
+      avgHrMae?: number;
+      avgHrPearson?: number;
+      avgCaloriesBias?: number;
+      avgStepsBias?: number;
+      avgDistanceBias?: number;
+    };
+  } | null;  // UserAccuracySummary
   sessions: WorkoutSession[];
   totalSessions: number;
   totalWorkouts: number;
@@ -166,6 +180,63 @@ const AdminWorkoutUserView: React.FC<AdminWorkoutUserViewProps> = ({
           </div>
         </Card>
       </div>
+
+      {/* Workout Bias Metrics */}
+      {data.summary?.workoutOverview && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card>
+            <div className="space-y-1">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600 font-medium">Avg Calories Bias</span>
+                <span className={`text-lg font-semibold ${
+                  data.summary.workoutOverview.avgCaloriesBias !== undefined 
+                    ? (data.summary.workoutOverview.avgCaloriesBias >= 0 ? 'text-red-500' : 'text-blue-500')
+                    : 'text-gray-400'
+                }`}>
+                  {data.summary.workoutOverview.avgCaloriesBias !== undefined 
+                    ? `${data.summary.workoutOverview.avgCaloriesBias >= 0 ? '+' : ''}${data.summary.workoutOverview.avgCaloriesBias.toFixed(1)} kcal`
+                    : '--'}
+                </span>
+              </div>
+              <p className="text-xs text-gray-500">Falcon - Benchmark</p>
+            </div>
+          </Card>
+          <Card>
+            <div className="space-y-1">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600 font-medium">Avg Steps Bias</span>
+                <span className={`text-lg font-semibold ${
+                  data.summary.workoutOverview.avgStepsBias !== undefined 
+                    ? (data.summary.workoutOverview.avgStepsBias >= 0 ? 'text-red-500' : 'text-blue-500')
+                    : 'text-gray-400'
+                }`}>
+                  {data.summary.workoutOverview.avgStepsBias !== undefined 
+                    ? `${data.summary.workoutOverview.avgStepsBias >= 0 ? '+' : ''}${Math.round(data.summary.workoutOverview.avgStepsBias)}`
+                    : '--'}
+                </span>
+              </div>
+              <p className="text-xs text-gray-500">Falcon - Benchmark</p>
+            </div>
+          </Card>
+          <Card>
+            <div className="space-y-1">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600 font-medium">Avg Distance Bias</span>
+                <span className={`text-lg font-semibold ${
+                  data.summary.workoutOverview.avgDistanceBias !== undefined 
+                    ? (data.summary.workoutOverview.avgDistanceBias >= 0 ? 'text-red-500' : 'text-blue-500')
+                    : 'text-gray-400'
+                }`}>
+                  {data.summary.workoutOverview.avgDistanceBias !== undefined 
+                    ? `${data.summary.workoutOverview.avgDistanceBias >= 0 ? '+' : ''}${data.summary.workoutOverview.avgDistanceBias.toFixed(0)} m`
+                    : '--'}
+                </span>
+              </div>
+              <p className="text-xs text-gray-500">Falcon - Benchmark</p>
+            </div>
+          </Card>
+        </div>
+      )}
 
       {/* Best/Worst Sessions */}
       {(bestSession || worstSession) && (

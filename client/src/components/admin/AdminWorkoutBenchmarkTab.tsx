@@ -14,6 +14,13 @@ interface BenchmarkData {
     avgPearson?: number;
     avgBias?: number;
   };
+  workoutStats?: {
+    avgHrMae?: number;
+    avgHrPearson?: number;
+    avgCaloriesBias?: number;
+    avgStepsBias?: number;
+    avgDistanceBias?: number;
+  };
   sportTypeBreakdown?: {
     sportType: number;
     sportName: string;
@@ -118,6 +125,15 @@ const AdminWorkoutBenchmarkTab: React.FC = () => {
                   Mean Bias
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Cal Bias
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Steps Bias
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Dist Bias
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
                 </th>
               </tr>
@@ -129,6 +145,9 @@ const AdminWorkoutBenchmarkTab: React.FC = () => {
                 const mape = device.hrStats?.avgMAPE;
                 const pearson = device.hrStats?.avgPearson;
                 const bias = device.hrStats?.avgBias;
+                const calBias = device.workoutStats?.avgCaloriesBias;
+                const stepsBias = device.workoutStats?.avgStepsBias;
+                const distBias = device.workoutStats?.avgDistanceBias;
                 const isPass = mae !== undefined && pearson !== undefined && mae <= 5 && pearson >= 0.9;
                 
                 return (
@@ -159,6 +178,21 @@ const AdminWorkoutBenchmarkTab: React.FC = () => {
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">
                       {bias?.toFixed(2) || '--'}
+                    </td>
+                    <td className={`px-4 py-4 whitespace-nowrap text-sm font-medium ${
+                      calBias !== undefined ? (calBias >= 0 ? 'text-red-500' : 'text-blue-500') : 'text-gray-400'
+                    }`}>
+                      {calBias !== undefined ? `${calBias >= 0 ? '+' : ''}${calBias.toFixed(1)}` : '--'}
+                    </td>
+                    <td className={`px-4 py-4 whitespace-nowrap text-sm font-medium ${
+                      stepsBias !== undefined ? (stepsBias >= 0 ? 'text-red-500' : 'text-blue-500') : 'text-gray-400'
+                    }`}>
+                      {stepsBias !== undefined ? `${stepsBias >= 0 ? '+' : ''}${Math.round(stepsBias)}` : '--'}
+                    </td>
+                    <td className={`px-4 py-4 whitespace-nowrap text-sm font-medium ${
+                      distBias !== undefined ? (distBias >= 0 ? 'text-red-500' : 'text-blue-500') : 'text-gray-400'
+                    }`}>
+                      {distBias !== undefined ? `${distBias >= 0 ? '+' : ''}${distBias.toFixed(0)}m` : '--'}
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap">
                       {isPass ? (

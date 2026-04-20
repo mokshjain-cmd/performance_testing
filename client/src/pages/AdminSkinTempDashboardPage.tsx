@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Users, TrendingUp, Thermometer, Activity } from 'lucide-react';
+import { Users, TrendingUp, Thermometer, Activity, Info } from 'lucide-react';
 import { Card } from '../components/common';
 import { skintempService } from '../services/skintemp.service';
 import type { AdminSkinTempGlobalSummary, SkinTempTrendData } from '../types/skintemp.types';
@@ -125,13 +125,23 @@ export const AdminSkinTempDashboardPage: React.FC = () => {
 
           <Card>
             <div className="space-y-2">
-              <p className="text-sm text-gray-500 uppercase tracking-wide">Overall Correlation</p>
-              <p className={`text-3xl font-bold ${getAccuracyColor((summary.skinTempStats?.avgCorrelation || 0) * 100)}`}>
-                {((summary.skinTempStats?.avgCorrelation || 0) * 100).toFixed(1)}%
+              <p className="text-sm text-gray-500 uppercase tracking-wide">Avg Bias</p>
+              <p className={`text-3xl font-bold ${
+                summary.skinTempStats?.avgBias !== undefined
+                  ? (summary.skinTempStats.avgBias >= 0 ? 'text-red-500' : 'text-blue-500')
+                  : 'text-gray-400'
+              }`}>
+                {summary.skinTempStats?.avgBias !== undefined 
+                  ? `${summary.skinTempStats.avgBias >= 0 ? '+' : ''}${summary.skinTempStats.avgBias.toFixed(2)}°C`
+                  : 'N/A'}
               </p>
               <div className="flex items-center gap-2">
                 <TrendingUp className="w-4 h-4 text-gray-400" />
-                <p className="text-xs text-gray-500">Falcon vs Benchmark</p>
+                <p className="text-xs text-gray-500">
+                  {summary.skinTempStats?.avgBias !== undefined 
+                    ? (summary.skinTempStats.avgBias >= 0 ? 'Falcon reads higher' : 'Falcon reads lower')
+                    : 'vs Apple Watch'}
+                </p>
               </div>
             </div>
           </Card>
@@ -188,43 +198,50 @@ export const AdminSkinTempDashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Validation Metrics (if comparison available) */}
-      {summary.skinTempStats?.avgMAE !== undefined && (
+      {/* Validation vs Apple Watch (if comparison available) */}
+      {summary.skinTempStats?.avgBias !== undefined && (
         <div>
-          <h2 className="text-xl font-semibold mb-4">Validation Metrics</h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <h2 className="text-xl font-semibold mb-4">Validation vs Apple Watch</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <Card>
-              <h3 className="text-lg font-semibold mb-2">Correlation</h3>
-              <p className={`text-3xl font-bold ${getAccuracyColor((summary.skinTempStats.avgCorrelation || 0) * 100)}`}>
-                {((summary.skinTempStats.avgCorrelation || 0) * 100).toFixed(1)}%
-              </p>
-              <p className="text-xs text-gray-500 mt-2">Agreement with benchmark</p>
-            </Card>
-
-            <Card>
-              <h3 className="text-lg font-semibold mb-2">MAE</h3>
-              <p className="text-3xl font-bold text-blue-600">
-                {summary.skinTempStats.avgMAE.toFixed(2)}°C
-              </p>
-              <p className="text-xs text-gray-500 mt-2">Mean Absolute Error</p>
-            </Card>
-
-            <Card>
-              <h3 className="text-lg font-semibold mb-2">MAPE</h3>
-              <p className="text-3xl font-bold text-purple-600">
-                {(summary.skinTempStats.avgMAPE || 0).toFixed(2)}%
-              </p>
-              <p className="text-xs text-gray-500 mt-2">Mean Absolute % Error</p>
-            </Card>
-
-            <Card>
-              <h3 className="text-lg font-semibold mb-2">RMSE</h3>
+              <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
+                <Thermometer className="w-5 h-5 text-orange-500" />
+                Falcon Average
+              </h3>
               <p className="text-3xl font-bold text-orange-600">
-                {(summary.skinTempStats.avgRMSE || 0).toFixed(2)}°C
+                {formatTemperature(summary.skinTempStats.lunaAvg || 0)}
               </p>
-              <p className="text-xs text-gray-500 mt-2">Root Mean Square Error</p>
+              <p className="text-xs text-gray-500 mt-2">Average across all sessions</p>
+            </Card>
+
+            <Card>
+              <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
+                <Thermometer className="w-5 h-5 text-blue-500" />
+                Apple Average
+              </h3>
+              <p className="text-3xl font-bold text-blue-600">
+                {formatTemperature(summary.skinTempStats.benchmarkAvg || 0)}
+              </p>
+              <p className="text-xs text-gray-500 mt-2">Average from Apple Watch</p>
+            </Card>
+
+            <Card>
+              <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-purple-500" />
+                Bias
+              </h3>
+              <p className={`text-3xl font-bold ${(summary.skinTempStats.avgBias || 0) >= 0 ? 'text-red-500' : 'text-blue-500'}`}>
+                {(summary.skinTempStats.avgBias || 0) >= 0 ? '+' : ''}{(summary.skinTempStats.avgBias || 0).toFixed(2)}°C
+              </p>
+              <p className="text-xs text-gray-500 mt-2">
+                {(summary.skinTempStats.avgBias || 0) >= 0 ? 'Falcon reads higher' : 'Falcon reads lower'}
+              </p>
             </Card>
           </div>
+          <p className="text-sm text-gray-500 mt-4 flex items-center gap-2">
+            <Info className="w-4 h-4" />
+            Apple Watch provides a single average temperature per sleep session. Only bias comparison is meaningful.
+          </p>
         </div>
       )}
 
@@ -278,6 +295,67 @@ export const AdminSkinTempDashboardPage: React.FC = () => {
                 )}
               </LineChart>
             </ResponsiveContainer>
+          </Card>
+        </div>
+      )}
+
+      {/* Daily Bias Trend Chart */}
+      {accuracyTrend.some((d) => d.avgBias !== undefined) && (
+        <div>
+          <h2 className="text-xl font-semibold mb-4">Daily Bias Trend</h2>
+          <Card className="p-4">
+            <ResponsiveContainer width="100%" height={250}>
+              <LineChart data={accuracyTrend.filter(d => d.avgBias !== undefined)}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="date"
+                  tickFormatter={(val) =>
+                    new Date(val).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                  }
+                />
+                <YAxis
+                  tickFormatter={(val) => `${val >= 0 ? '+' : ''}${val.toFixed(1)}°C`}
+                  domain={['dataMin - 0.5', 'dataMax + 0.5']}
+                />
+                <Tooltip
+                  formatter={(val: number | undefined) => {
+                    const v = val ?? 0;
+                    return [`${v >= 0 ? '+' : ''}${v.toFixed(2)}°C`, 'Bias'];
+                  }}
+                  labelFormatter={(label) =>
+                    new Date(label).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                    })
+                  }
+                />
+                <Legend />
+                <Line
+                  type="monotone"
+                  dataKey="avgBias"
+                  name="Avg Bias (Falcon - Apple)"
+                  stroke="#8b5cf6"
+                  strokeWidth={2}
+                  dot={{ fill: '#8b5cf6', r: 4 }}
+                />
+                {/* Zero reference line */}
+                <Line
+                  type="monotone"
+                  dataKey={() => 0}
+                  name="Zero Line"
+                  stroke="#9ca3af"
+                  strokeWidth={1}
+                  strokeDasharray="5 5"
+                  dot={false}
+                  legendType="none"
+                />
+              </LineChart>
+            </ResponsiveContainer>
+            <p className="text-sm text-gray-500 mt-2 flex items-center gap-2">
+              <Info className="w-4 h-4" />
+              Bias = Falcon avg - Apple avg. Positive means Falcon reads higher.
+            </p>
           </Card>
         </div>
       )}

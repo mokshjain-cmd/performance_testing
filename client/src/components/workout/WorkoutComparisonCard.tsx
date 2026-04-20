@@ -326,7 +326,7 @@ export const WorkoutComparisonCard: React.FC<WorkoutComparisonCardProps> = ({ co
                   </div>
                   <div className="pt-2 border-t border-purple-200">
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Difference:</span>
+                      <span className="text-gray-600">Bias:</span>
                       <span className={`font-semibold ${
                         comparison.distanceDifference && comparison.distanceDifference >= 0 
                           ? 'text-green-600' 
@@ -375,7 +375,7 @@ export const WorkoutComparisonCard: React.FC<WorkoutComparisonCardProps> = ({ co
                   </div>
                   <div className="pt-2 border-t border-green-200">
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Difference:</span>
+                      <span className="text-gray-600">Bias:</span>
                       <span className={`font-semibold ${
                         comparison.stepsDifference && comparison.stepsDifference >= 0 
                           ? 'text-green-600' 

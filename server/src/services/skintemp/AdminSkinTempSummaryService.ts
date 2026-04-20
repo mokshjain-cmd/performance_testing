@@ -8,6 +8,10 @@ interface ISkinTempGlobalStats {
   avgMin: number;
   avgMax: number;
   avgRange: number;
+  avgBias?: number;
+  lunaAvg?: number;
+  benchmarkAvg?: number;
+  // Legacy fields - undefined for bias-only comparisons
   avgCorrelation?: number;
   avgMAE?: number;
   avgMAPE?: number;
@@ -37,6 +41,7 @@ interface ISkinTempTrendData {
   benchmarkAvg?: number;
   benchmarkMin?: number;
   benchmarkMax?: number;
+  avgBias?: number;
   sessionCount: number;
 }
 
@@ -98,7 +103,8 @@ export class AdminSkinTempSummaryService {
 
       // Aggregate stats
       let totalMean = 0, totalMin = 0, totalMax = 0, totalRange = 0;
-      let totalCorrelation = 0, totalMAE = 0, totalMAPE = 0, totalRMSE = 0;
+      let totalCorrelation = 0, totalMAE = 0, totalMAPE = 0, totalRMSE = 0, totalBias = 0;
+      let totalLunaAvg = 0, totalBenchmarkAvg = 0;
       let sessionsWithComparison = 0;
       let validSessions = 0;
 
@@ -148,11 +154,18 @@ export class AdminSkinTempSummaryService {
         if (pairwise) {
           sessionsWithComparison++;
           userStat.comparisonCount++;
-          totalCorrelation += pairwise.pearsonR || 0;
-          totalMAE += pairwise.mae || 0;
-          totalMAPE += pairwise.mape || 0;
-          totalRMSE += pairwise.rmse || 0;
-          userStat.sumCorrelation += pairwise.pearsonR || 0;
+          // Bias is always available (the only meaningful metric for Apple comparison)
+          totalBias += pairwise.meanBias || 0;
+          totalLunaAvg += pairwise.lunaAvg || 0;
+          totalBenchmarkAvg += pairwise.benchmarkAvg || 0;
+          // These may be undefined for bias-only comparisons (Apple Health)
+          if (pairwise.pearsonR !== undefined) {
+            totalCorrelation += pairwise.pearsonR;
+            userStat.sumCorrelation += pairwise.pearsonR;
+          }
+          if (pairwise.mae !== undefined) totalMAE += pairwise.mae;
+          if (pairwise.mape !== undefined) totalMAPE += pairwise.mape;
+          if (pairwise.rmse !== undefined) totalRMSE += pairwise.rmse;
         }
       }
 
@@ -182,10 +195,14 @@ export class AdminSkinTempSummaryService {
       };
 
       if (sessionsWithComparison > 0) {
-        result.skinTempStats.avgCorrelation = totalCorrelation / sessionsWithComparison;
-        result.skinTempStats.avgMAE = totalMAE / sessionsWithComparison;
-        result.skinTempStats.avgMAPE = totalMAPE / sessionsWithComparison;
-        result.skinTempStats.avgRMSE = totalRMSE / sessionsWithComparison;
+        result.skinTempStats.avgBias = totalBias / sessionsWithComparison;
+        result.skinTempStats.lunaAvg = totalLunaAvg / sessionsWithComparison;
+        result.skinTempStats.benchmarkAvg = totalBenchmarkAvg / sessionsWithComparison;
+        // These may be undefined for bias-only comparisons
+        if (totalCorrelation > 0) result.skinTempStats.avgCorrelation = totalCorrelation / sessionsWithComparison;
+        if (totalMAE > 0) result.skinTempStats.avgMAE = totalMAE / sessionsWithComparison;
+        if (totalMAPE > 0) result.skinTempStats.avgMAPE = totalMAPE / sessionsWithComparison;
+        if (totalRMSE > 0) result.skinTempStats.avgRMSE = totalRMSE / sessionsWithComparison;
       }
 
       return result;
@@ -230,8 +247,10 @@ export class AdminSkinTempSummaryService {
         sumBenchmarkAvg: number;
         sumBenchmarkMin: number;
         sumBenchmarkMax: number;
+        sumBias: number;
         validCount: number;
         benchmarkCount: number;
+        biasCount: number;
       }>();
 
       for (const session of sessions) {
@@ -251,8 +270,10 @@ export class AdminSkinTempSummaryService {
             sumBenchmarkAvg: 0,
             sumBenchmarkMin: 0,
             sumBenchmarkMax: 0,
+            sumBias: 0,
             validCount: 0,
             benchmarkCount: 0,
+            biasCount: 0,
           });
         }
 
@@ -271,6 +292,12 @@ export class AdminSkinTempSummaryService {
           group.sumBenchmarkAvg += benchmarkStats.avg || 0;
           group.sumBenchmarkMin += benchmarkStats.min || 0;
           group.sumBenchmarkMax += benchmarkStats.max || 0;
+          
+          // Calculate bias for this session (Luna - Benchmark)
+          if (lunaStats && typeof lunaStats.avg === 'number' && typeof benchmarkStats.avg === 'number') {
+            group.sumBias += lunaStats.avg - benchmarkStats.avg;
+            group.biasCount++;
+          }
         }
       }
 
@@ -290,10 +317,181 @@ export class AdminSkinTempSummaryService {
           result.benchmarkMax = group.sumBenchmarkMax / group.benchmarkCount;
         }
 
+        if (group.biasCount > 0) {
+          result.avgBias = group.sumBias / group.biasCount;
+        }
+
         return result;
       });
     } catch (error) {
       console.error("[AdminSkinTempSummaryService] Error getting trend:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get firmware comparison for SkinTemp
+   * Groups sessions by firmware version and calculates bias stats
+   */
+  static async getFirmwareComparison(): Promise<Array<{
+    firmwareVersion: string;
+    totalSessions: number;
+    lunaAvg: number;
+    benchmarkAvg: number;
+    avgBias: number;
+  }>> {
+    try {
+      // Find all SkinTemp sessions
+      const sessions = await Session.find({
+        metric: "SkinTemp",
+      }).lean();
+
+      if (sessions.length === 0) {
+        return [];
+      }
+
+      // Fetch session analyses
+      const sessionIds = sessions.map(s => s._id);
+      const analyses = await SessionAnalysis.find({
+        sessionId: { $in: sessionIds },
+      }).lean();
+
+      const analysisMap = new Map(analyses.map(a => [a.sessionId.toString(), a]));
+
+      // Group by firmware version
+      const firmwareGroups = new Map<string, {
+        totalSessions: number;
+        sumLunaAvg: number;
+        sumBenchmarkAvg: number;
+        sumBias: number;
+        validCount: number;
+      }>();
+
+      for (const session of sessions) {
+        const analysis = analysisMap.get(session._id.toString());
+        const pairwise = getPairwiseComparison(analysis?.pairwiseComparisons || []);
+        
+        // Get firmware version from session devices
+        const lunaDevice = session.devices?.find((d: any) => d.deviceType === 'luna');
+        const firmwareVersion = lunaDevice?.firmwareVersion || 'Unknown';
+
+        if (!firmwareGroups.has(firmwareVersion)) {
+          firmwareGroups.set(firmwareVersion, {
+            totalSessions: 0,
+            sumLunaAvg: 0,
+            sumBenchmarkAvg: 0,
+            sumBias: 0,
+            validCount: 0,
+          });
+        }
+
+        const group = firmwareGroups.get(firmwareVersion)!;
+        group.totalSessions++;
+
+        // Only count sessions with valid pairwise comparison
+        if (pairwise && pairwise.meanBias !== undefined) {
+          group.validCount++;
+          group.sumBias += pairwise.meanBias || 0;
+          group.sumLunaAvg += pairwise.lunaAvg || 0;
+          group.sumBenchmarkAvg += pairwise.benchmarkAvg || 0;
+        }
+      }
+
+      // Convert to array
+      return Array.from(firmwareGroups.entries())
+        .map(([firmwareVersion, group]) => ({
+          firmwareVersion,
+          totalSessions: group.totalSessions,
+          lunaAvg: group.validCount > 0 ? Math.round((group.sumLunaAvg / group.validCount) * 100) / 100 : 0,
+          benchmarkAvg: group.validCount > 0 ? Math.round((group.sumBenchmarkAvg / group.validCount) * 100) / 100 : 0,
+          avgBias: group.validCount > 0 ? Math.round((group.sumBias / group.validCount) * 100) / 100 : 0,
+        }))
+        .sort((a, b) => a.firmwareVersion.localeCompare(b.firmwareVersion));
+    } catch (error) {
+      console.error("[AdminSkinTempSummaryService] Error getting firmware comparison:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get benchmark comparison for SkinTemp
+   * Groups sessions by benchmark device type and calculates bias stats
+   */
+  static async getBenchmarkComparison(): Promise<Array<{
+    benchmarkDeviceType: string;
+    totalSessions: number;
+    lunaAvg: number;
+    benchmarkAvg: number;
+    avgBias: number;
+  }>> {
+    try {
+      // Find all SkinTemp sessions with benchmark device
+      const sessions = await Session.find({
+        metric: "SkinTemp",
+        benchmarkDeviceType: { $exists: true, $ne: null },
+      }).lean();
+
+      if (sessions.length === 0) {
+        return [];
+      }
+
+      // Fetch session analyses
+      const sessionIds = sessions.map(s => s._id);
+      const analyses = await SessionAnalysis.find({
+        sessionId: { $in: sessionIds },
+      }).lean();
+
+      const analysisMap = new Map(analyses.map(a => [a.sessionId.toString(), a]));
+
+      // Group by benchmark device type
+      const benchmarkGroups = new Map<string, {
+        totalSessions: number;
+        sumLunaAvg: number;
+        sumBenchmarkAvg: number;
+        sumBias: number;
+        validCount: number;
+      }>();
+
+      for (const session of sessions) {
+        const analysis = analysisMap.get(session._id.toString());
+        const pairwise = getPairwiseComparison(analysis?.pairwiseComparisons || []);
+        
+        const benchmarkDeviceType = session.benchmarkDeviceType || 'Unknown';
+
+        if (!benchmarkGroups.has(benchmarkDeviceType)) {
+          benchmarkGroups.set(benchmarkDeviceType, {
+            totalSessions: 0,
+            sumLunaAvg: 0,
+            sumBenchmarkAvg: 0,
+            sumBias: 0,
+            validCount: 0,
+          });
+        }
+
+        const group = benchmarkGroups.get(benchmarkDeviceType)!;
+        group.totalSessions++;
+
+        // Only count sessions with valid pairwise comparison
+        if (pairwise && pairwise.meanBias !== undefined) {
+          group.validCount++;
+          group.sumBias += pairwise.meanBias || 0;
+          group.sumLunaAvg += pairwise.lunaAvg || 0;
+          group.sumBenchmarkAvg += pairwise.benchmarkAvg || 0;
+        }
+      }
+
+      // Convert to array
+      return Array.from(benchmarkGroups.entries())
+        .map(([benchmarkDeviceType, group]) => ({
+          benchmarkDeviceType,
+          totalSessions: group.totalSessions,
+          lunaAvg: group.validCount > 0 ? Math.round((group.sumLunaAvg / group.validCount) * 100) / 100 : 0,
+          benchmarkAvg: group.validCount > 0 ? Math.round((group.sumBenchmarkAvg / group.validCount) * 100) / 100 : 0,
+          avgBias: group.validCount > 0 ? Math.round((group.sumBias / group.validCount) * 100) / 100 : 0,
+        }))
+        .sort((a, b) => a.benchmarkDeviceType.localeCompare(b.benchmarkDeviceType));
+    } catch (error) {
+      console.error("[AdminSkinTempSummaryService] Error getting benchmark comparison:", error);
       throw error;
     }
   }

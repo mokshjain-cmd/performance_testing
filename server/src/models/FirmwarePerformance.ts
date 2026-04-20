@@ -45,6 +45,13 @@ export interface IFirmwarePerformance extends Document {
       avgDifference?: number;
     };
   };
+  workoutStats?: {
+    avgHrMae?: number;
+    avgHrPearson?: number;
+    avgCaloriesBias?: number;
+    avgStepsBias?: number;
+    avgDistanceBias?: number;
+  };
   computedAt: Date;
 }
 
@@ -100,10 +107,14 @@ const FirmwarePerformanceSchema = new Schema<IFirmwarePerformance>({
       avgDifference: Number,
     },
   },
-  computedAt: { type: Date, default: Date.now },
+  workoutStats: {
+    avgHrMae: Number,
+    avgHrPearson: Number,
+    avgCaloriesBias: Number,
+    avgStepsBias: Number,
+    avgDistanceBias: Number,
+  },
 });
-
-FirmwarePerformanceSchema.index({ firmwareVersion: 1, metric: 1 }, { unique: true });
 
 export default model<IFirmwarePerformance>(
   "FirmwarePerformance",

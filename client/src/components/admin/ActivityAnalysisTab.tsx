@@ -242,7 +242,8 @@ const ActivityAnalysisTab: React.FC<ActivityAnalysisTabProps> = ({ metric }) => 
                       borderRadius: '8px',
                       padding: '12px',
                     }}
-                    formatter={(value: any, name?: string) => {
+                    formatter={(value: number | string | undefined, name?: string) => {
+                      if (value === undefined) return ['--', name || ''];
                       if (name === 'value') {
                         const formattedValue = Number(value).toFixed(selectedActivityMetric === 'avgPearson' ? 3 : 2);
                         return [formattedValue, getActivityMetricLabel(selectedActivityMetric)];

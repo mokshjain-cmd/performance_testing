@@ -13,37 +13,11 @@ import { Download } from 'lucide-react';
 
 interface AdminSessionViewProps {
   sessionId: string;
-  userId: string;
   metric: Metric;
 }
 
-const AdminSessionView: React.FC<AdminSessionViewProps> = ({ sessionId, userId: _userId, metric }) => {
-  // Handle sleep metric separately
-  if (metric === 'sleep') {
-    return <AdminSleepSessionView sessionId={sessionId} />;
-  }
-
-  // Handle activity metric separately
-  if (metric === 'activity') {
-    return <AdminActivitySessionView sessionId={sessionId} />;
-  }
-
-  // Handle workout metric separately
-  if (metric === 'workout') {
-    return <AdminWorkoutSessionView sessionId={sessionId} />;
-  }
-
-  // Handle skintemp metric - use the user SkinTempSessionPage component
-  if (metric === 'skintemp') {
-    // Import dynamically to avoid circular dependencies
-    const SkinTempSessionPage = React.lazy(() => import('../../pages/SkinTempSessionPage').then(m => ({ default: m.SkinTempSessionPage })));
-    return (
-      <React.Suspense fallback={<div className="flex items-center justify-center h-64"><div className="text-lg text-gray-600">Loading...</div></div>}>
-        <SkinTempSessionPage sessionId={sessionId} />
-      </React.Suspense>
-    );
-  }
-
+const AdminSessionView: React.FC<AdminSessionViewProps> = ({ sessionId, metric }) => {
+  // All hooks must be called before any early returns
   const [sessionDetails, setSessionDetails] = useState<SessionFullDetails | null>(null);
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -70,8 +44,11 @@ const AdminSessionView: React.FC<AdminSessionViewProps> = ({ sessionId, userId: 
   };
 
   useEffect(() => {
-    // TODO: Fetch session details
-    // API: GET /api/sessions/full/{sessionId}
+    // Skip fetch for metrics with dedicated components
+    if (metric === 'sleep' || metric === 'activity' || metric === 'workout' || metric === 'skintemp') {
+      return;
+    }
+    
     setLoading(true);
     apiClient.get(`/sessions/full/${sessionId}`)
       .then(res => {
@@ -82,7 +59,32 @@ const AdminSessionView: React.FC<AdminSessionViewProps> = ({ sessionId, userId: 
         console.error('Error fetching session details:', err);
         setLoading(false);
       });
-  }, [sessionId]);
+  }, [sessionId, metric]);
+
+  // Handle sleep metric separately
+  if (metric === 'sleep') {
+    return <AdminSleepSessionView sessionId={sessionId} />;
+  }
+
+  // Handle activity metric separately
+  if (metric === 'activity') {
+    return <AdminActivitySessionView sessionId={sessionId} />;
+  }
+
+  // Handle workout metric separately
+  if (metric === 'workout') {
+    return <AdminWorkoutSessionView sessionId={sessionId} />;
+  }
+
+  // Handle skintemp metric - use the user SkinTempSessionPage component
+  if (metric === 'skintemp') {
+    const SkinTempSessionPage = React.lazy(() => import('../../pages/SkinTempSessionPage').then(m => ({ default: m.SkinTempSessionPage })));
+    return (
+      <React.Suspense fallback={<div className="flex items-center justify-center h-64"><div className="text-lg text-gray-600">Loading...</div></div>}>
+        <SkinTempSessionPage sessionId={sessionId} />
+      </React.Suspense>
+    );
+  }
 
   if (loading) {
     return (

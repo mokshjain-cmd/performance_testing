@@ -12,10 +12,11 @@ interface ISkinTempStats {
 }
 
 interface ISkinTempComparison {
-  correlation: number;
-  mae: number;
-  mape: number;
-  rmse: number;
+  correlation?: number;
+  mae?: number;
+  mape?: number;
+  rmse?: number;
+  bias?: number;
 }
 
 interface IUserSkinTempOverview {
@@ -25,10 +26,14 @@ interface IUserSkinTempOverview {
   avgMax: number;
   avgRange: number;
   comparison?: {
-    avgCorrelation: number;
-    avgMAE: number;
-    avgMAPE: number;
-    avgRMSE: number;
+    avgBias: number;
+    lunaAvg: number;
+    benchmarkAvg: number;
+    // Legacy fields - undefined for bias-only comparisons
+    avgCorrelation?: number;
+    avgMAE?: number;
+    avgMAPE?: number;
+    avgRMSE?: number;
   };
   sessions: Array<{
     sessionId: string;
@@ -115,7 +120,8 @@ export class UserSkinTempSummaryService {
 
       // Aggregate stats
       let totalMean = 0, totalMin = 0, totalMax = 0, totalRange = 0;
-      let totalCorrelation = 0, totalMAE = 0, totalMAPE = 0, totalRMSE = 0;
+      let totalCorrelation = 0, totalMAE = 0, totalMAPE = 0, totalRMSE = 0, totalBias = 0;
+      let totalLunaAvg = 0, totalBenchmarkAvg = 0;
       let sessionsWithComparison = 0;
       let validSessions = 0;
 
@@ -139,15 +145,21 @@ export class UserSkinTempSummaryService {
         let comparison: ISkinTempComparison | undefined;
         if (pairwise) {
           sessionsWithComparison++;
-          totalCorrelation += pairwise.pearsonR || 0;
-          totalMAE += pairwise.mae || 0;
-          totalMAPE += pairwise.mape || 0;
-          totalRMSE += pairwise.rmse || 0;
+          // Bias is always available (the only meaningful metric for Apple comparison)
+          totalBias += pairwise.meanBias || 0;
+          totalLunaAvg += pairwise.lunaAvg || 0;
+          totalBenchmarkAvg += pairwise.benchmarkAvg || 0;
+          // These may be undefined for bias-only comparisons (Apple Health)
+          if (pairwise.pearsonR !== undefined) totalCorrelation += pairwise.pearsonR;
+          if (pairwise.mae !== undefined) totalMAE += pairwise.mae;
+          if (pairwise.mape !== undefined) totalMAPE += pairwise.mape;
+          if (pairwise.rmse !== undefined) totalRMSE += pairwise.rmse;
           comparison = {
-            correlation: pairwise.pearsonR || 0,
-            mae: pairwise.mae || 0,
-            mape: pairwise.mape || 0,
-            rmse: pairwise.rmse || 0,
+            bias: pairwise.meanBias,
+            correlation: pairwise.pearsonR,
+            mae: pairwise.mae,
+            mape: pairwise.mape,
+            rmse: pairwise.rmse,
           };
         }
 
@@ -183,10 +195,14 @@ export class UserSkinTempSummaryService {
 
       if (sessionsWithComparison > 0) {
         result.comparison = {
-          avgCorrelation: totalCorrelation / sessionsWithComparison,
-          avgMAE: totalMAE / sessionsWithComparison,
-          avgMAPE: totalMAPE / sessionsWithComparison,
-          avgRMSE: totalRMSE / sessionsWithComparison,
+          avgBias: totalBias / sessionsWithComparison,
+          lunaAvg: totalLunaAvg / sessionsWithComparison,
+          benchmarkAvg: totalBenchmarkAvg / sessionsWithComparison,
+          // These may be undefined for bias-only comparisons
+          avgCorrelation: totalCorrelation > 0 ? totalCorrelation / sessionsWithComparison : undefined,
+          avgMAE: totalMAE > 0 ? totalMAE / sessionsWithComparison : undefined,
+          avgMAPE: totalMAPE > 0 ? totalMAPE / sessionsWithComparison : undefined,
+          avgRMSE: totalRMSE > 0 ? totalRMSE / sessionsWithComparison : undefined,
         };
       }
 

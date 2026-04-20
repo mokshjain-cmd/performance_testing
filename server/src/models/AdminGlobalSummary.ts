@@ -49,6 +49,14 @@ export interface IAdminGlobalSummary extends Document {
     };
   };
 
+  workoutStats?: {
+    avgHrMae?: number;
+    avgHrPearson?: number;
+    avgCaloriesBias?: number;
+    avgStepsBias?: number;
+    avgDistanceBias?: number;
+  };
+
   // Firmware version used for this aggregation (if filtered)
   latestFirmwareVersion?: string;
 
@@ -108,6 +116,14 @@ const AdminGlobalSummarySchema = new Schema<IAdminGlobalSummary>({
       avgAccuracyPercent: Number,
       avgDifference: Number,
     },
+  },
+
+  workoutStats: {
+    avgHrMae: Number,
+    avgHrPearson: Number,
+    avgCaloriesBias: Number,
+    avgStepsBias: Number,
+    avgDistanceBias: Number,
   },
 
 //   invalidStats: {

@@ -27,10 +27,12 @@ export interface SkinTempReading {
 }
 
 export interface SkinTempComparison {
-  correlation: number;
-  mae: number;
-  mape: number;
-  rmse: number;
+  bias?: number;
+  // Legacy fields - may be undefined for bias-only comparisons (Apple Health)
+  correlation?: number;
+  mae?: number;
+  mape?: number;
+  rmse?: number;
 }
 
 export interface SkinTempSessionView {
@@ -67,10 +69,14 @@ export interface UserSkinTempOverview {
   avgMax: number;
   avgRange: number;
   comparison?: {
-    avgCorrelation: number;
-    avgMAE: number;
-    avgMAPE: number;
-    avgRMSE: number;
+    avgBias: number;
+    lunaAvg: number;
+    benchmarkAvg: number;
+    // Legacy fields - undefined for bias-only comparisons
+    avgCorrelation?: number;
+    avgMAE?: number;
+    avgMAPE?: number;
+    avgRMSE?: number;
   };
   sessions: SkinTempSessionSummary[];
 }
@@ -83,6 +89,7 @@ export interface SkinTempTrendData {
   benchmarkAvg?: number;
   benchmarkMin?: number;
   benchmarkMax?: number;
+  avgBias?: number;
   sessionCount: number;
 }
 
@@ -104,6 +111,10 @@ export interface AdminSkinTempGlobalSummary {
     avgMin: number;
     avgMax: number;
     avgRange: number;
+    avgBias?: number;
+    lunaAvg?: number;
+    benchmarkAvg?: number;
+    // Legacy fields - undefined for bias-only comparisons
     avgCorrelation?: number;
     avgMAE?: number;
     avgMAPE?: number;
@@ -115,12 +126,9 @@ export interface AdminSkinTempGlobalSummary {
 export interface AdminSkinTempFirmwareComparison {
   firmwareVersion: string;
   totalSessions: number;
-  skinTempStats: {
-    avgMin: number;
-    avgMax: number;
-    avgRange: number;
-    avgMae?: number;
-  };
+  lunaAvg: number;
+  benchmarkAvg: number;
+  avgBias: number;
 }
 
 export interface AdminSkinTempBenchmarkComparison {

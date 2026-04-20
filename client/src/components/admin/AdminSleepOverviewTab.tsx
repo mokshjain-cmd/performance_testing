@@ -79,6 +79,7 @@ const AdminSleepOverviewTab: React.FC<AdminSleepOverviewTabProps> = ({ subTab })
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     
     // Fetch global summary with latest firmware filter enabled

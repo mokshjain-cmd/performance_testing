@@ -47,4 +47,18 @@ router.get("/admin/global", AdminSkinTempController.getGlobalSummary);
  */
 router.get("/admin/trend", AdminSkinTempController.getAccuracyTrend);
 
+/**
+ * @route   GET /api/skintemp/admin/firmware
+ * @desc    Get firmware comparison for SkinTemp (bias-only)
+ * @access  Private (Admin)
+ */
+router.get("/admin/firmware", AdminSkinTempController.getFirmwareComparison);
+
+/**
+ * @route   GET /api/skintemp/admin/benchmark
+ * @desc    Get benchmark comparison for SkinTemp (bias-only)
+ * @access  Private (Admin)
+ */
+router.get("/admin/benchmark", AdminSkinTempController.getBenchmarkComparison);
+
 export default router;

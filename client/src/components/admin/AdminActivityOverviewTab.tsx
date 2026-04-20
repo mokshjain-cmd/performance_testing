@@ -17,9 +17,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 
-interface AdminActivityOverviewTabProps {}
-
-const AdminActivityOverviewTab: React.FC<AdminActivityOverviewTabProps> = () => {
+const AdminActivityOverviewTab: React.FC = () => {
   const [summary, setSummary] = useState<AdminGlobalActivitySummary | null>(null);
   const [accuracyTrend, setAccuracyTrend] = useState<ActivityAccuracyTrend[]>([]);
   const [loading, setLoading] = useState(true);

@@ -107,32 +107,62 @@ export async function updateBenchmarkComparisonSummary(benchmarkDeviceType: stri
     }
 
     let totalMAE = 0, totalRMSE = 0, totalMAPE = 0, totalPearson = 0, totalBias = 0;
-    let count = 0;
+    let totalCalBias = 0, totalStepsBias = 0, totalDistBias = 0;
+    let countHr = 0, countCal = 0, countSteps = 0, countDist = 0;
 
     filteredAnalyses.forEach((analysis) => {
       const workoutStats = (analysis as any).workoutStats;
       if (workoutStats?.benchmarkComparison) {
         const bc = workoutStats.benchmarkComparison;
-        totalMAE += bc.hrMae || 0;
-        totalRMSE += bc.hrRmse || 0;
-        totalMAPE += bc.hrMape || 0;
-        totalPearson += bc.hrPearsonR || 0;
-        totalBias += bc.hrMeanBias || 0;
-        count++;
+        
+        // HR metrics
+        if (bc.hrMae !== undefined) {
+          totalMAE += bc.hrMae;
+          totalRMSE += bc.hrRmse || 0;
+          totalMAPE += bc.hrMape || 0;
+          totalPearson += bc.hrPearsonR || 0;
+          totalBias += bc.hrMeanBias || 0;
+          countHr++;
+        }
+        
+        // Calories bias
+        if (bc.caloriesBias !== undefined) {
+          totalCalBias += bc.caloriesBias;
+          countCal++;
+        }
+        
+        // Steps bias
+        if (bc.stepsBias !== undefined || bc.stepsDifference !== undefined) {
+          totalStepsBias += bc.stepsBias ?? bc.stepsDifference ?? 0;
+          countSteps++;
+        }
+        
+        // Distance bias
+        if (bc.distanceBias !== undefined || bc.distanceDifference !== undefined) {
+          totalDistBias += bc.distanceBias ?? bc.distanceDifference ?? 0;
+          countDist++;
+        }
       }
     });
 
-    const summary = {
+    const summary: any = {
       benchmarkDeviceType,
       metric,
       totalSessions: filteredAnalyses.length,
-      hrStats: count > 0 ? {
-        avgMAE: totalMAE / count,
-        avgRMSE: totalRMSE / count,
-        avgMAPE: totalMAPE / count,
-        avgPearson: totalPearson / count,
-        avgBias: totalBias / count,
+      hrStats: countHr > 0 ? {
+        avgMAE: totalMAE / countHr,
+        avgRMSE: totalRMSE / countHr,
+        avgMAPE: totalMAPE / countHr,
+        avgPearson: totalPearson / countHr,
+        avgBias: totalBias / countHr,
       } : undefined,
+      workoutStats: {
+        avgHrMae: countHr > 0 ? totalMAE / countHr : undefined,
+        avgHrPearson: countHr > 0 ? totalPearson / countHr : undefined,
+        avgCaloriesBias: countCal > 0 ? totalCalBias / countCal : undefined,
+        avgStepsBias: countSteps > 0 ? totalStepsBias / countSteps : undefined,
+        avgDistanceBias: countDist > 0 ? totalDistBias / countDist : undefined,
+      },
       lastUpdated: new Date(),
     };
 
@@ -146,6 +176,9 @@ export async function updateBenchmarkComparisonSummary(benchmarkDeviceType: stri
       totalSessions: summary.totalSessions,
       avgMAE: summary.hrStats?.avgMAE?.toFixed(2),
       avgMAPE: summary.hrStats?.avgMAPE?.toFixed(2),
+      avgCalBias: summary.workoutStats?.avgCaloriesBias?.toFixed(2),
+      avgStepsBias: summary.workoutStats?.avgStepsBias?.toFixed(0),
+      avgDistBias: summary.workoutStats?.avgDistanceBias?.toFixed(2),
     });
 
     return result;

@@ -77,7 +77,8 @@ export async function updateFirmwarePerformanceForLuna(firmwareVersion: string, 
   // Handle Workout metric (uses workoutStats)
   if (metric === 'Workout') {
     let totalMAE = 0, totalRMSE = 0, totalPearson = 0, totalMAPE = 0;
-    let countComparison = 0;
+    let totalCalBias = 0, totalStepsBias = 0, totalDistBias = 0;
+    let countHr = 0, countCal = 0, countSteps = 0, countDist = 0;
     const userSet = new Set<string>();
     const activityMap = new Map<string, { sum: number, count: number }>();
 
@@ -88,17 +89,39 @@ export async function updateFirmwarePerformanceForLuna(firmwareVersion: string, 
       
       // Count sessions with benchmark comparison
       if (workoutStats.benchmarkComparison) {
-        const comparison = workoutStats.benchmarkComparison;
-        totalMAE += comparison.hrMae || 0;
-        totalRMSE += comparison.hrRmse || 0;
-        totalPearson += comparison.hrPearsonR || 0;
-        totalMAPE += comparison.hrMape || 0;
-        countComparison++;
+        const bc = workoutStats.benchmarkComparison;
+        
+        // HR metrics
+        if (bc.hrMae !== undefined) {
+          totalMAE += bc.hrMae;
+          totalRMSE += bc.hrRmse || 0;
+          totalPearson += bc.hrPearsonR || 0;
+          totalMAPE += bc.hrMape || 0;
+          countHr++;
+        }
+        
+        // Calories bias
+        if (bc.caloriesBias !== undefined) {
+          totalCalBias += bc.caloriesBias;
+          countCal++;
+        }
+        
+        // Steps bias
+        if (bc.stepsBias !== undefined || bc.stepsDifference !== undefined) {
+          totalStepsBias += bc.stepsBias ?? bc.stepsDifference ?? 0;
+          countSteps++;
+        }
+        
+        // Distance bias
+        if (bc.distanceBias !== undefined || bc.distanceDifference !== undefined) {
+          totalDistBias += bc.distanceBias ?? bc.distanceDifference ?? 0;
+          countDist++;
+        }
         
         // Track by sport type (as activityType)
         const sportType = `sport_${workoutStats.sportType}`;
         const a = activityMap.get(sportType) || { sum: 0, count: 0 };
-        const sessionAccuracy = 100 - (comparison.hrMape || 0);
+        const sessionAccuracy = 100 - (bc.hrMape || 0);
         a.sum += sessionAccuracy;
         a.count++;
         activityMap.set(sportType, a);
@@ -112,12 +135,19 @@ export async function updateFirmwarePerformanceForLuna(firmwareVersion: string, 
       metric,
       totalSessions: analyses.length,
       totalUsers: userSet.size,
-      overallAccuracy: countComparison > 0 ? {
-        avgMAE: totalMAE / countComparison,
-        avgRMSE: totalRMSE / countComparison,
-        avgMAPE: totalMAPE / countComparison,
-        avgPearson: totalPearson / countComparison,
+      overallAccuracy: countHr > 0 ? {
+        avgMAE: totalMAE / countHr,
+        avgRMSE: totalRMSE / countHr,
+        avgMAPE: totalMAPE / countHr,
+        avgPearson: totalPearson / countHr,
       } : undefined,
+      workoutStats: {
+        avgHrMae: countHr > 0 ? totalMAE / countHr : undefined,
+        avgHrPearson: countHr > 0 ? totalPearson / countHr : undefined,
+        avgCaloriesBias: countCal > 0 ? totalCalBias / countCal : undefined,
+        avgStepsBias: countSteps > 0 ? totalStepsBias / countSteps : undefined,
+        avgDistanceBias: countDist > 0 ? totalDistBias / countDist : undefined,
+      },
       activityWise: Array.from(activityMap.entries()).map(([activityType, { sum, count }]) => ({
         activityType,
         avgAccuracy: count ? sum / count : 0,
@@ -132,7 +162,11 @@ export async function updateFirmwarePerformanceForLuna(firmwareVersion: string, 
         doc,
         { upsert: true, new: true, setDefaultsOnInsert: true }
       );
-      console.log('Firmware performance (Workout) updated for Luna version:', firmwareVersion);
+      console.log('Firmware performance (Workout) updated for Luna version:', firmwareVersion, {
+        avgCalBias: doc.workoutStats?.avgCaloriesBias?.toFixed(2),
+        avgStepsBias: doc.workoutStats?.avgStepsBias?.toFixed(0),
+        avgDistBias: doc.workoutStats?.avgDistanceBias?.toFixed(2),
+      });
     } catch (err) {
       console.error('Error updating firmware performance (Workout) for Luna version:', firmwareVersion, err);
       return;

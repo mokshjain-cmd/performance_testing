@@ -137,6 +137,63 @@ export const WorkoutOverviewPage: React.FC = () => {
         </Card>
       </div>
 
+      {/* Workout Bias Metrics (when available) */}
+      {overview.summary?.workoutOverview && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card>
+            <div className="space-y-1">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600 font-medium">Avg Calories Bias</span>
+                <span className={`text-lg font-semibold ${
+                  overview.summary.workoutOverview.avgCaloriesBias !== undefined 
+                    ? (overview.summary.workoutOverview.avgCaloriesBias >= 0 ? 'text-red-500' : 'text-blue-500')
+                    : 'text-gray-400'
+                }`}>
+                  {overview.summary.workoutOverview.avgCaloriesBias !== undefined 
+                    ? `${overview.summary.workoutOverview.avgCaloriesBias >= 0 ? '+' : ''}${overview.summary.workoutOverview.avgCaloriesBias.toFixed(1)} kcal`
+                    : '--'}
+                </span>
+              </div>
+              <p className="text-xs text-gray-500">Falcon - Benchmark. Positive = Falcon higher</p>
+            </div>
+          </Card>
+          <Card>
+            <div className="space-y-1">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600 font-medium">Avg Steps Bias</span>
+                <span className={`text-lg font-semibold ${
+                  overview.summary.workoutOverview.avgStepsBias !== undefined 
+                    ? (overview.summary.workoutOverview.avgStepsBias >= 0 ? 'text-red-500' : 'text-blue-500')
+                    : 'text-gray-400'
+                }`}>
+                  {overview.summary.workoutOverview.avgStepsBias !== undefined 
+                    ? `${overview.summary.workoutOverview.avgStepsBias >= 0 ? '+' : ''}${Math.round(overview.summary.workoutOverview.avgStepsBias)}`
+                    : '--'}
+                </span>
+              </div>
+              <p className="text-xs text-gray-500">Falcon - Benchmark. Positive = Falcon higher</p>
+            </div>
+          </Card>
+          <Card>
+            <div className="space-y-1">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600 font-medium">Avg Distance Bias</span>
+                <span className={`text-lg font-semibold ${
+                  overview.summary.workoutOverview.avgDistanceBias !== undefined 
+                    ? (overview.summary.workoutOverview.avgDistanceBias >= 0 ? 'text-red-500' : 'text-blue-500')
+                    : 'text-gray-400'
+                }`}>
+                  {overview.summary.workoutOverview.avgDistanceBias !== undefined 
+                    ? `${overview.summary.workoutOverview.avgDistanceBias >= 0 ? '+' : ''}${overview.summary.workoutOverview.avgDistanceBias.toFixed(0)} m`
+                    : '--'}
+                </span>
+              </div>
+              <p className="text-xs text-gray-500">Falcon - Benchmark. Positive = Falcon higher</p>
+            </div>
+          </Card>
+        </div>
+      )}
+
       {/* Accuracy Trend Chart */}
       {trend.length > 0 && (
         <Card>

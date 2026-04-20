@@ -13,6 +13,7 @@ import AdminActivityOverviewTab from './AdminActivityOverviewTab';
 import AdminActivityBenchmarkTab from './AdminActivityBenchmarkTab';
 import AdminActivityFirmwareTab from './AdminActivityFirmwareTab';
 import AdminWorkoutOverviewTab from './AdminWorkoutOverviewTab';
+import AdminSkinTempOverviewTab from './AdminSkinTempOverviewTab';
 
 interface GlobalSummary {
   totalUsers: number;
@@ -48,6 +49,13 @@ interface AdminOverviewTabProps {
 }
 
 const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({ metric, subTab }) => {
+  // All hooks must be called before any early returns
+  const [globalSummary, setGlobalSummary] = useState<GlobalSummary | null>(null);
+  const [dailyTrends, setDailyTrends] = useState<DailyTrend[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedChartMetric, setSelectedChartMetric] = useState<ChartMetric>('avgMAE');
+  const [selectedTimeRange, setSelectedTimeRange] = useState<10 | 30>(10);
+
   // Get unit based on metric
   const getUnit = () => {
     if (metric === 'skintemp') return '°C';
@@ -65,43 +73,19 @@ const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({ metric, subTab }) =
   };
   const targets = getTargets();
 
-  // Handle sleep metric separately with dedicated component
-  if (metric === 'sleep') {
-    return <AdminSleepOverviewTab subTab={subTab} />;
-  }
-
-  // Handle activity metric separately with dedicated components
-  if (metric === 'activity') {
-    if (subTab === 'benchmark') {
-      return <AdminActivityBenchmarkTab />;
-    }
-    if (subTab === 'firmware') {
-      return <AdminActivityFirmwareTab />;
-    }
-    // Default to overview for activity
-    return <AdminActivityOverviewTab />;
-  }
-
-  // Handle workout metric with dedicated components
-  if (metric === 'workout') {
-    return <AdminWorkoutOverviewTab subTab={subTab} />;
-  }
-
-  const [globalSummary, setGlobalSummary] = useState<GlobalSummary | null>(null);
-  const [dailyTrends, setDailyTrends] = useState<DailyTrend[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [selectedChartMetric, setSelectedChartMetric] = useState<ChartMetric>('avgMAE');
-  const [selectedTimeRange, setSelectedTimeRange] = useState<10 | 30>(10);
-
+  // Fetch data only for hr/spo2 metrics
   useEffect(() => {
+    // Skip fetch for metrics that have dedicated components
+    if (metric === 'sleep' || metric === 'activity' || metric === 'workout' || metric === 'skintemp') {
+      return;
+    }
+
     // Clear previous data when metric changes to prevent showing stale data
     setGlobalSummary(null);
     setDailyTrends([]);
     
-    // Convert metric to backend format (HR, SPO2, SkinTemp)
-    // Note: Sleep, Activity, and Workout have early returns above, so only hr/spo2/skintemp reach here
-    const metricParam = metric === 'hr' ? 'HR' : 
-                       metric === 'spo2' ? 'SPO2' : 'SkinTemp';
+    // Convert metric to backend format (HR, SPO2)
+    const metricParam = metric === 'hr' ? 'HR' : 'SPO2';
     
     // Fetch global summary
     setLoading(true);
@@ -160,6 +144,29 @@ const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({ metric, subTab }) =
     if (diffDays < 7) return `${diffDays}d ago`;
     return date.toLocaleDateString();
   };
+
+  // Handle metrics with dedicated components (after all hooks)
+  if (metric === 'sleep') {
+    return <AdminSleepOverviewTab subTab={subTab} />;
+  }
+
+  if (metric === 'activity') {
+    if (subTab === 'benchmark') {
+      return <AdminActivityBenchmarkTab />;
+    }
+    if (subTab === 'firmware') {
+      return <AdminActivityFirmwareTab />;
+    }
+    return <AdminActivityOverviewTab />;
+  }
+
+  if (metric === 'workout') {
+    return <AdminWorkoutOverviewTab subTab={subTab} />;
+  }
+
+  if (metric === 'skintemp') {
+    return <AdminSkinTempOverviewTab subTab={subTab} />;
+  }
 
   if (loading) {
     return (
@@ -379,11 +386,11 @@ const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({ metric, subTab }) =
                         borderRadius: '8px',
                         padding: '12px',
                       }}
-                      formatter={(value: any, name?: string) => {
-                        if (name === 'value') {
+                      formatter={(value: number | string | undefined, name?: string) => {
+                        if (name === 'value' && value !== undefined) {
                           return [Number(value).toFixed(3), getMetricLabel(selectedChartMetric)];
                         }
-                         return [value, name || ''];
+                         return [value ?? '', name || ''];
                       }}
                       labelFormatter={(label, payload) => {
                         if (payload && payload.length > 0) {

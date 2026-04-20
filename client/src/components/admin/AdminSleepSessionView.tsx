@@ -78,6 +78,7 @@ const AdminSleepSessionView: React.FC<AdminSleepSessionViewProps> = ({ sessionId
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
 
     // Fetch session summary

@@ -51,6 +51,34 @@ interface AdminUserViewProps {
 }
 
 const AdminUserView: React.FC<AdminUserViewProps> = ({ userId, metric }) => {
+  // All hooks must be called before any conditional returns
+  const [userSummary, setUserSummary] = useState<UserSummary | null>(null);
+  const [loading, setLoading] = useState(false);
+  
+  const isHRorSPO2orSkinTemp = metric === 'hr' || metric === 'spo2' || metric === 'skintemp';
+
+  useEffect(() => {
+    // Only fetch for HR, SPO2, SkinTemp metrics
+    if (!isHRorSPO2orSkinTemp) return;
+    
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLoading(true);
+    // Convert metric to backend format (hr -> HR, spo2 -> SPO2, skintemp -> SkinTemp)
+    let metricParam = metric.toUpperCase();
+    if (metric === 'skintemp') {
+      metricParam = 'SkinTemp';
+    }
+    apiClient.get(`/users/summary/${userId}?metric=${metricParam}`)
+      .then(res => {
+        setUserSummary(res.data.summary);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Error fetching user summary:', err);
+        setLoading(false);
+      });
+  }, [userId, metric, isHRorSPO2orSkinTemp]);
+
   // Handle sleep metric separately
   if (metric === 'sleep') {
     return <AdminSleepUserView userId={userId} />;
@@ -67,28 +95,6 @@ const AdminUserView: React.FC<AdminUserViewProps> = ({ userId, metric }) => {
   }
 
   // For HR, SPO2, and SkinTemp - use the same user summary view
-  const [userSummary, setUserSummary] = useState<UserSummary | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    // TODO: Fetch user summary data
-    // API: GET /api/users/summary/{userId}
-    setLoading(true);
-    // Convert metric to backend format (hr -> HR, spo2 -> SPO2, skintemp -> SkinTemp)
-    let metricParam = metric.toUpperCase();
-    if (metric === 'skintemp') {
-      metricParam = 'SkinTemp';
-    }
-    apiClient.get(`/users/summary/${userId}?metric=${metricParam}`)
-      .then(res => {
-        setUserSummary(res.data.summary);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error('Error fetching user summary:', err);
-        setLoading(false);
-      });
-  }, [userId, metric]);
 
   const getMetricColor = (
   value: number | null | undefined,

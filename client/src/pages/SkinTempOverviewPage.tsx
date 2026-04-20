@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Thermometer, TrendingUp, CheckCircle, Info, Calendar } from 'lucide-react';
+import { Thermometer, TrendingUp, Info, Calendar } from 'lucide-react';
 import { Card } from '../components/common';
 import { skintempService } from '../services/skintemp.service';
 import type { UserSkinTempOverview, SkinTempTrendData } from '../types/skintemp.types';
@@ -139,63 +139,54 @@ export const SkinTempOverviewPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Validation Metrics (if comparison available) */}
+      {/* Validation vs Apple Watch (if comparison available) */}
       {overview.comparison && (
         <div>
-          <h2 className="text-xl font-semibold mb-4">Validation Metrics</h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <h2 className="text-xl font-semibold mb-4">Validation vs Apple Watch</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <Card>
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <CheckCircle className="w-5 h-5 text-green-500" />
-                Correlation
-              </h3>
-              <p className="text-3xl font-bold text-green-600">
-                {(overview.comparison.avgCorrelation * 100).toFixed(1)}%
-              </p>
-              <p className="text-xs text-gray-500 mt-2">
-                Agreement with benchmark readings
-              </p>
-            </Card>
-
-            <Card>
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <Info className="w-5 h-5 text-blue-500" />
-                MAE
-              </h3>
-              <p className="text-3xl font-bold text-blue-600">
-                {overview.comparison.avgMAE.toFixed(2)}°C
-              </p>
-              <p className="text-xs text-gray-500 mt-2">
-                Mean Absolute Error
-              </p>
-            </Card>
-
-            <Card>
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <Info className="w-5 h-5 text-purple-500" />
-                MAPE
-              </h3>
-              <p className="text-3xl font-bold text-purple-600">
-                {overview.comparison.avgMAPE.toFixed(2)}%
-              </p>
-              <p className="text-xs text-gray-500 mt-2">
-                Mean Absolute Percentage Error
-              </p>
-            </Card>
-
-            <Card>
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <Info className="w-5 h-5 text-orange-500" />
-                RMSE
+                <Thermometer className="w-5 h-5 text-orange-500" />
+                Falcon Average
               </h3>
               <p className="text-3xl font-bold text-orange-600">
-                {overview.comparison.avgRMSE.toFixed(2)}°C
+                {formatTemperature(overview.comparison.lunaAvg)}
               </p>
               <p className="text-xs text-gray-500 mt-2">
-                Root Mean Square Error
+                Average across all sessions
+              </p>
+            </Card>
+
+            <Card>
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <Thermometer className="w-5 h-5 text-blue-500" />
+                Apple Average
+              </h3>
+              <p className="text-3xl font-bold text-blue-600">
+                {formatTemperature(overview.comparison.benchmarkAvg)}
+              </p>
+              <p className="text-xs text-gray-500 mt-2">
+                Average from Apple Watch
+              </p>
+            </Card>
+
+            <Card>
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-purple-500" />
+                Bias
+              </h3>
+              <p className={`text-3xl font-bold ${overview.comparison.avgBias >= 0 ? 'text-red-500' : 'text-blue-500'}`}>
+                {overview.comparison.avgBias >= 0 ? '+' : ''}{overview.comparison.avgBias.toFixed(2)}°C
+              </p>
+              <p className="text-xs text-gray-500 mt-2">
+                {overview.comparison.avgBias >= 0 ? 'Falcon reads higher' : 'Falcon reads lower'}
               </p>
             </Card>
           </div>
+          <p className="text-sm text-gray-500 mt-4 flex items-center gap-2">
+            <Info className="w-4 h-4" />
+            Apple Watch provides a single average temperature per sleep session. Only bias comparison is meaningful.
+          </p>
         </div>
       )}
 
@@ -316,7 +307,7 @@ export const SkinTempOverviewPage: React.FC = () => {
                         {session.luna.range.toFixed(2)}°C
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        {session.comparison ? (
+                        {session.comparison && session.comparison.correlation !== undefined ? (
                           <span className={getAccuracyColor(session.comparison.correlation * 100)}>
                             {(session.comparison.correlation * 100).toFixed(1)}%
                           </span>

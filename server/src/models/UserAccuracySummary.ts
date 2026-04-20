@@ -44,6 +44,13 @@ export interface IUserAccuracySummary extends Document {
       avgDifference?: number;
     };
   };
+  workoutOverview?: {
+    avgHrMae?: number;
+    avgHrPearson?: number;
+    avgCaloriesBias?: number;
+    avgStepsBias?: number;
+    avgDistanceBias?: number;
+  };
   bestSession?: {
     sessionId: Types.ObjectId;
     activityType: string;
@@ -122,6 +129,13 @@ const UserAccuracySummarySchema = new Schema<IUserAccuracySummary>({
       avgAccuracyPercent: Number,
       avgDifference: Number,
     },
+  },
+  workoutOverview: {
+    avgHrMae: Number,
+    avgHrPearson: Number,
+    avgCaloriesBias: Number,
+    avgStepsBias: Number,
+    avgDistanceBias: Number,
   },
   bestSession: {
     sessionId: { type: Schema.Types.ObjectId, ref: "Session" },

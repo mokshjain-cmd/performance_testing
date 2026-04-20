@@ -256,7 +256,6 @@ const AdminDashboardPage: React.FC = () => {
                 {selectedView === 'session' && selectedSessionId && selectedUserId && (
                   <AdminSessionView
                     sessionId={selectedSessionId}
-                    userId={selectedUserId}
                     metric={selectedMetric}
                   />
                 )}

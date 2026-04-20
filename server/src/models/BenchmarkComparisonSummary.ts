@@ -45,6 +45,14 @@ export interface IBenchmarkComparisonSummary extends Document {
     };
   };
 
+  workoutStats?: {
+    avgHrMae?: number;
+    avgHrPearson?: number;
+    avgCaloriesBias?: number;
+    avgStepsBias?: number;
+    avgDistanceBias?: number;
+  };
+
   lastUpdated: Date;
 }
 
@@ -97,6 +105,14 @@ const BenchmarkComparisonSummarySchema =
         avgAccuracyPercent: Number,
         avgDifference: Number,
       },
+    },
+
+    workoutStats: {
+      avgHrMae: Number,
+      avgHrPearson: Number,
+      avgCaloriesBias: Number,
+      avgStepsBias: Number,
+      avgDistanceBias: Number,
     },
 
     lastUpdated: { type: Date, default: Date.now },

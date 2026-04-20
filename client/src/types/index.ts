@@ -314,16 +314,28 @@ export interface WorkoutStats {
     lunaCalories?: number;
     benchmarkCalories?: number;
     caloriesDifference?: number;
+    caloriesBias?: number;
     caloriesAccuracyPercent?: number;
     lunaDistance?: number;
     benchmarkDistance?: number;
     distanceDifference?: number;
+    distanceBias?: number;
     distanceAccuracyPercent?: number;
     lunaSteps?: number;
     benchmarkSteps?: number;
     stepsDifference?: number;
+    stepsBias?: number;
     stepsAccuracyPercent?: number;
   };
+}
+
+// Workout bias stats for admin summaries
+export interface WorkoutBiasStats {
+  avgHrMae?: number;
+  avgHrPearson?: number;
+  avgCaloriesBias?: number;
+  avgStepsBias?: number;
+  avgDistanceBias?: number;
 }
 
 export interface WorkoutReading {
@@ -349,10 +361,19 @@ export interface WorkoutOverviewData {
   totalWorkouts: number;
   totalDurationSec: number;
   summary?: {
-    avgMAE?: number;
-    avgRMSE?: number;
-    avgPearson?: number;
-    avgMAPE?: number;
+    overallAccuracy?: {
+      avgMAE?: number;
+      avgRMSE?: number;
+      avgPearson?: number;
+      avgMAPE?: number;
+    };
+    workoutOverview?: {
+      avgHrMae?: number;
+      avgHrPearson?: number;
+      avgCaloriesBias?: number;
+      avgStepsBias?: number;
+      avgDistanceBias?: number;
+    };
   } | null;
   avgHrAccuracy?: {
     mae?: number;
