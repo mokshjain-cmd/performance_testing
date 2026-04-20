@@ -194,7 +194,7 @@ export async function parsePolarCsv(
         !isNaN(min) &&
         !isNaN(sec)
       ) {
-        if (process.env.ENV === "production") {
+        if (process.env.ENV === "production" || process.env.MODE === "uat") {
           baseDatetime = new Date(Date.UTC(yyyy, mm - 1, dd, hh, min, sec));
         } else {
           baseDatetime = new Date(yyyy, mm - 1, dd, hh + 5, min + 30, sec);
@@ -203,7 +203,7 @@ export async function parsePolarCsv(
     }
   }
 
-  //console.log("📌 Base Datetime Detected:", baseDatetime.toISOString());
+  console.log("📌 Base Datetime Detected:", baseDatetime.toISOString());
 
   // Data lines (including header row)
   const dataLines = lines.slice(dataStartIdx);
