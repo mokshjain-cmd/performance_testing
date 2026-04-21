@@ -25,29 +25,83 @@ export interface IAppleWorkout {
 
 /**
  * Apple workout activity type to Luna sport type mapping
+ * Based on Luna Android SDK getSportName() function
  */
 const APPLE_TO_LUNA_SPORT_TYPE: Record<string, number> = {
+  // Running
   'HKWorkoutActivityTypeRunning': 1,
-  'HKWorkoutActivityTypeWalking': 9,
-  'HKWorkoutActivityTypeCycling': 2,
-  'HKWorkoutActivityTypeIndoorCycling': 3,
-  'HKWorkoutActivityTypeSwimming': 4,
-  'HKWorkoutActivityTypePoolSwim': 4,
-  'HKWorkoutActivityTypeOpenWaterSwim': 5,
-  'HKWorkoutActivityTypeHiking': 6,
-  'HKWorkoutActivityTypeYoga': 7,
-  'HKWorkoutActivityTypeElliptical': 8,
-  'HKWorkoutActivityTypeFunctionalStrengthTraining': 16,
-  'HKWorkoutActivityTypeTraditionalStrengthTraining': 16,
-  'HKWorkoutActivityTypeCoreTraining': 17,
-  'HKWorkoutActivityTypeHighIntensityIntervalTraining': 18,
-  'HKWorkoutActivityTypeBadminton': 19,
-  'HKWorkoutActivityTypeTennis': 20,
-  'HKWorkoutActivityTypeTableTennis': 21,
-  'HKWorkoutActivityTypeBasketball': 22,
-  'HKWorkoutActivityTypeSoccer': 23,
-  'HKWorkoutActivityTypeDance': 24,
-  'HKWorkoutActivityTypeMindAndBody': 25,
+  'HKWorkoutActivityTypeIndoorRunning': 3,
+  // Walking
+  'HKWorkoutActivityTypeWalking': 2,
+  // Hiking
+  'HKWorkoutActivityTypeHiking': 13,
+  // Cycling
+  'HKWorkoutActivityTypeCycling': 6,
+  'HKWorkoutActivityTypeIndoorCycling': 7,
+  // Swimming
+  'HKWorkoutActivityTypeSwimming': 21,
+  'HKWorkoutActivityTypePoolSwim': 21,
+  'HKWorkoutActivityTypeOpenWaterSwim': 22,
+  // Gym/Fitness
+  'HKWorkoutActivityTypeYoga': 35,
+  'HKWorkoutActivityTypePilates': 28,
+  'HKWorkoutActivityTypeElliptical': 34,
+  'HKWorkoutActivityTypeFunctionalStrengthTraining': 94,
+  'HKWorkoutActivityTypeTraditionalStrengthTraining': 25,
+  'HKWorkoutActivityTypeCoreTraining': 23,
+  'HKWorkoutActivityTypeHighIntensityIntervalTraining': 64,
+  'HKWorkoutActivityTypeCrossTraining': 84,
+  'HKWorkoutActivityTypeRowing': 121,
+  'HKWorkoutActivityTypeJumpRope': 122,
+  'HKWorkoutActivityTypeStairClimbing': 83,
+  'HKWorkoutActivityTypeStepTraining': 32,
+  // Ball Sports
+  'HKWorkoutActivityTypeBadminton': 12,
+  'HKWorkoutActivityTypeTennis': 105,
+  'HKWorkoutActivityTypeTableTennis': 11,
+  'HKWorkoutActivityTypeBasketball': 9,
+  'HKWorkoutActivityTypeSoccer': 10,
+  'HKWorkoutActivityTypeAmericanFootball': 154,
+  'HKWorkoutActivityTypeAustralianFootball': 153,
+  'HKWorkoutActivityTypeCricket': 39,
+  'HKWorkoutActivityTypeGolf': 134,
+  'HKWorkoutActivityTypeVolleyball': 45,
+  'HKWorkoutActivityTypeSquash': 42,
+  'HKWorkoutActivityTypePickleball': 155,
+  'HKWorkoutActivityTypeRugby': 103,
+  'HKWorkoutActivityTypeHockey': 104,
+  'HKWorkoutActivityTypeBaseball': 40,
+  'HKWorkoutActivityTypeSoftball': 43,
+  'HKWorkoutActivityTypeHandball': 46,
+  // Dancing
+  'HKWorkoutActivityTypeDance': 52,
+  'HKWorkoutActivityTypeSocialDance': 51,
+  // Martial Arts
+  'HKWorkoutActivityTypeBoxing': 56,
+  'HKWorkoutActivityTypeKickboxing': 125,
+  'HKWorkoutActivityTypeMartialArts': 62,
+  'HKWorkoutActivityTypeWrestling': 58,
+  'HKWorkoutActivityTypeTaiChi': 59,
+  // Winter Sports
+  'HKWorkoutActivityTypeSnowSports': 109,
+  'HKWorkoutActivityTypeDownhillSkiing': 129,
+  'HKWorkoutActivityTypeCrossCountrySkiing': 127,
+  'HKWorkoutActivityTypeSnowboarding': 128,
+  // Water Sports
+  'HKWorkoutActivityTypeSurfingSports': 132,
+  'HKWorkoutActivityTypePaddleSports': 67,
+  'HKWorkoutActivityTypeWaterSports': 69,
+  'HKWorkoutActivityTypeSailing': 16,
+  // Other
+  'HKWorkoutActivityTypeMindAndBody': 150,
+  'HKWorkoutActivityTypeFlexibility': 29,
+  'HKWorkoutActivityTypePreparationAndRecovery': 148,
+  'HKWorkoutActivityTypeGymnastics': 33,
+  'HKWorkoutActivityTypeTrackAndField': 119,
+  'HKWorkoutActivityTypeArchery': 65,
+  'HKWorkoutActivityTypeFishing': 36,
+  'HKWorkoutActivityTypeEquestrianSports': 20,
+  'HKWorkoutActivityTypeClimbing': 79,
   'HKWorkoutActivityTypeOther': 0,
 };
 

@@ -45,50 +45,76 @@ export interface ICorosWorkout {
 /**
  * FIT file sport types to Luna sport type mapping
  * FIT sport enum: https://developer.garmin.com/fit/cookbook/sport-types/
- * Luna sport types:
- * 1=Running, 2=Cycling, 3=IndoorCycling, 4=Swimming, 5=OpenWaterSwim,
- * 6=Hiking, 7=Yoga, 8=Elliptical, 9=Walking, 16=StrengthTraining,
- * 17=CoreTraining, 18=HIIT, 19=Badminton, 20=Tennis, 21=TableTennis,
- * 22=Basketball, 23=Soccer, 24=Dance, 25=MindAndBody, 0=Other
+ * Based on Luna Android SDK getSportName() function
  */
 const FIT_TO_LUNA_SPORT_TYPE: Record<string, number> = {
   // Running variants
   'running': 1,
-  'trail_running': 6,
-  'treadmill_running': 1,
+  'trail_running': 5,
+  'treadmill_running': 66,
+  'indoor_running': 3,
+  'marathon': 139,
   // Walking
-  'walking': 9,
-  'hiking': 6,
+  'walking': 2,
+  'indoor_walking': 135,
+  // Hiking
+  'hiking': 13,
+  'trekking': 4,
   // Cycling
-  'cycling': 2,
-  'road_cycling': 2,
-  'mountain_biking': 2,
-  'indoor_cycling': 3,
-  'spinning': 3,
+  'cycling': 6,
+  'road_cycling': 6,
+  'mountain_biking': 124,
+  'indoor_cycling': 7,
+  'spinning': 7,
   // Swimming
-  'swimming': 4,
-  'lap_swimming': 4,
-  'pool_swimming': 4,
-  'open_water_swimming': 5,
+  'swimming': 21,
+  'lap_swimming': 21,
+  'pool_swimming': 21,
+  'open_water_swimming': 22,
   // Gym
-  'strength_training': 16,
-  'weight_training': 16,
-  'fitness_equipment': 16,
-  'cardio_training': 18,
-  'hiit': 18,
-  'elliptical': 8,
-  'stair_climbing': 8,
+  'strength_training': 25,
+  'weight_training': 25,
+  'fitness_equipment': 30,
+  'cardio_training': 64,
+  'hiit': 64,
+  'elliptical': 34,
+  'stair_climbing': 83,
+  'rowing': 121,
+  'cross_training': 84,
+  'crossfit': 84,
+  'core_training': 23,
+  'flexibility_training': 29,
   // Sports
-  'tennis': 20,
-  'badminton': 19,
-  'table_tennis': 21,
-  'basketball': 22,
-  'soccer': 23,
-  'football': 23,
+  'tennis': 105,
+  'badminton': 12,
+  'table_tennis': 11,
+  'basketball': 9,
+  'soccer': 10,
+  'football': 10,
+  'cricket': 39,
+  'golf': 134,
+  'volleyball': 45,
+  'squash': 42,
   // Mind & body
-  'yoga': 7,
-  'pilates': 7,
-  'meditation': 25,
+  'yoga': 35,
+  'pilates': 28,
+  'meditation': 150,
+  // Dancing
+  'dance': 52,
+  // Martial Arts
+  'boxing': 56,
+  'martial_arts': 62,
+  // Winter Sports
+  'skiing': 126,
+  'snowboarding': 128,
+  'cross_country_skiing': 127,
+  // Water Sports
+  'paddling': 67,
+  'kayaking': 71,
+  'surfing': 132,
+  // Triathlon
+  'triathlon': 123,
+  'multisport': 123,
   // Generic
   'generic': 0,
   'training': 0,

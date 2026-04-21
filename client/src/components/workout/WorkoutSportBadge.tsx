@@ -8,7 +8,11 @@ import {
   PersonStanding,
   Waves,
   Target,
-  Timer
+  Timer,
+  Dribbble,
+  Swords,
+  Music,
+  Snowflake
 } from 'lucide-react';
 
 interface WorkoutSportBadgeProps {
@@ -17,39 +21,101 @@ interface WorkoutSportBadgeProps {
   size?: 'sm' | 'md' | 'lg';
 }
 
-// Sport type mappings based on common fitness app codes
+/**
+ * Luna Sport Type Mappings (from Android SDK)
+ * Key sport types with display info
+ */
 const SPORT_TYPES: Record<number, { name: string; icon: typeof Activity; color: string }> = {
-  // Running variations
-  1: { name: 'Running', icon: Activity, color: 'text-orange-500' },
-  206: { name: 'Running', icon: Activity, color: 'text-orange-500' },
+  // Running
+  1: { name: 'Outdoor Running', icon: Activity, color: 'text-orange-500' },
+  3: { name: 'Indoor Running', icon: Activity, color: 'text-orange-400' },
+  66: { name: 'Treadmill', icon: Activity, color: 'text-orange-400' },
+  139: { name: 'Marathon', icon: Activity, color: 'text-orange-600' },
+  206: { name: 'Indoor Running', icon: Activity, color: 'text-orange-400' },
+  207: { name: 'Outdoor Running', icon: Activity, color: 'text-orange-500' },
+  220: { name: 'Running', icon: Activity, color: 'text-orange-500' },
   
   // Walking
-  2: { name: 'Walking', icon: Footprints, color: 'text-green-500' },
-  207: { name: 'Walking', icon: Footprints, color: 'text-green-500' },
+  2: { name: 'Outdoor Walking', icon: Footprints, color: 'text-green-500' },
+  135: { name: 'Indoor Walking', icon: Footprints, color: 'text-green-400' },
+  208: { name: 'Walking', icon: Footprints, color: 'text-green-500' },
+  
+  // Hiking/Trekking
+  4: { name: 'Trekking', icon: Mountain, color: 'text-emerald-600' },
+  5: { name: 'Trail Running', icon: Mountain, color: 'text-emerald-500' },
+  13: { name: 'Outdoor Hiking', icon: Mountain, color: 'text-emerald-600' },
+  229: { name: 'Hiking', icon: Mountain, color: 'text-emerald-600' },
   
   // Cycling
-  3: { name: 'Cycling', icon: Bike, color: 'text-blue-500' },
-  208: { name: 'Cycling', icon: Bike, color: 'text-blue-500' },
-  
-  // Gym/Strength
-  4: { name: 'Gym Workout', icon: Dumbbell, color: 'text-purple-500' },
-  228: { name: 'Strength Training', icon: Dumbbell, color: 'text-purple-500' },
+  6: { name: 'Outdoor Cycling', icon: Bike, color: 'text-blue-500' },
+  7: { name: 'Indoor Cycling', icon: Bike, color: 'text-blue-400' },
+  14: { name: 'BMX', icon: Bike, color: 'text-blue-600' },
+  124: { name: 'Mountain Cycling', icon: Bike, color: 'text-blue-600' },
+  209: { name: 'Indoor Cycling', icon: Bike, color: 'text-blue-400' },
+  210: { name: 'Outdoor Cycling', icon: Bike, color: 'text-blue-500' },
+  221: { name: 'Cycling', icon: Bike, color: 'text-blue-500' },
   
   // Swimming
-  5: { name: 'Swimming', icon: Waves, color: 'text-cyan-500' },
-  209: { name: 'Swimming', icon: Waves, color: 'text-cyan-500' },
+  21: { name: 'Pool Swimming', icon: Waves, color: 'text-cyan-500' },
+  22: { name: 'Open Water', icon: Waves, color: 'text-cyan-600' },
+  200: { name: 'Pool Swimming', icon: Waves, color: 'text-cyan-500' },
+  219: { name: 'Swimming', icon: Waves, color: 'text-cyan-500' },
   
-  // Hiking
-  6: { name: 'Hiking', icon: Mountain, color: 'text-emerald-600' },
-  210: { name: 'Hiking', icon: Mountain, color: 'text-emerald-600' },
+  // Gym/Fitness
+  8: { name: 'Freestyle', icon: Dumbbell, color: 'text-purple-500' },
+  23: { name: 'Core Training', icon: Dumbbell, color: 'text-purple-500' },
+  25: { name: 'Strength Training', icon: Dumbbell, color: 'text-purple-600' },
+  30: { name: 'Indoor Fitness', icon: Dumbbell, color: 'text-purple-500' },
+  34: { name: 'Elliptical', icon: Dumbbell, color: 'text-purple-400' },
+  64: { name: 'HIIT', icon: Timer, color: 'text-red-500' },
+  84: { name: 'CrossFit', icon: Dumbbell, color: 'text-purple-600' },
+  121: { name: 'Rowing Machine', icon: Dumbbell, color: 'text-purple-500' },
+  122: { name: 'Rope Skipping', icon: Timer, color: 'text-red-400' },
+  223: { name: 'HIIT', icon: Timer, color: 'text-red-500' },
+  228: { name: 'Strength Training', icon: Dumbbell, color: 'text-purple-600' },
   
-  // Yoga/Flexibility
-  7: { name: 'Yoga', icon: PersonStanding, color: 'text-pink-500' },
-  211: { name: 'Yoga', icon: PersonStanding, color: 'text-pink-500' },
+  // Yoga/Pilates
+  28: { name: 'Pilates', icon: PersonStanding, color: 'text-pink-500' },
+  35: { name: 'Yoga', icon: PersonStanding, color: 'text-pink-500' },
+  215: { name: 'Yoga', icon: PersonStanding, color: 'text-pink-500' },
+  233: { name: 'Pilates', icon: PersonStanding, color: 'text-pink-500' },
   
-  // HIIT
-  8: { name: 'HIIT', icon: Timer, color: 'text-red-500' },
-  212: { name: 'HIIT', icon: Timer, color: 'text-red-500' },
+  // Ball Sports
+  9: { name: 'Basketball', icon: Dribbble, color: 'text-orange-600' },
+  10: { name: 'Football', icon: Dribbble, color: 'text-green-600' },
+  11: { name: 'Pingpong', icon: Target, color: 'text-yellow-500' },
+  12: { name: 'Badminton', icon: Target, color: 'text-lime-500' },
+  39: { name: 'Cricket', icon: Dribbble, color: 'text-green-500' },
+  105: { name: 'Tennis', icon: Target, color: 'text-yellow-600' },
+  134: { name: 'Golf', icon: Target, color: 'text-green-700' },
+  155: { name: 'Pickleball', icon: Target, color: 'text-lime-600' },
+  211: { name: 'Badminton', icon: Target, color: 'text-lime-500' },
+  212: { name: 'Tennis', icon: Target, color: 'text-yellow-600' },
+  213: { name: 'Soccer', icon: Dribbble, color: 'text-green-600' },
+  214: { name: 'Cricket', icon: Dribbble, color: 'text-green-500' },
+  230: { name: 'Basketball', icon: Dribbble, color: 'text-orange-600' },
+  
+  // Dancing
+  47: { name: 'Ballet', icon: Music, color: 'text-pink-400' },
+  52: { name: 'Dance', icon: Music, color: 'text-pink-500' },
+  53: { name: 'Zumba', icon: Music, color: 'text-pink-600' },
+  226: { name: 'Dance', icon: Music, color: 'text-pink-500' },
+  227: { name: 'Zumba', icon: Music, color: 'text-pink-600' },
+  
+  // Martial Arts
+  56: { name: 'Boxing', icon: Swords, color: 'text-red-600' },
+  59: { name: 'Tai Chi', icon: PersonStanding, color: 'text-indigo-500' },
+  61: { name: 'Taekwondo', icon: Swords, color: 'text-red-500' },
+  62: { name: 'Martial Arts', icon: Swords, color: 'text-red-500' },
+  125: { name: 'Kickboxing', icon: Swords, color: 'text-red-600' },
+  
+  // Winter Sports
+  126: { name: 'Skiing', icon: Snowflake, color: 'text-sky-500' },
+  128: { name: 'Snowboarding', icon: Snowflake, color: 'text-sky-600' },
+  
+  // Triathlon
+  123: { name: 'Triathlon', icon: Activity, color: 'text-amber-500' },
+  204: { name: 'Triathlon', icon: Activity, color: 'text-amber-500' },
   
   // Generic workout
   0: { name: 'Workout', icon: Target, color: 'text-gray-500' },
