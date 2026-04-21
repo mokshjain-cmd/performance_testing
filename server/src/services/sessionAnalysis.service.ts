@@ -41,18 +41,22 @@ export async function analyzeSession(sessionId: Types.ObjectId) {
     }
   }
 
-  // Save analysis
-  const analysis = await SessionAnalysis.create({
-    sessionId,
-    userId: session.userId,
-    activityType: session.activityType,
-    metric: session.metric,
-    startTime: session.startTime,
-    endTime: session.endTime,
-    deviceStats,
-    pairwiseComparisons,
-    isValid: true,
-    computedAt: new Date(),
-  });
+  // Save or update analysis (upsert to prevent duplicates)
+  const analysis = await SessionAnalysis.findOneAndUpdate(
+    { sessionId },
+    {
+      sessionId,
+      userId: session.userId,
+      activityType: session.activityType,
+      metric: session.metric,
+      startTime: session.startTime,
+      endTime: session.endTime,
+      deviceStats,
+      pairwiseComparisons,
+      isValid: true,
+      computedAt: new Date(),
+    },
+    { upsert: true, new: true }
+  );
   return analysis;
 }

@@ -464,7 +464,7 @@ const WorkoutStatsSchema = new Schema(
 );
 
 const SessionAnalysisSchema = new Schema<ISessionAnalysis>({
-  sessionId: { type: Schema.Types.ObjectId, ref: "Session", index: true },
+  sessionId: { type: Schema.Types.ObjectId, ref: "Session", index: true, unique: true },
   userId: { type: Schema.Types.ObjectId, ref: "User", index: true },
   activityType: String,
   metric: { 
