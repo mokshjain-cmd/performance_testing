@@ -453,7 +453,7 @@ export class LunaSleepParser {
     const targetDateStr = this.dateToString(targetDate);
     
     // UAT mode: Apply IST offset to match epoch storage behavior
-    const useIST = process.env.MODE === "uat";
+    const useIST = process.env.MODE === "uat" || process.env.NODE_ENV === "production";
     const offsetSec = useIST ? this.IST_OFFSET_SEC : 0;
     
     console.log(`🔍 [LunaSleepParser] Searching ${records.length} records for exitTime matching ${targetDateStr} (IST offset: ${useIST ? 'YES' : 'NO'}):`);

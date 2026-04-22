@@ -7,11 +7,8 @@ import { LunaWorkoutParser, IParsedWorkout } from "../../parsers/workout";
 import { WorkoutAnalysisService, IBenchmarkWorkoutMeta } from "./WorkoutAnalysisService";
 import { AppleHealthWorkoutParser, IAppleWorkout } from "../../parsers/workout/AppleHealthWorkoutParser";
 import { PolarWorkoutParser, IPolarWorkout } from "../../parsers/workout/PolarWorkoutParser";
-<<<<<<< HEAD
 import { CorosWorkoutParser, ICorosWorkout } from "../../parsers/workout/CorosWorkoutParser";
-=======
 import { WhoopWorkoutParser, IWhoopWorkout } from "../../parsers/workout/WhoopWorkoutParser";
->>>>>>> feat/source_wiseparser
 import { extractHRForWorkoutComparison } from "../../parsers/appleHRparser";
 import { extractAppleHealthZip, deleteDirectory } from "../../tools/zipExtractor";
 import { mailService } from "../mail.service";
@@ -253,11 +250,8 @@ export class IngestWorkoutService {
       // Parse benchmark file if provided
       let appleWorkouts: IAppleWorkout[] = [];
       let polarWorkout: IPolarWorkout | null = null;
-<<<<<<< HEAD
       let corosWorkout: ICorosWorkout | null = null;
-=======
       let whoopWorkouts: IWhoopWorkout[] = [];
->>>>>>> feat/source_wiseparser
       let benchmarkFilePath: string | undefined;
       
       // Handle Apple Health benchmark file
@@ -305,7 +299,6 @@ export class IngestWorkoutService {
         }
       }
       
-<<<<<<< HEAD
       // Handle Coros benchmark file (.fit format)
       if (benchmarkFile && benchmarkDeviceType === 'coros') {
         console.log(`[IngestWorkoutService] ⌚ Parsing Coros workout FIT file...`);
@@ -318,7 +311,9 @@ export class IngestWorkoutService {
           }
         } catch (corosError) {
           console.error('[IngestWorkoutService] ❌ Error parsing Coros FIT:', corosError);
-=======
+        }
+      }
+      
       // Handle Whoop benchmark file (from Apple Health export, filtered by sourceName)
       if (benchmarkFile && benchmarkDeviceType === 'whoop') {
         console.log(`[IngestWorkoutService] 🏋️ Parsing Whoop workout from Apple Health export...`);
@@ -350,7 +345,6 @@ export class IngestWorkoutService {
           } catch (whoopError) {
             console.error('[IngestWorkoutService] ❌ Error parsing Whoop workouts:', whoopError);
           }
->>>>>>> feat/source_wiseparser
         }
       }
       
@@ -419,23 +413,15 @@ export class IngestWorkoutService {
             }
           }
           
-<<<<<<< HEAD
           // Match Coros workout
           if (corosWorkout && benchmarkDeviceType === 'coros') {
             const overlap = CorosWorkoutParser.findWorkoutOverlap(
               corosWorkout,
-=======
-          // Match Whoop workout (same pattern as Apple)
-          if (whoopWorkouts.length > 0 && benchmarkDeviceType === 'whoop') {
-            const match = WhoopWorkoutParser.findMatchingWorkout(
-              whoopWorkouts,
->>>>>>> feat/source_wiseparser
               workout.startTime,
               workout.endTime,
               50
             );
             
-<<<<<<< HEAD
             if (overlap?.isMatch) {
               benchmarkWorkoutMeta = {
                 // Coros doesn't provide calories or steps, only distance
@@ -451,7 +437,18 @@ export class IngestWorkoutService {
               );
               
               console.log(`[IngestWorkoutService] ⌚ Matched Coros workout: ${overlap.overlapPercent.toFixed(1)}% overlap`);
-=======
+            }
+          }
+          
+          // Match Whoop workout (same pattern as Apple)
+          if (whoopWorkouts.length > 0 && benchmarkDeviceType === 'whoop') {
+            const match = WhoopWorkoutParser.findMatchingWorkout(
+              whoopWorkouts,
+              workout.startTime,
+              workout.endTime,
+              50
+            );
+            
             if (match) {
               benchmarkWorkoutMeta = {
                 activeCalories: match.workout.calories,
@@ -467,7 +464,6 @@ export class IngestWorkoutService {
               );
               
               console.log(`[IngestWorkoutService] 🏋️ Matched Whoop workout: ${match.overlapPercent.toFixed(1)}% overlap`);
->>>>>>> feat/source_wiseparser
             }
           }
           
@@ -723,7 +719,6 @@ export class IngestWorkoutService {
   }
   
   /**
-<<<<<<< HEAD
    * Process Coros HR data for a workout session
    * Uses pre-parsed Coros workout data (already in memory from FIT parsing)
    */
@@ -739,7 +734,43 @@ export class IngestWorkoutService {
       // Extract Coros HR readings within the Luna workout time window
       const hrReadings = CorosWorkoutParser.extractHRInTimeWindow(
         corosWorkout,
-=======
+        workout.startTime,
+        workout.endTime
+      );
+      
+      if (hrReadings.length === 0) {
+        console.log(`[IngestWorkoutService] No Coros HR readings found in workout time range`);
+        return;
+      }
+      
+      console.log(`[IngestWorkoutService] ⌚ Found ${hrReadings.length} Coros HR readings in workout window`);
+      
+      // Insert benchmark readings
+      const benchmarkReadings = hrReadings.map(reading => ({
+        meta: {
+          sessionId: sessionId,
+          workoutId: workout.workoutId,
+          userId: new Types.ObjectId(userId.toString()),
+          deviceType: 'coros',
+          firmwareVersion: undefined,
+        },
+        timestamp: reading.timestamp,
+        heartRate: reading.heartRate,
+        heartRateConfidence: 95, // Coros optical HR has good confidence
+        exerciseIntensity: 0,
+        isValid: true,
+      }));
+      
+      await WorkoutReading.insertMany(benchmarkReadings);
+      console.log(`[IngestWorkoutService] ⌚ Inserted ${benchmarkReadings.length} Coros readings for session ${sessionId}`);
+      
+    } catch (error) {
+      console.error(`[IngestWorkoutService] ❌ Error processing Coros HR:`, error);
+      // Don't throw - we still want the session to be created even without benchmark
+    }
+  }
+  
+  /**
    * Process Whoop HR data for a workout session
    * Uses pre-parsed Whoop workout data (already in memory from Apple Health parsing)
    */
@@ -755,25 +786,16 @@ export class IngestWorkoutService {
       // Extract Whoop HR readings within the Luna workout time window
       const hrReadings = WhoopWorkoutParser.extractHRInTimeWindow(
         whoopWorkout,
->>>>>>> feat/source_wiseparser
         workout.startTime,
         workout.endTime
       );
       
       if (hrReadings.length === 0) {
-<<<<<<< HEAD
-        console.log(`[IngestWorkoutService] No Coros HR readings found in workout time range`);
-        return;
-      }
-      
-      console.log(`[IngestWorkoutService] ⌚ Found ${hrReadings.length} Coros HR readings in workout window`);
-=======
         console.log(`[IngestWorkoutService] No Whoop HR readings found in workout time range`);
         return;
       }
       
       console.log(`[IngestWorkoutService] 🏋️ Found ${hrReadings.length} Whoop HR readings in workout window (6-sec intervals)`);
->>>>>>> feat/source_wiseparser
       
       // Insert benchmark readings
       const benchmarkReadings = hrReadings.map(reading => ({
@@ -781,37 +803,23 @@ export class IngestWorkoutService {
           sessionId: sessionId,
           workoutId: workout.workoutId,
           userId: new Types.ObjectId(userId.toString()),
-<<<<<<< HEAD
-          deviceType: 'coros',
-=======
           deviceType: 'whoop',
->>>>>>> feat/source_wiseparser
           firmwareVersion: undefined,
         },
         timestamp: reading.timestamp,
         heartRate: reading.heartRate,
-<<<<<<< HEAD
-        heartRateConfidence: 95, // Coros optical HR has good confidence
-=======
         heartRateConfidence: 90, // Whoop optical HR - good but not chest strap level
->>>>>>> feat/source_wiseparser
         exerciseIntensity: 0,
         isValid: true,
       }));
       
       await WorkoutReading.insertMany(benchmarkReadings);
-<<<<<<< HEAD
-      console.log(`[IngestWorkoutService] ⌚ Inserted ${benchmarkReadings.length} Coros readings for session ${sessionId}`);
-      
-    } catch (error) {
-      console.error(`[IngestWorkoutService] ❌ Error processing Coros HR:`, error);
-=======
       console.log(`[IngestWorkoutService] 🏋️ Inserted ${benchmarkReadings.length} Whoop readings for session ${sessionId}`);
       
     } catch (error) {
       console.error(`[IngestWorkoutService] ❌ Error processing Whoop HR:`, error);
->>>>>>> feat/source_wiseparser
       // Don't throw - we still want the session to be created even without benchmark
     }
   }
 }
+ 
