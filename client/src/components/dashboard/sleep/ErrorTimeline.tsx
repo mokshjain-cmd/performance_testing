@@ -19,6 +19,15 @@ interface ErrorTimelineProps {
 }
 
 export const ErrorTimeline: React.FC<ErrorTimelineProps> = ({ epochs }) => {
+  // Validate props - return early if no epochs data
+  if (!epochs || epochs.length === 0) {
+    return (
+      <div className="text-center py-8 text-gray-500">
+        <p>No epoch data available for comparison</p>
+      </div>
+    );
+  }
+  
   // Filter only disagreements
   const errors = epochs.filter((e) => !e.agreement);
 

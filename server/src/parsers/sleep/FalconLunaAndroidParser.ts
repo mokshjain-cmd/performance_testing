@@ -430,12 +430,16 @@ export class FalconLunaAndroidParser {
 
     const targetDateStr = this.dateToString(targetDate);
     
-    console.log(`🔍 [Falcon] Searching ${records.length} records for exitTime matching ${targetDateStr}:`);
+    // UAT mode: Apply IST offset to match epoch storage behavior
+    const useIST = process.env.MODE === "uat" || process.env.NODE_ENV === "production";
+    const offsetSec = useIST ? this.IST_OFFSET_SEC : 0;
+    
+    console.log(`🔍 [Falcon] Searching ${records.length} records for exitTime matching ${targetDateStr} (IST offset: ${useIST ? 'YES' : 'NO'}):`);
 
     for (const rec of records) {
-      const exitDate = new Date(rec.exitTime * 1000);
+      const exitDate = new Date((rec.exitTime + offsetSec) * 1000);
       const exitDateStr = this.dateToString(exitDate);
-      const entryDate = new Date(rec.entryTime * 1000);
+      const entryDate = new Date((rec.entryTime + offsetSec) * 1000);
       
       const matches = exitDateStr === targetDateStr;
       console.log(`   - entry=${entryDate.toISOString()}, exit=${exitDate.toISOString()}, exitDate=${exitDateStr} ${matches ? '✅ MATCH' : ''}`);

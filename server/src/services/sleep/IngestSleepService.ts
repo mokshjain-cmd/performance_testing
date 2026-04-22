@@ -3,13 +3,14 @@ import Session from "../../models/Session";
 import SleepStageEpoch from "../../models/SleepStageEpoch";
 import { LunaSleepParser } from "../../parsers/sleep/LunaSleepParser";
 import { AppleSleepParser } from "../../parsers/sleep/AppleSleepParser";
+import { WhoopSleepParser } from "../../parsers/sleep/WhoopSleepParser";
 import User from "../../models/Users";
 import Device from "../../models/Devices";
 import { mailService } from "../mail.service";
 import fs from 'fs';
 import path from 'path';
 import { promisify } from 'util';
-import { extractAppleHealthZip, deleteDirectory, deleteFile } from '../../tools/zipExtractor';
+import { extractAppleHealthZip, extractWhoopZip, deleteDirectory, deleteFile } from '../../tools/zipExtractor';
 
 const unlinkAsync = promisify(fs.unlink);
 
@@ -307,8 +308,9 @@ export class IngestSleepService {
 
       let fileToProcess = filePath;
 
-      // Check if the file is a ZIP (for Apple Health export)
+      // Handle ZIP extraction based on device type
       const fileExtension = path.extname(filePath).toLowerCase();
+      
       if (benchmarkDeviceType === 'apple' && fileExtension === '.zip') {
         console.log(`[IngestSleepService] Detected Apple Health ZIP file, extracting...`);
         
@@ -321,6 +323,18 @@ export class IngestSleepService {
           console.error(`[IngestSleepService] Error extracting Apple Health ZIP:`, zipError);
           throw new Error(`Failed to extract Apple Health ZIP: ${zipError instanceof Error ? zipError.message : 'Unknown error'}`);
         }
+      } else if (benchmarkDeviceType === 'whoop' && fileExtension === '.zip') {
+        console.log(`[IngestSleepService] Detected Whoop ZIP file, extracting...`);
+        
+        try {
+          const extracted = await extractWhoopZip(filePath);
+          fileToProcess = extracted;
+          extractedFolder = extracted;
+          console.log(`[IngestSleepService] Using Whoop folder: ${extracted}`);
+        } catch (zipError) {
+          console.error(`[IngestSleepService] Error extracting Whoop ZIP:`, zipError);
+          throw new Error(`Failed to extract Whoop ZIP: ${zipError instanceof Error ? zipError.message : 'Unknown error'}`);
+        }
       }
 
       // Call the appropriate benchmark parser
@@ -328,17 +342,19 @@ export class IngestSleepService {
       if (benchmarkDeviceType === 'apple') {
         const { AppleHealthSleepParser } = await import('../../parsers/sleep/AppleHealthSleepParser');
         parseResult = await AppleHealthSleepParser.parse(fileToProcess, sessionId.toString(), userId.toString(), sleepDate);
+      } else if (benchmarkDeviceType === 'whoop') {
+        parseResult = await WhoopSleepParser.parse(fileToProcess, sessionId.toString(), userId.toString(), sleepDate);
       } else {
         // For other benchmarks, use AppleSleepParser as fallback
         console.log(`Device Not recognized , parser is not ready yet for this benchmark.`);
-        }
+      }
 
       // Get firmware version from session devices (if applicable)
       const session = await Session.findById(sessionId).populate("devices.deviceId");
       const benchmarkDevice = session?.devices.find((d: any) => d.deviceType === benchmarkDeviceType);
       const firmwareVersion = benchmarkDevice?.firmwareVersion;
 
-      // Store each epoch in the database
+      // Store each epoch in the database (only if epochs exist)
       if (parseResult && parseResult.epochs && parseResult.epochs.length > 0) {
         const epochDocs = parseResult.epochs.map((epoch) => ({
           meta: {
@@ -366,7 +382,15 @@ export class IngestSleepService {
           extractedFolder
         };
       } else {
-        console.warn(`[IngestSleepService] No ${benchmarkDeviceType} epochs parsed from file`);
+        // No epochs - summary-only mode (e.g., Whoop CSV)
+        console.log(`[IngestSleepService] ⚠️  ${benchmarkDeviceType} parser returned 0 epochs - summary-only mode`);
+        
+        if (parseResult && parseResult.metadata) {
+          console.log(`[IngestSleepService] ${benchmarkDeviceType} metadata (summary-only):`, parseResult.metadata);
+          // Metadata will be used by SleepAnalysisService for duration comparisons
+          // TODO: Store this in SessionAnalysis
+        }
+        
         return {
           epochsInserted: 0,
           extractedFolder
