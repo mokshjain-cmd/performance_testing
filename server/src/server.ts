@@ -31,8 +31,8 @@ const startServer = async (): Promise<void> => {
     console.log('🌐 Step 4: Starting HTTP server...');
     app.listen(PORT, '0.0.0.0' , () => {
       console.log('✅ HTTP server started\n');
-      console.log('='.repeat(60));
-      console.log("hello");
+     console.log('='.repeat(60));
+      
       console.log(`🚀 Server is running on http://localhost:${PORT}`);
       console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
       console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
