@@ -209,12 +209,17 @@ export class LunaSleepParserIOS {
   private static findSleepByExitDate(sleepDataList: IOSSleepData[], targetDate: Date): IOSSleepData | null {
     const targetDateStr = this.dateToString(targetDate);
     
-    console.log(`🔍 [LunaSleepParserIOS] Searching ${sleepDataList.length} sessions for exitTime matching ${targetDateStr}:`);
+    // UAT mode: Apply IST offset to match epoch storage behavior
+    const IST_OFFSET_SEC = 19800; // 5h 30m
+    const useIST = process.env.MODE === "uat";
+    const offsetSec = useIST ? IST_OFFSET_SEC : 0;
+    
+    console.log(`🔍 [LunaSleepParserIOS] Searching ${sleepDataList.length} sessions for exitTime matching ${targetDateStr} (IST offset: ${useIST ? 'YES' : 'NO'}):`);
 
     for (const sleepData of sleepDataList) {
-      const exitDate = new Date(sleepData.exitTime * 1000);
+      const exitDate = new Date((sleepData.exitTime + offsetSec) * 1000);
       const exitDateStr = this.dateToString(exitDate);
-      const entryDate = new Date(sleepData.entryTime * 1000);
+      const entryDate = new Date((sleepData.entryTime + offsetSec) * 1000);
       
       const matches = exitDateStr === targetDateStr;
       console.log(`   - entry=${entryDate.toISOString()}, exit=${exitDate.toISOString()}, exitDate=${exitDateStr} ${matches ? '✅ MATCH' : ''}`);

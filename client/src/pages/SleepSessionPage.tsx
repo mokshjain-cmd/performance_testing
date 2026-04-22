@@ -280,7 +280,7 @@ export const SleepSessionPage: React.FC = () => {
       )}
 
       {/* Hypnogram */}
-      {sessionData.epochs && (
+      {sessionData.epochs?.luna && (
         <div className="bg-white p-6 rounded-lg shadow">
           <h2 className="text-xl font-semibold mb-4">Sleep Hypnogram</h2>
           <HypnogramChart
@@ -292,7 +292,7 @@ export const SleepSessionPage: React.FC = () => {
       )}
 
       {/* Show message if epochs not available */}
-      {!sessionData.epochs && (
+      {!sessionData.epochs?.luna && (
         <div className="bg-yellow-50 p-6 rounded-lg border border-yellow-200">
           <p className="text-yellow-800">Hypnogram data is not available for this session.</p>
         </div>

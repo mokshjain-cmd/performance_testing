@@ -32,6 +32,9 @@ export const HypnogramChart: React.FC<HypnogramChartProps> = ({
   benchmarkEpochs,
   showComparison = false,
 }) => {
+  // Determine if we have benchmark epochs for comparison
+  const hasBenchmarkEpochs = benchmarkEpochs && benchmarkEpochs.length > 0;
+  
   // Helper to extract time from ISO string (show UTC, no timezone conversion)
   const formatTimeFromISO = (timestamp: string | Date): string => {
     const isoString = typeof timestamp === 'string' ? timestamp : timestamp.toISOString();
@@ -93,6 +96,11 @@ export const HypnogramChart: React.FC<HypnogramChartProps> = ({
 
   return (
     <div className="w-full h-80">
+      {showComparison && !hasBenchmarkEpochs && (
+        <div className="mb-3 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
+          ℹ️ Showing Luna only — Benchmark epoch data unavailable (summary metrics only)
+        </div>
+      )}
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={displayData}>
           <CartesianGrid strokeDasharray="3 3" />
@@ -118,7 +126,7 @@ export const HypnogramChart: React.FC<HypnogramChartProps> = ({
             dot={false}
             name="Falcon"
           />
-          {showComparison && benchmarkEpochs && (
+          {showComparison && hasBenchmarkEpochs && (
             <Line
               type="stepAfter"
               dataKey="benchmark"
