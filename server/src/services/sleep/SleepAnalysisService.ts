@@ -79,6 +79,9 @@ export class SleepAnalysisService {
         epochAccuracyPercent = this.calculateAccuracy(confusionMatrix);
         kappaScore = this.calculateKappa(confusionMatrix);
         console.log(`[SleepAnalysisService] ✅ Accuracy: ${epochAccuracyPercent.toFixed(1)}%, Kappa: ${kappaScore.toFixed(3)}`);
+      } else if (benchmarkDeviceType && benchmarkEpochs.length === 0) {
+        console.log(`[SleepAnalysisService] ⚠️  Epoch-level analysis skipped: Benchmark device (${benchmarkDeviceType}) has no epochs (summary-only mode)`);
+        console.log(`[SleepAnalysisService] ✅ Stage duration comparisons will still be computed from metadata`);
       }
 
       // Calculate sleep efficiency (if we have onset/wake times)

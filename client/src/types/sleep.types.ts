@@ -143,8 +143,12 @@ export interface UserSingleSessionView {
     remDifferenceSec: number;
   };
   
+  /**
+   * Epoch data for hypnogram visualization.
+   * Luna always has epochs. Benchmark may be undefined when device lacks epoch data (e.g., Whoop CSV).
+   */
   epochs?: {
-    luna: SleepEpoch[];
+    luna?: SleepEpoch[];
     benchmark?: SleepEpoch[];
   };
 }

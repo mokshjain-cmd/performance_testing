@@ -423,7 +423,7 @@ const AdminSleepSessionView: React.FC<AdminSleepSessionViewProps> = ({ sessionId
       )}
 
       {/* Validation Metrics */}
-      {sessionSummary.benchmark && (
+      {sessionSummary.benchmark && benchmarkEpochs.length > 0 && (
         <Card>
           <h3 className="text-lg font-semibold mb-4">Validation Metrics</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
@@ -498,7 +498,8 @@ const AdminSleepSessionView: React.FC<AdminSleepSessionViewProps> = ({ sessionId
         />
       </Card>
 
-      {/* Stage Sensitivity */}
+      {/* Stage Sensitivity - Requires epoch-level data */}
+      {sessionSummary.benchmark && benchmarkEpochs.length > 0 && (
       <Card>
         <h3 className="text-lg font-semibold mb-4">Stage Sensitivity (True Positive Rate)</h3>
         <p className="text-sm text-gray-600 mb-4">
@@ -526,8 +527,10 @@ const AdminSleepSessionView: React.FC<AdminSleepSessionViewProps> = ({ sessionId
           </ul>
         </div>
       </Card>
+      )}
 
-      {/* Stage Specificity */}
+      {/* Stage Specificity - Requires epoch-level data */}
+      {sessionSummary.benchmark && benchmarkEpochs.length > 0 && (
       <Card>
         <h3 className="text-lg font-semibold mb-4">Stage Specificity (True Negative Rate)</h3>
         <p className="text-sm text-gray-600 mb-4">
@@ -555,8 +558,10 @@ const AdminSleepSessionView: React.FC<AdminSleepSessionViewProps> = ({ sessionId
           </ul>
         </div>
       </Card>
+      )}
 
-      {/* Confusion Matrix */}
+      {/* Confusion Matrix - Requires epoch-level data */}
+      {sessionSummary.benchmark && benchmarkEpochs.length > 0 && (
       <Card>
         <h3 className="text-lg font-semibold mb-4">Confusion Matrix</h3>
         <p className="text-sm text-gray-600 mb-4">
@@ -609,6 +614,23 @@ const AdminSleepSessionView: React.FC<AdminSleepSessionViewProps> = ({ sessionId
           </ul>
         </div>
       </Card>
+      )}
+
+      {/* Message when benchmark lacks epochs */}
+      {sessionSummary.benchmark && benchmarkEpochs.length === 0 && (
+        <Card>
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-5">
+            <p className="font-semibold text-yellow-900 mb-2">ℹ️ Epoch-level Metrics Unavailable</p>
+            <p className="text-sm text-yellow-800">
+              Benchmark device provides summary metrics only (no hypnograph data). 
+              Epoch-level metrics (Accuracy, Kappa, Sensitivity, Specificity, Confusion Matrix) require epoch data from both devices.
+            </p>
+            <p className="text-sm text-yellow-800 mt-2">
+              <strong>Available:</strong> Stage duration comparisons and bias analysis shown above.
+            </p>
+          </div>
+        </Card>
+      )}
     </div>
   );
 };

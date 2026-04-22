@@ -174,7 +174,7 @@ export const AdminSleepSessionPage: React.FC = () => {
       )}
 
       {/* Hypnogram Comparison */}
-      {hasBenchmark && sessionData.epochs && (
+      {hasBenchmark && sessionData.epochs?.luna && (
         <div className="bg-white p-6 rounded-lg shadow">
           <h2 className="text-xl font-semibold mb-4">Hypnogram Comparison</h2>
           <HypnogramChart
@@ -264,17 +264,20 @@ export const AdminSleepSessionPage: React.FC = () => {
         </div>
       )}
 
-      {/* Error Timeline */}
+      {/* Error Timeline - Requires both devices to have epochs */}
       {hasBenchmark &&
-        sessionData.epochs &&
+        sessionData.epochs?.luna &&
+        sessionData.epochs?.benchmark &&
+        sessionData.epochs.luna.length > 0 &&
+        sessionData.epochs.benchmark.length > 0 &&
         sessionData.epochs.luna.length === sessionData.epochs.benchmark.length && (
           <div className="bg-white p-6 rounded-lg shadow">
             <ErrorTimeline
               epochs={sessionData.epochs.luna.map((lunaEpoch, idx) => ({
                 timestamp: new Date(lunaEpoch.timestamp).getTime() / 1000,
                 lunaStage: lunaEpoch.stage,
-                benchmarkStage: sessionData.epochs.benchmark[idx].stage,
-                agreement: lunaEpoch.stage === sessionData.epochs.benchmark[idx].stage,
+                benchmarkStage: sessionData.epochs.benchmark![idx].stage,
+                agreement: lunaEpoch.stage === sessionData.epochs.benchmark![idx].stage,
               }))}
             />
           </div>

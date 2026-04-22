@@ -35,6 +35,8 @@ const METRIC_OPTIONS = [
 const BENCHMARK_DEVICE_OPTIONS = [
   { value: 'polar', label: 'Polar' },
   { value: 'apple', label: 'Apple Watch' },
+  { value: 'whoop', label: 'WHOOP' },
+  { value: 'coros', label: 'Coros' },
   { value: 'masimo', label: 'Masimo' },
   { value: 'garmin', label: 'Garmin' },
 ];
@@ -450,7 +452,13 @@ export default function SessionFormPage() {
                 <input
                   key={`${formData.benchmarkDeviceType}-${fileInputKey}`}
                   type="file"
-                  accept={formData.benchmarkDeviceType === 'apple' ? '.xml,.XML,.zip,.ZIP,.csv,.CSV' : '.csv,.CSV'}
+                  accept={
+                    formData.benchmarkDeviceType === 'apple' || formData.benchmarkDeviceType === 'whoop' 
+                      ? '.xml,.XML,.zip,.ZIP,.csv,.CSV' 
+                      : formData.benchmarkDeviceType === 'coros'
+                        ? '.fit,.FIT'
+                        : '.csv,.CSV'
+                  }
                   onChange={(e) => handleFileChange(formData.benchmarkDeviceType, e.target.files?.[0] || null)}
                   className="block w-full text-sm text-gray-600 file:mr-4 file:py-2.5 file:px-5 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-gradient-to-r file:from-blue-500 file:to-blue-600 file:text-white hover:file:from-blue-600 hover:file:to-blue-700 file:cursor-pointer file:shadow-sm file:transition-all cursor-pointer border border-gray-200 rounded-xl p-3"
                 />

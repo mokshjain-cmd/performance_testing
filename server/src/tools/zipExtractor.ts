@@ -136,3 +136,30 @@ export async function extractAppleHealthZip(zipFilePath: string): Promise<{
     throw error;
   }
 }
+
+/**
+ * Extract Whoop ZIP and return path to extracted folder
+ * @param zipFilePath - Path to the uploaded Whoop ZIP file
+ * @returns Path to the extracted folder containing sleeps.csv
+ */
+export async function extractWhoopZip(zipFilePath: string): Promise<string> {
+  try {
+    // Extract the ZIP
+    const extractedFolder = await extractZipFile(zipFilePath);
+
+    // Verify sleeps.csv exists in the extracted folder
+    const sleepsCsvPath = findFileInDirectory(extractedFolder, 'sleeps.csv');
+
+    if (!sleepsCsvPath) {
+      throw new Error('sleeps.csv not found in the uploaded Whoop ZIP file');
+    }
+
+    console.log(`✅ Found sleeps.csv at: ${sleepsCsvPath}`);
+    console.log(`📁 Extracted folder: ${extractedFolder}`);
+
+    return extractedFolder;
+  } catch (error) {
+    console.error(`❌ Error extracting Whoop ZIP:`, error);
+    throw error;
+  }
+}
