@@ -517,9 +517,6 @@ export async function extractHRForWorkoutComparison(
     let recordCount = 0;
     let matchedCount = 0;
     
-    // Apply IST offset to comparison times
-    const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
-    
     const fileStream = fs.createReadStream(filePath, { encoding: 'utf-8' });
     const rl = readline.createInterface({
       input: fileStream,
@@ -537,7 +534,7 @@ export async function extractHRForWorkoutComparison(
         const sourceNameMatch = line.match(/sourceName="([^"]+)"/);
         const startDateMatch = line.match(/startDate="([^"]+)"/);
         const valueMatch = line.match(/value="([^"]+)"/);
-        console.log(`🍎 DEBUG Line ${lineCount}: Found HR record - sourceName: ${sourceNameMatch ? sourceNameMatch[1] : 'N/A'}, startDate: ${startDateMatch ? startDateMatch[1] : 'N/A'}, value: ${valueMatch ? valueMatch[1] : 'N/A'}`);
+        
         if (sourceNameMatch && startDateMatch && valueMatch) {
           const sourceName = sourceNameMatch[1];
           const startDateStr = startDateMatch[1];
@@ -545,29 +542,27 @@ export async function extractHRForWorkoutComparison(
           
           // Check if from Apple Watch
           const normalizedSource = sourceName.replace(/\xa0/g, ' ').replace(/\u00A0/g, ' ');
-          const isAppleWatch = normalizedSource.includes('Apple Watch') || true;
-          console.log("🍎 DEBUG Record source:", sourceName, "→ isAppleWatch:", isAppleWatch);
+          const isAppleWatch = normalizedSource.includes('Apple Watch') ;
           
           if (isAppleWatch) {
-            // Parse timestamp - extract datetime part and add IST offset
-            const dateTimePart = startDateStr.substring(0, 19); // "2026-03-16 11:01:29"
-            const timestamp = new Date(dateTimePart.replace(' ', 'T') + 'Z');
-            const timestampIST = new Date(timestamp.getTime() + IST_OFFSET_MS);
+            // Parse timestamp with timezone - Apple format: "2026-04-23 07:28:33 +0530"
+            // JavaScript Date constructor handles the timezone offset correctly
+            const timestamp = new Date(startDateStr);
             
             // Check if within workout time range
-            if (timestampIST >= startTime && timestampIST <= endTime) {
+            if (timestamp >= startTime && timestamp <= endTime) {
               const heartRate = parseFloat(valueStr);
               
               if (!isNaN(heartRate) && heartRate > 0) {
                 readings.push({
-                  timestamp: timestampIST,
+                  timestamp: timestamp,
                   heartRate: Math.round(heartRate),
                 });
                 matchedCount++;
                 
                 // Debug first few readings
                 if (matchedCount <= 5) {
-                  console.log(`🍎 HR Reading ${matchedCount}: ${timestampIST.toISOString()} → ${heartRate} BPM`);
+                  console.log(`🍎 HR Reading ${matchedCount}: ${timestamp.toISOString()} → ${heartRate} BPM`);
                 }
               }
             }

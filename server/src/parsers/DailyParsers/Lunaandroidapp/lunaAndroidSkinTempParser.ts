@@ -197,13 +197,18 @@ export class LunaAndroidSkinTempParser {
         for (let idx = 0; idx < entry.tempValues.length; idx++) {
           const rawTempValue = entry.tempValues[idx];
 
+          // Skip zero values (invalid/missing sensor data)
+          if (rawTempValue === 0) {
+            continue;
+          }
+
           // Calculate timestamp (each reading is 'frequency' MINUTES apart for SkinTemp)
           const timestamp = new Date(baseDate.getTime() + idx * entry.frequency * 60 * 1000);
 
           // Debug: Log first few timestamps
           if (idx < 3) {
             console.log(`  Sample timestamp [${idx}]: ${timestamp.toISOString()}`);
-            console.log(`    Raw value: ${rawTempValue}, Celsius: ${rawTempValue > 0 ? (rawTempValue / 100).toFixed(2) : 0}°C`);
+            console.log(`    Raw value: ${rawTempValue}, Celsius: ${(rawTempValue / 100).toFixed(2)}°C`);
           }
 
           // Filter by session time range
@@ -215,11 +220,10 @@ export class LunaAndroidSkinTempParser {
           inRangeCount++;
 
           // Convert raw value to Celsius (divide by 100)
-          // Raw value 0 is kept as 0°C (user requested to include 0 values)
           const tempCelsius = rawTempValue / 100;
-          const isValid = true; // All readings are valid including 0°C
+          const isValid = true;
 
-          if (tempCelsius > 0) validCount++;
+          validCount++;
 
           // Create normalized reading
           const reading: NormalizedReadingInput = {
@@ -241,7 +245,7 @@ export class LunaAndroidSkinTempParser {
           normalizedReadings.push(reading);
         }
 
-        console.log(`  ✅ Readings in range: ${inRangeCount} (${validCount} with temp > 0)`);
+        console.log(`  ✅ Readings in range: ${inRangeCount} (zero values filtered out)`);
         console.log(`  ⏭️  Readings out of range: ${outRangeCount}`);
       }
 

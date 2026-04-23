@@ -94,6 +94,12 @@ const SPORT_TYPES: Record<number, { name: string; icon: typeof Activity; color: 
   213: { name: 'Soccer', icon: Dribbble, color: 'text-green-600' },
   214: { name: 'Cricket', icon: Dribbble, color: 'text-green-500' },
   230: { name: 'Basketball', icon: Dribbble, color: 'text-orange-600' },
+  256: { name: 'Golf', icon: Target, color: 'text-green-700' },
+  257: { name: 'Soccer', icon: Dribbble, color: 'text-green-600' },
+  258: { name: 'Badminton', icon: Target, color: 'text-lime-500' },
+  259: { name: 'Tennis', icon: Target, color: 'text-yellow-600' },
+  262: { name: 'Cricket', icon: Dribbble, color: 'text-green-500' },
+  265: { name: 'Basketball', icon: Dribbble, color: 'text-orange-600' },
   
   // Dancing
   47: { name: 'Ballet', icon: Music, color: 'text-pink-400' },

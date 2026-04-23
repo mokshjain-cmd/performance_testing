@@ -35,6 +35,7 @@ export class WorkoutAnalysisService {
   ): Promise<void> {
     try {
       console.log(`[WorkoutAnalysisService] Analyzing session: ${sessionId}`);
+      console.log(`[WorkoutAnalysisService] 📊 benchmarkWorkoutMeta:`, JSON.stringify(benchmarkWorkoutMeta, null, 2));
       
       const sessionObjId = new Types.ObjectId(sessionId);
       
@@ -71,6 +72,10 @@ export class WorkoutAnalysisService {
         
         if (benchmarkReadings.length > 0) {
           console.log(`[WorkoutAnalysisService] Found ${benchmarkReadings.length} ${benchmarkDeviceType} readings`);
+          console.log(`[WorkoutAnalysisService] 📊 Comparison data:`);
+          console.log(`   - Luna: calories=${parsedWorkout.summary.calories}, distance=${parsedWorkout.summary.distance}m, steps=${parsedWorkout.summary.steps}`);
+          console.log(`   - Benchmark: calories=${benchmarkWorkoutMeta?.activeCalories || 'N/A'}, distance=${benchmarkWorkoutMeta?.distance || 'N/A'}m, steps=${benchmarkWorkoutMeta?.steps || 'N/A'}`);
+          
           benchmarkComparison = this.computeBenchmarkComparison(
             lunaReadings,
             benchmarkReadings,
@@ -84,6 +89,15 @@ export class WorkoutAnalysisService {
               benchmarkSteps: benchmarkWorkoutMeta?.steps,
             }
           );
+          
+          console.log(`[WorkoutAnalysisService] ✅ Benchmark comparison computed:`, {
+            hrMae: benchmarkComparison.hrMae,
+            hrMape: benchmarkComparison.hrMape,
+            overlapCount: benchmarkComparison.overlapCount,
+            hasBenchmarkCalories: benchmarkComparison.benchmarkCalories !== undefined,
+            hasBenchmarkDistance: benchmarkComparison.benchmarkDistance !== undefined,
+            hasBenchmarkSteps: benchmarkComparison.benchmarkSteps !== undefined,
+          });
         }
       }
       
@@ -278,19 +292,33 @@ export class WorkoutAnalysisService {
       }
     });
     
-    // Find overlapping timestamps (within 1 second tolerance)
+    // Find nearest timestamps within tolerance window
+    const TOLERANCE_SECONDS = 5;
     const pairs: Array<{ luna: number; benchmark: number }> = [];
+    const benchmarkArray = Array.from(benchmarkMap.entries());
+    const usedBenchmarkTs = new Set<number>();
     
     for (const [lunaTs, lunaHr] of lunaMap) {
-      // Try exact match first
-      if (benchmarkMap.has(lunaTs)) {
-        pairs.push({ luna: lunaHr, benchmark: benchmarkMap.get(lunaTs)! });
-      } else if (benchmarkMap.has(lunaTs - 1)) {
-        pairs.push({ luna: lunaHr, benchmark: benchmarkMap.get(lunaTs - 1)! });
-      } else if (benchmarkMap.has(lunaTs + 1)) {
-        pairs.push({ luna: lunaHr, benchmark: benchmarkMap.get(lunaTs + 1)! });
+      let closestTs: number | null = null;
+      let minDiff = Infinity;
+      
+      // Find closest benchmark reading within tolerance
+      for (const [benchTs] of benchmarkArray) {
+        if (usedBenchmarkTs.has(benchTs)) continue; // Avoid duplicate matches
+        const diff = Math.abs(benchTs - lunaTs);
+        if (diff <= TOLERANCE_SECONDS && diff < minDiff) {
+          minDiff = diff;
+          closestTs = benchTs;
+        }
+      }
+      
+      if (closestTs !== null) {
+        pairs.push({ luna: lunaHr, benchmark: benchmarkMap.get(closestTs)! });
+        usedBenchmarkTs.add(closestTs);
       }
     }
+    
+    console.log(`[WorkoutAnalysisService] Matched ${pairs.length}/${lunaMap.size} Luna readings with benchmark (tolerance: ${TOLERANCE_SECONDS}s)`);
     
     if (pairs.length === 0) {
       console.warn(`[WorkoutAnalysisService] No overlapping readings found for comparison`);

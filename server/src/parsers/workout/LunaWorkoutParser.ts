@@ -89,7 +89,8 @@ export class LunaWorkoutParser {
             if (workoutDateStr === targetDateStr) {
               // Store by workoutId - later entries override earlier (deduplication)
               workoutsMap.set(workout.workoutId, workout);
-              console.log(`[LunaWorkoutParser] Found workout: ${workout.workoutId}, sportType: ${workout.sportType}, duration: ${workout.durationSec}s`);
+              console.log(`[LunaWorkoutParser] Found workout: ${workout.workoutId}, sportType: ${workout.sportType}, ` +
+                `startTime: ${workout.startTime.toISOString()}, endTime: ${workout.endTime.toISOString()}, duration: ${workout.durationSec}s`);
             }
           }
         } catch (parseError) {
@@ -126,18 +127,16 @@ export class LunaWorkoutParser {
       
       const sportType = getNumber('recordPointSportType');
       const startTimeMs = getNumber('reportSportStartTime');
-      const endTimeMs = getNumber('reportSportEndTime');
       const durationSec = getNumber('reportDuration');
       
-      if (!startTimeMs || !endTimeMs) {
-        console.warn(`[LunaWorkoutParser] Missing start/end time for workout ${workoutId}`);
+      if (!startTimeMs) {
+        console.warn(`[LunaWorkoutParser] Missing start time for workout ${workoutId}`);
         return null;
       }
       
-      // Add 5:30 hours (IST offset) to convert to proper IST timestamps
-      const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000; // 5 hours 30 minutes in milliseconds
-      const startTimeIST = startTimeMs + IST_OFFSET_MS;
-      const endTimeIST = endTimeMs + IST_OFFSET_MS;
+      // Luna timestamps are already in UTC, use them directly
+      const startTimeUTC = startTimeMs;
+      const endTimeUTC = startTimeMs + (durationSec * 1000);
       
       // Parse summary fields
       const summary = {
@@ -167,13 +166,13 @@ export class LunaWorkoutParser {
       // Parse ringPointData array using startTimeIST as base
       // Note: pointTime in ringPointData is bugged (+30s increments instead of +1s)
       // We use index-based calculation instead: startTime + (index * 1 second)
-      const readings = this.parseRingPointData(line, startTimeIST);
+      const readings = this.parseRingPointData(line, startTimeUTC);
       
       return {
         workoutId,
         sportType,
-        startTime: new Date(startTimeIST),
-        endTime: new Date(endTimeIST),
+        startTime: new Date(startTimeUTC),
+        endTime: new Date(endTimeUTC),
         durationSec,
         summary,
         readings,
@@ -194,7 +193,7 @@ export class LunaWorkoutParser {
    * timestamps instead: timestamp = startTimeMs + (index * 1000ms)
    * 
    * @param line The workout log line
-   * @param startTimeMs The workout start time in milliseconds (IST-adjusted)
+   * @param startTimeMs The workout start time in milliseconds (UTC)
    */
   private static parseRingPointData(line: string, startTimeMs: number): IParsedWorkout['readings'] {
     const readings: IParsedWorkout['readings'] = [];

@@ -94,7 +94,13 @@ export class AppleHealthActivityParser {
     console.log(`[AppleHealthActivityParser] Parsing activity records from: ${this.xmlFilePath}`);
     console.log(`[AppleHealthActivityParser] 📱 Filtering: Accept Apple Watch records, Reject iPhone records`);
     if (startDate && endDate) {
-      console.log(`[AppleHealthActivityParser] 📅 Date range: ${startDate.toISOString().split('T')[0]} to ${endDate.toISOString().split('T')[0]}`);
+      // Show both UTC and the date string we'll use for comparison
+      const targetYear = startDate.getUTCFullYear();
+      const targetMonth = String(startDate.getUTCMonth() + 1).padStart(2, '0');
+      const targetDay = String(startDate.getUTCDate()).padStart(2, '0');
+      const targetDateStr = `${targetYear}-${targetMonth}-${targetDay}`;
+      console.log(`[AppleHealthActivityParser] 📅 Session startDate: ${startDate.toISOString()}`);
+      console.log(`[AppleHealthActivityParser] 📅 Looking for records with date: ${targetDateStr}`);
     }
     
     const dataPoints: ActivityDataPoint[] = [];
@@ -127,7 +133,7 @@ export class AppleHealthActivityParser {
       }
 
       // Only process Apple Watch records
-      if (!line.includes("Apple") || !line.includes("Watch") || !line.includes("WHOOP")) {
+      if (!line.includes("Apple") || !line.includes("Watch")) {
         continue;
       }
 
@@ -139,9 +145,22 @@ export class AppleHealthActivityParser {
               const record = this.parseRecordLine(line, type);
 
               // Filter by date if provided (compare date portion only)
+              // Use the record's local date (from Apple Health) and compare with session date
               if (startDate && endDate) {
-                const targetDateStr = startDate.toISOString().split('T')[0];
-                const recordDateStr = record.date; // Already in YYYY-MM-DD format
+                // Get session date in local format (YYYY-MM-DD) 
+                // Apple Health stores dates in local time, so we need to match that
+                const sessionYear = startDate.getUTCFullYear();
+                const sessionMonth = String(startDate.getUTCMonth() + 1).padStart(2, '0');
+                const sessionDay = String(startDate.getUTCDate()).padStart(2, '0');
+                const targetDateStr = `${sessionYear}-${sessionMonth}-${sessionDay}`;
+                
+                const recordDateStr = record.date; // Already in YYYY-MM-DD format from Apple Health
+                
+                // Debug log first few lines
+                if (lineNumber < 50000 && lineNumber % 10000 === 0) {
+                  console.log(`[AppleHealthActivityParser] DEBUG: Record date=${recordDateStr}, Target date=${targetDateStr}`);
+                }
+                
                 if (recordDateStr !== targetDateStr) continue;
               }
 
@@ -192,10 +211,16 @@ export class AppleHealthActivityParser {
       throw new Error('Invalid record line');
     }
 
+    // Parse the full date string including timezone to get correct UTC time
+    // Format: "2026-04-23 12:46:29 +0530"
     const startDate = new Date(startDateMatch[1]);
     
-    // Extract date in YYYY-MM-DD format from startDate
-    const date = startDateMatch[1].split(' ')[0];
+    // Extract date in YYYY-MM-DD format from UTC representation
+    // This ensures consistency with session dates which are stored in UTC
+    const year = startDate.getUTCFullYear();
+    const month = String(startDate.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(startDate.getUTCDate()).padStart(2, '0');
+    const date = `${year}-${month}-${day}`;
 
     return {
       type,

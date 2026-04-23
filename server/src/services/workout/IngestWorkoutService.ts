@@ -107,6 +107,14 @@ export class IngestWorkoutService {
       workoutDate
     );
     
+    // Log each Luna workout found with start/end times
+    console.log(`[IngestWorkoutService] Found ${parsedWorkouts.length} Luna workouts`);
+    parsedWorkouts.forEach((workout, idx) => {
+      console.log(`[IngestWorkoutService]   Luna Workout #${idx + 1}: ${workout.workoutId}, sportType: ${workout.sportType}, ` +
+        `startTime: ${workout.startTime.toISOString()}, endTime: ${workout.endTime.toISOString()}, ` +
+        `duration: ${workout.durationSec}s (${(workout.durationSec / 60).toFixed(1)}min)`);
+    });
+    
     if (parsedWorkouts.length === 0) {
       console.log(`[IngestWorkoutService] No workouts found for ${workoutDate.toISOString().split('T')[0]}`);
       result.status = 'completed';
@@ -269,8 +277,11 @@ export class IngestWorkoutService {
         }
         
         if (benchmarkFilePath) {
-          const minStartTime = new Date(Math.min(...parsedWorkouts.map(w => w.startTime.getTime())) - 3600000);
-          const maxEndTime = new Date(Math.max(...parsedWorkouts.map(w => w.endTime.getTime())) + 3600000);
+          // Add 15 minute buffer on each side (devices are well synchronized, typically <1 min drift)
+          const minStartTime = new Date(Math.min(...parsedWorkouts.map(w => w.startTime.getTime())) - 900000);
+          const maxEndTime = new Date(Math.max(...parsedWorkouts.map(w => w.endTime.getTime())) + 900000);
+          
+          console.log(`[IngestWorkoutService] Apple filter window: ${minStartTime.toISOString()} to ${maxEndTime.toISOString()}`);
           
           appleWorkouts = await AppleHealthWorkoutParser.parseWorkouts(
             benchmarkFilePath,
@@ -278,6 +289,14 @@ export class IngestWorkoutService {
             maxEndTime
           );
           console.log(`[IngestWorkoutService] Found ${appleWorkouts.length} Apple workouts in time range`);
+          
+          // Log each Apple workout with start/end times
+          appleWorkouts.forEach((workout, idx) => {
+            const duration = workout.durationMin ? workout.durationMin.toFixed(1) : workout.durationSec ? (workout.durationSec / 60).toFixed(1) : 'N/A';
+            console.log(`[IngestWorkoutService]   Apple Workout #${idx + 1}: ${workout.workoutActivityType}, ` +
+              `startTime: ${workout.startTime.toISOString()}, endTime: ${workout.endTime.toISOString()}, ` +
+              `duration: ${duration}min`);
+          });
         }
       }
       
@@ -329,8 +348,8 @@ export class IngestWorkoutService {
         }
         
         if (benchmarkFilePath) {
-          const minStartTime = new Date(Math.min(...parsedWorkouts.map(w => w.startTime.getTime())) - 3600000);
-          const maxEndTime = new Date(Math.max(...parsedWorkouts.map(w => w.endTime.getTime())) + 3600000);
+          const minStartTime = new Date(Math.min(...parsedWorkouts.map(w => w.startTime.getTime())) - 900000);
+          const maxEndTime = new Date(Math.max(...parsedWorkouts.map(w => w.endTime.getTime())) + 900000);
           
           try {
             whoopWorkouts = await WhoopWorkoutParser.parseWorkouts(
@@ -356,6 +375,8 @@ export class IngestWorkoutService {
           
           // Match Apple workout
           if (appleWorkouts.length > 0 && benchmarkDeviceType === 'apple' && benchmarkFilePath) {
+            console.log(`[IngestWorkoutService] Matching Luna workout: ${workout.startTime.toISOString()} - ${workout.endTime.toISOString()}`);
+            
             const match = AppleHealthWorkoutParser.findMatchingWorkout(
               appleWorkouts,
               workout.startTime,
@@ -364,10 +385,17 @@ export class IngestWorkoutService {
             );
             
             if (match) {
+              const timeDiff = (match.workout.startTime.getTime() - workout.startTime.getTime()) / 60000;
+              console.log(`[IngestWorkoutService] ✅ Matched Apple workout: ${match.workout.startTime.toISOString()} - ${match.workout.endTime.toISOString()}`);
+              console.log(`[IngestWorkoutService]    Overlap: ${match.overlapPercent.toFixed(1)}%, Time diff: ${timeDiff.toFixed(1)} minutes`);
+              console.log(`[IngestWorkoutService]    Apple stats - Calories: ${match.workout.activeCalories || 'N/A'}, Distance: ${match.workout.distance ? (match.workout.distance/1000).toFixed(2) + 'km' : 'N/A'}, Steps: ${match.workout.steps || 'N/A'}`);
+              console.log(`[IngestWorkoutService]    Luna stats  - Calories: ${workout.summary.calories}, Distance: ${(workout.summary.distance/1000).toFixed(2)}km, Steps: ${workout.summary.steps}`);
+              
               benchmarkWorkoutMeta = {
                 activeCalories: match.workout.activeCalories,
                 totalCalories: match.workout.totalCalories,
                 distance: match.workout.distance,
+                steps: match.workout.steps,
               };
               
               // Process Apple HR data
@@ -378,8 +406,8 @@ export class IngestWorkoutService {
                 benchmarkFilePath,
                 benchmarkDeviceType
               );
-              
-              console.log(`[IngestWorkoutService] Matched Apple workout: ${match.overlapPercent.toFixed(1)}% overlap`);
+            } else {
+              console.log(`[IngestWorkoutService] ❌ No matching Apple workout found for Luna workout at ${workout.startTime.toISOString()}`);
             }
           }
           

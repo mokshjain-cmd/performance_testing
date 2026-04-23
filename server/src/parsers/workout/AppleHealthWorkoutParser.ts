@@ -17,6 +17,7 @@ export interface IAppleWorkout {
   totalCalories?: number;       // kcal (if available)
   distance?: number;            // meters
   distanceUnit?: string;        // original unit
+  steps?: number;               // step count
   
   // Source info
   sourceName: string;
@@ -139,6 +140,8 @@ export class AppleHealthWorkoutParser {
       
       let lineCount = 0;
       let workoutCount = 0;
+      let totalWorkoutsProcessed = 0;
+      let totalWorkouts2026 = 0;
       let currentWorkout: Partial<IAppleWorkout> | null = null;
       let inWorkoutBlock = false;
       let workoutBuffer = '';
@@ -146,10 +149,11 @@ export class AppleHealthWorkoutParser {
       rl.on('line', (line: string) => {
         lineCount++;
         
-        // Start of a Workout element
-        if (line.includes('<Workout')) {
+        // Start of a Workout element (but NOT WorkoutStatistics or WorkoutEvent or WorkoutRoute)
+        if (line.includes('<Workout') && !line.includes('<WorkoutStatistics') && !line.includes('<WorkoutEvent') && !line.includes('<WorkoutRoute')) {
           inWorkoutBlock = true;
           workoutBuffer = line;
+          console.log(`[AppleHealthWorkoutParser] 🏋️ Starting workout block at line ${lineCount}`);
           
           // Check if workout ends on same line
           if (line.includes('</Workout>') || (line.includes('/>') && !line.includes('<WorkoutStatistics'))) {
@@ -165,6 +169,7 @@ export class AppleHealthWorkoutParser {
           } else {
             // Multi-line workout, parse the opening tag
             currentWorkout = this.parseWorkoutAttributes(workoutBuffer);
+            console.log(`[AppleHealthWorkoutParser] 📋 Parsed workout: type=${currentWorkout?.workoutActivityType || 'MISSING'}, sportType=${currentWorkout?.sportType}`);
           }
         }
         // Inside a workout block
@@ -172,24 +177,64 @@ export class AppleHealthWorkoutParser {
           workoutBuffer += ' ' + line.trim();
           
           // WorkoutStatistics element
-          if (line.includes('<WorkoutStatistics') && currentWorkout) {
-            this.parseWorkoutStatistics(line, currentWorkout);
+          if (line.includes('<WorkoutStatistics')) {
+            if (currentWorkout) {
+              console.log(`[AppleHealthWorkoutParser] 🔍 Processing WorkoutStatistics line: ${line.trim().substring(0, 100)}...`);
+              this.parseWorkoutStatistics(line, currentWorkout);
+            } else {
+              console.warn(`[AppleHealthWorkoutParser] ⚠️ Found WorkoutStatistics but currentWorkout is null!`);
+            }
           }
           
           // End of Workout element
           if (line.includes('</Workout>')) {
-            if (currentWorkout && this.isInTimeRange(currentWorkout, filterStartTime, filterEndTime)) {
-              // Fill in defaults
-              if (!currentWorkout.sportType) {
-                currentWorkout.sportType = 0;
-              }
-              workouts.push(currentWorkout as IAppleWorkout);
-              workoutCount++;
+            console.log(`[AppleHealthWorkoutParser] 🏁 Ending workout block at line ${lineCount}`);
+            if (currentWorkout) {
+              totalWorkoutsProcessed++;
+              const inRange = this.isInTimeRange(currentWorkout, filterStartTime, filterEndTime);
               
-              if (workoutCount <= 5) {
-                console.log(`[AppleHealthWorkoutParser] Found workout: ${currentWorkout.workoutActivityType}, ` +
-                  `start: ${currentWorkout.startTime?.toISOString()}, duration: ${currentWorkout.durationMin?.toFixed(1)}min, ` +
-                  `calories: ${currentWorkout.activeCalories || 0}kcal, distance: ${currentWorkout.distance || 0}m`);
+              // Only log workouts from 2026 (first 20 of them)
+              const year = currentWorkout.startTime?.getFullYear();
+              if (year === 2026) {
+                totalWorkouts2026++;
+                if (totalWorkouts2026 <= 20) {
+                  // Calculate duration if not present
+                  let duration = 'N/A';
+                  if (currentWorkout.durationMin) {
+                    duration = currentWorkout.durationMin.toFixed(1);
+                  } else if (currentWorkout.startTime && currentWorkout.endTime) {
+                    const durationMs = currentWorkout.endTime.getTime() - currentWorkout.startTime.getTime();
+                    duration = (durationMs / 60000).toFixed(1);
+                  }
+                  
+                  console.log(`[AppleHealthWorkoutParser] 2026 Workout #${totalWorkouts2026}: ${currentWorkout.workoutActivityType || 'Unknown'}, ` +
+                    `start: ${currentWorkout.startTime?.toISOString()}, end: ${currentWorkout.endTime?.toISOString()}, ` +
+                    `duration: ${duration}min, inRange: ${inRange}`);
+                }
+              }
+              
+              if (inRange) {
+                // Fill in defaults
+                if (!currentWorkout.sportType) {
+                  currentWorkout.sportType = 0;
+                }
+                
+                // Calculate durationMin from timestamps if not present
+                if (!currentWorkout.durationMin && currentWorkout.startTime && currentWorkout.endTime) {
+                  const durationMs = currentWorkout.endTime.getTime() - currentWorkout.startTime.getTime();
+                  currentWorkout.durationMin = durationMs / 60000;
+                  currentWorkout.durationSec = durationMs / 1000;
+                }
+                
+                workouts.push(currentWorkout as IAppleWorkout);
+                workoutCount++;
+                
+                // Log every workout that passes filter
+                const duration = currentWorkout.durationMin ? currentWorkout.durationMin.toFixed(1) : 'N/A';
+                console.log(`[AppleHealthWorkoutParser] ✅ Found workout #${workoutCount}: ${currentWorkout.workoutActivityType}, ` +
+                  `startTime: ${currentWorkout.startTime?.toISOString()}, endTime: ${currentWorkout.endTime?.toISOString()}, ` +
+                  `duration: ${duration}min`);
+                console.log(`[AppleHealthWorkoutParser]    📊 Stats: Calories=${currentWorkout.activeCalories || 'N/A'}, Distance=${currentWorkout.distance ? (currentWorkout.distance/1000).toFixed(2) + 'km' : 'N/A'}, Steps=${currentWorkout.steps || 'N/A'}`);
               }
             }
             
@@ -207,7 +252,9 @@ export class AppleHealthWorkoutParser {
       
       rl.on('close', () => {
         console.log(`[AppleHealthWorkoutParser] Parsing complete. Scanned ${lineCount} lines`);
-        console.log(`[AppleHealthWorkoutParser] Found ${workoutCount} workouts in time range`);
+        console.log(`[AppleHealthWorkoutParser] Total workouts in file: ${totalWorkoutsProcessed}`);
+        console.log(`[AppleHealthWorkoutParser] Total 2026 workouts: ${totalWorkouts2026}`);
+        console.log(`[AppleHealthWorkoutParser] Workouts in time range: ${workoutCount}`);
         resolve(workouts);
       });
       
@@ -333,7 +380,15 @@ export class AppleHealthWorkoutParser {
     const sumMatch = line.match(/sum="([^"]+)"/);
     const unitMatch = line.match(/unit="([^"]+)"/);
     
-    if (!typeMatch || !sumMatch) return;
+    console.log(`[AppleParser] 🔍 Parsing WorkoutStatistics:`);
+    console.log(`  - typeMatch: ${typeMatch ? typeMatch[1] : 'NULL'}`);
+    console.log(`  - sumMatch: ${sumMatch ? sumMatch[1] : 'NULL'}`);
+    console.log(`  - unitMatch: ${unitMatch ? unitMatch[1] : 'NULL'}`);
+    
+    if (!typeMatch || !sumMatch) {
+      console.warn(`[AppleParser] ⚠️ Missing required attributes (type or sum)`);
+      return;
+    }
     
     const type = typeMatch[1];
     const sum = parseFloat(sumMatch[1]);
@@ -341,11 +396,17 @@ export class AppleHealthWorkoutParser {
     
     if (type === 'HKQuantityTypeIdentifierActiveEnergyBurned') {
       workout.activeCalories = sum;
+      console.log(`[AppleParser] ✅ Parsed ActiveCalories: ${sum} kcal`);
     } else if (type === 'HKQuantityTypeIdentifierBasalEnergyBurned') {
       // If we have both, calculate total
       if (workout.activeCalories) {
         workout.totalCalories = workout.activeCalories + sum;
+        console.log(`[AppleParser] ✅ Parsed TotalCalories: ${workout.totalCalories} kcal (Active: ${workout.activeCalories}, Basal: ${sum})`);
       }
+    } else if (type === 'HKQuantityTypeIdentifierStepCount') {
+      // Parse step count
+      workout.steps = Math.round(sum);
+      console.log(`[AppleParser] ✅ Parsed Steps: ${workout.steps}`);
     } else if (type === 'HKQuantityTypeIdentifierDistanceWalkingRunning' ||
                type === 'HKQuantityTypeIdentifierDistanceCycling' ||
                type === 'HKQuantityTypeIdentifierDistanceSwimming') {
@@ -361,6 +422,7 @@ export class AppleHealthWorkoutParser {
         // Assume kilometers if unit not recognized
         workout.distance = sum * 1000;
       }
+      console.log(`[AppleParser] ✅ Parsed Distance: ${workout.distance}m (${sum} ${unit})`);
     }
   }
   
@@ -372,20 +434,32 @@ export class AppleHealthWorkoutParser {
   }
   
   /**
-   * Parse Apple Health date format with IST offset
-   * Input: "2022-03-16 11:01:29 +0800"
-   * We ignore timezone and treat as local time, then apply IST offset (+5:30)
+   * Parse Apple Health date format using the embedded timezone
+   * Input: "2026-04-23 08:00:10 +0530"
+   * Output: Date object representing that exact moment in time
    */
   private static parseAppleDate(dateStr: string): Date {
-    // Extract date and time parts (ignore timezone)
-    const dateTimePart = dateStr.substring(0, 19); // "2022-03-16 11:01:29"
+    // Format: "2026-04-23 08:00:10 +0530"
+    // Convert to ISO format: "2026-04-23T08:00:10+05:30"
+    const dateTimePart = dateStr.substring(0, 19); // "2026-04-23 08:00:10"
+    const tzPart = dateStr.substring(20).trim();   // "+0530"
     
-    // Parse as UTC to preserve the clock time
-    const timestamp = new Date(dateTimePart.replace(' ', 'T') + 'Z');
+    // Convert timezone from "+0530" to "+05:30" format
+    let tzFormatted = tzPart;
+    if (tzPart.length === 5 && !tzPart.includes(':')) {
+      tzFormatted = tzPart.slice(0, 3) + ':' + tzPart.slice(3); // "+05:30"
+    }
     
-    // Add IST offset (5.5 hours)
-    const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
-    return new Date(timestamp.getTime() + IST_OFFSET_MS);
+    // Build ISO string and parse
+    const isoString = dateTimePart.replace(' ', 'T') + tzFormatted;
+    const parsedDate = new Date(isoString);
+    
+    // Log first few parses to debug
+    if (Math.random() < 0.001) {
+      console.log(`[AppleHealthWorkoutParser] Date parse: "${dateStr}" -> "${isoString}" -> ${parsedDate.toISOString()}`);
+    }
+    
+    return parsedDate;
   }
   
   /**
