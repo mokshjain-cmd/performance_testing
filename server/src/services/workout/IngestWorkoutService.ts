@@ -51,10 +51,10 @@ interface IWorkoutSessionInfo {
 export class IngestWorkoutService {
   
   /**
-   * Main entry point: Ingest workout day data (ASYNC - returns quickly)
+   * Main entry point: Ingest workout day data (SYNC - waits for full processing)
    * 
-   * Phase 1 (Sync): Parse Luna log, create sessions, return session IDs immediately
-   * Phase 2 (Async): Process readings, benchmark data, run analysis in background
+   * Phase 1: Parse Luna log, create session records
+   * Phase 2: Process readings, benchmark data, run analysis (all awaited before returning)
    * 
    * @param userId - User ID
    * @param workoutDate - Target date to extract workouts for
@@ -74,7 +74,7 @@ export class IngestWorkoutService {
     mobileType?: string
   ): Promise<IWorkoutIngestionResult> {
     console.log('\n🏋️🏋️🏋️ ============================================');
-    console.log('🏋️ WORKOUT INGESTION SERVICE (ASYNC MODE)');
+    console.log('🏋️ WORKOUT INGESTION SERVICE (SYNC MODE)');
     console.log('🏋️🏋️🏋️ ============================================');
     console.log('📊 Received Parameters:');
     console.log('   - userId:', userId);
@@ -90,8 +90,8 @@ export class IngestWorkoutService {
       sessionsCreated: 0,
       sessionIds: [],
       workouts: [],
-      status: 'processing',
-      message: 'Workout sessions created. Processing in background...',
+      status: 'completed',
+      message: 'Workout sessions created and fully processed.',
     };
     
     // Get Luna device
@@ -152,9 +152,8 @@ export class IngestWorkoutService {
       }
     }
     
-    // PHASE 2: Process readings, benchmark, analysis in background (async)
-    // This runs AFTER we return the response to the user
-    this.processWorkoutSessionsAsync(
+    // PHASE 2: Process readings, benchmark, analysis (sync - wait for completion)
+    await this.processWorkoutSessionsAsync(
       userId,
       workoutDate,
       firmwareVersion,
@@ -163,11 +162,9 @@ export class IngestWorkoutService {
       benchmarkDeviceType,
       sessionInfos,
       parsedWorkouts
-    ).catch(err => {
-      console.error('[IngestWorkoutService] Background processing error:', err);
-    });
+    );
     
-    console.log(`[IngestWorkoutService] Returning immediately with ${result.sessionsCreated} sessions - processing continues in background`);
+    console.log(`[IngestWorkoutService] Completed processing ${result.sessionsCreated} workout sessions`);
     
     return result;
   }
