@@ -300,18 +300,19 @@ export class PolarWorkoutParser {
     const timeStr = getVal('Start time') || '';    // 10:41:10
     const durationStr = getVal('Duration') || '';  // 00:29:06
     
-    // Parse start time - Polar time is already in IST
-    // Store as UTC-equivalent (same as Luna approach) so times align for comparison
+    // Parse start time - Polar time is in IST, convert to actual UTC
     let startTime: Date | undefined;
     let endTime: Date | undefined;
     let durationSec = 0;
     
     if (dateStr && timeStr) {
-      // Polar CSV time is already IST - store directly as UTC for comparison with Luna
-      // Luna applies IST offset so its timestamps show IST values as UTC
-      // We do the same here: 15:33:26 IST becomes 15:33:26.000Z
-      const dateTimeStr = `${dateStr}T${timeStr}Z`; // Treat as UTC directly
-      startTime = new Date(dateTimeStr);
+      // Polar CSV time is in IST - parse as UTC temporarily then subtract IST offset
+      const dateTimeStr = `${dateStr}T${timeStr}Z`; // Parse as if UTC
+      const istTime = new Date(dateTimeStr);
+      
+      // Subtract IST offset (5.5 hours) to get actual UTC
+      const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+      startTime = new Date(istTime.getTime() - IST_OFFSET_MS);
     }
     
     // Parse duration (HH:MM:SS)
