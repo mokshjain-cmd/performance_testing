@@ -172,8 +172,8 @@ async function extractAppleWatchHRRecordsStreaming(
 
           // Normalize source name to handle non-breaking spaces
           const normalizedSource = sourceName.replace(/\xa0/g, ' ').replace(/\u00A0/g, ' ');
-          const isAppleWatch = normalizedSource.includes('Apple Watch');
-
+          const isAppleWatch = normalizedSource.includes('Apple Watch') ||  true;
+          //console.log("sourceName:", sourceName, "→ isAppleWatch:", isAppleWatch);
           if (isAppleWatch) {
             // Parse datetime (format: "2026-03-02 14:18:42 +0530" or "2026-03-02 14:18:42 -0800")
             // Extract just the date and time portion (ignoring timezone)
@@ -537,7 +537,7 @@ export async function extractHRForWorkoutComparison(
         const sourceNameMatch = line.match(/sourceName="([^"]+)"/);
         const startDateMatch = line.match(/startDate="([^"]+)"/);
         const valueMatch = line.match(/value="([^"]+)"/);
-        
+        console.log(`🍎 DEBUG Line ${lineCount}: Found HR record - sourceName: ${sourceNameMatch ? sourceNameMatch[1] : 'N/A'}, startDate: ${startDateMatch ? startDateMatch[1] : 'N/A'}, value: ${valueMatch ? valueMatch[1] : 'N/A'}`);
         if (sourceNameMatch && startDateMatch && valueMatch) {
           const sourceName = sourceNameMatch[1];
           const startDateStr = startDateMatch[1];
@@ -545,7 +545,8 @@ export async function extractHRForWorkoutComparison(
           
           // Check if from Apple Watch
           const normalizedSource = sourceName.replace(/\xa0/g, ' ').replace(/\u00A0/g, ' ');
-          const isAppleWatch = normalizedSource.includes('Apple Watch');
+          const isAppleWatch = normalizedSource.includes('Apple Watch') || true;
+          console.log("🍎 DEBUG Record source:", sourceName, "→ isAppleWatch:", isAppleWatch);
           
           if (isAppleWatch) {
             // Parse timestamp - extract datetime part and add IST offset

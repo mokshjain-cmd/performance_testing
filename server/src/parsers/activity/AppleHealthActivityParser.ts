@@ -127,7 +127,7 @@ export class AppleHealthActivityParser {
       }
 
       // Only process Apple Watch records
-      if (!line.includes("Apple") || !line.includes("Watch")) {
+      if (!line.includes("Apple") || !line.includes("Watch") || !line.includes("WHOOP")) {
         continue;
       }
 
