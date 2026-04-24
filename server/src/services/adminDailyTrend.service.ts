@@ -47,6 +47,7 @@ export async function updateAdminDailyTrend(
         },
         isValid: true,
         metric,
+        benchmarkDeviceType: { $ne: null, $exists: true },
       });
       
       // Filter by firmware version
@@ -63,6 +64,7 @@ export async function updateAdminDailyTrend(
         },
         isValid: true,
         metric,
+        benchmarkDeviceType: { $ne: null, $exists: true },
       });
     }
   } else {
@@ -74,6 +76,7 @@ export async function updateAdminDailyTrend(
       },
       isValid: true,
       metric,
+      benchmarkDeviceType: { $ne: null, $exists: true },
     });
   }
 

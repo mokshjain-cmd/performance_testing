@@ -26,6 +26,7 @@ export class ActivitySummaryService {
         userId,
         metric: { $in: ["Activity"] },
         isValid: true,
+        benchmarkDeviceType: { $ne: null, $exists: true },
       });
 
       // If no sessions remain, delete the UserAccuracySummary document for Activity metric
@@ -554,6 +555,7 @@ export class ActivitySummaryService {
         metric: "Activity",
         isValid: true,
         startTime: { $gte: startOfDay, $lte: endOfDay },
+        benchmarkDeviceType: { $ne: null, $exists: true },
       });
 
       const sessionIds = sessions.map((s) => s._id);
@@ -706,6 +708,7 @@ export class ActivitySummaryService {
         isValid: true,
         "devices.firmwareVersion": firmwareVersion,
         "devices.deviceType": "luna",
+        benchmarkDeviceType: { $ne: null, $exists: true },
       });
 
       const sessionIds = sessions.map((s) => s._id);

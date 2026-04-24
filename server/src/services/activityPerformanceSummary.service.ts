@@ -14,6 +14,7 @@ export async function updateActivityPerformanceSummary(activityType: string) {
     activityType,
     metric: 'HR',
     isValid: true,
+    benchmarkDeviceType: { $ne: null, $exists: true },
   });
 
   if (sessions.length === 0) {

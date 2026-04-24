@@ -83,6 +83,7 @@ export class AdminActivitySummaryService {
       const allSessions = await Session.find({
         metric: "Activity",
         isValid: true,
+        benchmarkDeviceType: { $ne: null, $exists: true },
       });
 
       // Filter sessions by firmware version
@@ -295,6 +296,7 @@ export class AdminActivitySummaryService {
         userId,
         metric: "Activity",
         isValid: true,
+        benchmarkDeviceType: { $ne: null, $exists: true },
       }).sort({ createdAt: -1 });
 
       // Transform activityOverview to match frontend expectations
@@ -362,6 +364,7 @@ export class AdminActivitySummaryService {
         userId,
         metric: "Activity",
         isValid: true,
+        benchmarkDeviceType: { $ne: null, $exists: true },
       });
 
       const sessionIds = sessions.map((s: any) => s._id);
@@ -458,6 +461,7 @@ export class AdminActivitySummaryService {
         userId,
         metric: "Activity",
         isValid: true,
+        benchmarkDeviceType: { $ne: null, $exists: true },
       });
 
       const sessionIds = sessions.map((s: any) => s._id);

@@ -218,6 +218,7 @@ export class AdminSleepSummaryService {
           const allSessions = await Session.find({
             metric: "Sleep",
             isValid: true,
+            benchmarkDeviceType: { $ne: null, $exists: true },
           });
           
           // Filter sessions by firmware version
@@ -230,6 +231,7 @@ export class AdminSleepSummaryService {
           sessions = await Session.find({
             metric: "Sleep",
             isValid: true,
+            benchmarkDeviceType: { $ne: null, $exists: true },
           });
         }
       } else {
@@ -237,6 +239,7 @@ export class AdminSleepSummaryService {
         sessions = await Session.find({
           metric: "Sleep",
           isValid: true,
+          benchmarkDeviceType: { $ne: null, $exists: true },
         });
       }
 
@@ -374,6 +377,7 @@ export class AdminSleepSummaryService {
       const sessions = await Session.find({
         metric: "Sleep",
         isValid: true,
+        benchmarkDeviceType: { $ne: null, $exists: true },
       });
 
       // Group by firmware version
@@ -477,6 +481,7 @@ export class AdminSleepSummaryService {
       const sessions = await Session.find({
         metric: "Sleep",
         isValid: true,
+        benchmarkDeviceType: { $ne: null, $exists: true },
       });
 
       // Group by benchmark device
@@ -579,6 +584,7 @@ export class AdminSleepSummaryService {
         userId,
         metric: "Sleep",
         isValid: true,
+        benchmarkDeviceType: { $ne: null, $exists: true },
       });
 
       if (sessions.length === 0) {
@@ -687,6 +693,7 @@ export class AdminSleepSummaryService {
         userId,
         metric: "Sleep",
         isValid: true,
+        benchmarkDeviceType: { $ne: null, $exists: true },
       });
 
       if (sessions.length === 0) {
@@ -792,6 +799,7 @@ export class AdminSleepSummaryService {
         userId,
         metric: "Sleep",
         isValid: true,
+        benchmarkDeviceType: { $ne: null, $exists: true },
       });
 
       const sessionIds = sessions.map((s) => s._id);
@@ -1043,6 +1051,7 @@ export class AdminSleepSummaryService {
         metric: "Sleep",
         isValid: true,
         ...(Object.keys(dateFilter).length > 0 ? { startTime: dateFilter } : {}),
+        benchmarkDeviceType: { $ne: null, $exists: true },
       }).sort({ startTime: 1 });
 
       const sessionIds = sessions.map((s) => s._id);
@@ -1124,6 +1133,7 @@ export class AdminSleepSummaryService {
         metric: "Sleep",
         isValid: true,
         ...(Object.keys(dateFilter).length > 0 ? { startTime: dateFilter } : {}),
+        benchmarkDeviceType: { $ne: null, $exists: true },
       }).sort({ startTime: 1 });
 
       if (sessions.length === 0) {

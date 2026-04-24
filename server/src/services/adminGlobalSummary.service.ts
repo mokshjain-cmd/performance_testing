@@ -38,6 +38,7 @@ export async function updateAdminGlobalSummary(
       const allSessions = await Session.find({
         isValid: true,
         metric,
+        benchmarkDeviceType: { $ne: null, $exists: true },
       });
       
       console.log(`[AdminGlobalSummary] 📊 Total valid sessions for ${metric}: ${allSessions.length}`);
@@ -62,7 +63,7 @@ export async function updateAdminGlobalSummary(
       console.log(`[AdminGlobalSummary] ✅ Sessions matching firmware "${latestFirmware}": ${sessions.length}`);
     } else {
       console.log(`[AdminGlobalSummary] ⚠️  No latest firmware configured for ${metric}, using all sessions`);
-      sessions = await Session.find({ isValid: true, metric });
+      sessions = await Session.find({ isValid: true, metric, benchmarkDeviceType: { $ne: null, $exists: true } });
       console.log(`[AdminGlobalSummary] 📊 Total sessions (no filter): ${sessions.length}`);
       
       // Extract firmware from most recent session if no config exists
@@ -81,7 +82,7 @@ export async function updateAdminGlobalSummary(
   } else {
     // Get all valid sessions for this metric
     console.log(`[AdminGlobalSummary] 🔓 Firmware filtering disabled, fetching all sessions`);
-    sessions = await Session.find({ isValid: true, metric });
+    sessions = await Session.find({ isValid: true, metric, benchmarkDeviceType: { $ne: null, $exists: true } });
     console.log(`[AdminGlobalSummary] 📊 Total sessions: ${sessions.length}`);
     
     // Extract firmware from most recent session
