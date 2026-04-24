@@ -128,6 +128,7 @@ export class UserSleepSummaryService {
         userId,
         metric: "Sleep",
         isValid: true,
+        benchmarkDeviceType: { $ne: null, $exists: true },
       });
 
       if (sessions.length === 0) {
@@ -390,6 +391,7 @@ export class UserSleepSummaryService {
         userId,
         metric: "Sleep",
         isValid: true,
+        benchmarkDeviceType: { $ne: null, $exists: true },
       }).sort({ startTime: 1 });
 
       const sessionIds = sessions.map((s) => s._id);

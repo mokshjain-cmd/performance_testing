@@ -11,7 +11,7 @@ import { Types } from 'mongoose';
  */
 export async function updateUserAccuracySummary(userId: Types.ObjectId | string, metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity' | 'SkinTemp' | 'Workout' = 'HR') {
   // Get all sessions for the user with this metric
-  const sessions = await Session.find({ userId, metric }).lean();
+  const sessions = await Session.find({ userId, metric, benchmarkDeviceType: { $ne: null, $exists: true } }).lean();
   
   // If no sessions remain, delete the UserAccuracySummary document
   if (!sessions.length) {

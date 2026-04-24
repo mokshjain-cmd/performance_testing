@@ -71,6 +71,7 @@ export class AdminSkinTempSummaryService {
       // Find all SkinTemp sessions
       const sessions = await Session.find({
         metric: "SkinTemp",
+        benchmarkDeviceType: { $ne: null, $exists: true },
       }).lean();
 
       if (sessions.length === 0) {
@@ -217,7 +218,7 @@ export class AdminSkinTempSummaryService {
    */
   static async getAccuracyTrend(startDate?: string, endDate?: string): Promise<ISkinTempTrendData[]> {
     try {
-      const query: any = { metric: "SkinTemp" };
+      const query: any = { metric: "SkinTemp", benchmarkDeviceType: { $ne: null, $exists: true } };
 
       if (startDate || endDate) {
         query.startTime = {};
@@ -344,6 +345,7 @@ export class AdminSkinTempSummaryService {
       // Find all SkinTemp sessions
       const sessions = await Session.find({
         metric: "SkinTemp",
+        benchmarkDeviceType: { $ne: null, $exists: true },
       }).lean();
 
       if (sessions.length === 0) {

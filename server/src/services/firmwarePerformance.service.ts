@@ -11,7 +11,7 @@ import { Types } from 'mongoose';
  */
 export async function updateFirmwarePerformanceForLuna(firmwareVersion: string, metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity' | 'SkinTemp' | 'Workout' = 'HR') {
   // Find all sessions and analyses for Luna with this firmware and metric
-  const sessions = await Session.find({ 'devices.deviceType': 'luna', 'devices.firmwareVersion': firmwareVersion, metric }).lean();
+  const sessions = await Session.find({ 'devices.deviceType': 'luna', 'devices.firmwareVersion': firmwareVersion, metric, benchmarkDeviceType: { $ne: null, $exists: true } }).lean();
   if (!sessions.length) return;
   const sessionIds = sessions.map(s => s._id);
   const analyses = await SessionAnalysis.find({ sessionId: { $in: sessionIds } }).lean();

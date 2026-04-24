@@ -97,6 +97,7 @@ export class UserSkinTempSummaryService {
       const sessions = await Session.find({
         userId,
         metric: "SkinTemp",
+        benchmarkDeviceType: { $ne: null, $exists: true },
       }).sort({ startTime: -1 }).lean();
 
       if (sessions.length === 0) {
@@ -297,6 +298,7 @@ export class UserSkinTempSummaryService {
       const sessions = await Session.find({
         userId,
         metric: "SkinTemp",
+        benchmarkDeviceType: { $ne: null, $exists: true },
       }).sort({ startTime: 1 }).lean();
 
       if (sessions.length === 0) {

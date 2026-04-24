@@ -433,6 +433,7 @@ export class UserActivitySummaryService {
         userId,
         metric: "Activity",
         isValid: true,
+        benchmarkDeviceType: { $ne: null, $exists: true },
       }).sort({ date: 1 });
 
       if (sessions.length === 0) {
