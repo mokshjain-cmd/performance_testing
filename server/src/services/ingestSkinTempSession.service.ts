@@ -4,7 +4,7 @@ import User from '../models/Users';
 import NormalizedReading from '../models/NormalizedReadings';
 import { LunaAndroidSkinTempParser } from '../parsers/DailyParsers/Lunaandroidapp';
 import { AppleHealthSkinTempParser, IAppleSkinTempRecord } from '../parsers/AppleHealthSkinTempParser';
-import { extractAppleHealthZip, deleteDirectory } from '../tools/zipExtractor';
+import { extractAppleHealthZip, extractLunaZip, deleteDirectory } from '../tools/zipExtractor';
 import { analyzeSession } from './sessionAnalysis.service';
 import { updateUserAccuracySummary } from './userAccuracySummary.service';
 import { updateLunaFirmwarePerformanceForSession } from './lunaFirmwarePerformanceUpdate.service';
@@ -130,10 +130,21 @@ export async function ingestSkinTempSessionFiles({
         console.log("🌡️ Parsing Luna SkinTemp file...");
         console.log(`📱 Mobile Type: ${mobileType}, Activity Type: ${activityType}`);
         
+        // Handle ZIP file extraction for Luna
+        let lunaFilePath = filePath;
+        
+        if (filePath.toLowerCase().endsWith('.zip')) {
+          console.log('📦 Luna ZIP file detected, extracting...');
+          const extracted = await extractLunaZip(filePath);
+          lunaFilePath = extracted.logFilePath;
+          extractedFolder = extracted.extractedFolder;
+          console.log(`✅ Extracted Luna log file: ${lunaFilePath}`);
+        }
+        
         // Use different parsers based on mobileType and activityType
         if (activityType === "daily" && mobileType?.toLowerCase() === "android") {
           console.log("🤖 Using Luna Android SkinTemp parser for daily activity...");
-          readings = await LunaAndroidSkinTempParser.parse(filePath, meta, startTime, endTime);
+          readings = await LunaAndroidSkinTempParser.parse(lunaFilePath, meta, startTime, endTime);
         } else if (activityType === "daily" && mobileType?.toLowerCase() === "ios") {
           // iOS parser placeholder
           console.warn("🍎 Luna iOS SkinTemp parser not implemented yet. Skipping...");

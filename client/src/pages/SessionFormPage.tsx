@@ -432,7 +432,7 @@ export default function SessionFormPage() {
               <input
                 key={`luna-${fileInputKey}`}
                 type="file"
-                accept=".txt,.TXT,.log,.LOG"
+                accept=".txt,.TXT,.log,.LOG,.zip,.ZIP"
                 onChange={(e) => handleFileChange('luna', e.target.files?.[0] || null)}
                 required
                 className="block w-full text-sm text-gray-600 file:mr-4 file:py-2.5 file:px-5 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-gradient-to-r file:from-blue-500 file:to-blue-600 file:text-white hover:file:from-blue-600 hover:file:to-blue-700 file:cursor-pointer file:shadow-sm file:transition-all cursor-pointer border border-gray-200 rounded-xl p-3"
