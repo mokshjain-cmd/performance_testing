@@ -34,17 +34,22 @@ const SPORT_TYPES: Record<number, { name: string; icon: typeof Activity; color: 
   206: { name: 'Indoor Running', icon: Activity, color: 'text-orange-400' },
   207: { name: 'Outdoor Running', icon: Activity, color: 'text-orange-500' },
   220: { name: 'Running', icon: Activity, color: 'text-orange-500' },
+  246: { name: 'Outdoor Running', icon: Activity, color: 'text-orange-500' }, // Bracelet
+  247: { name: 'Indoor Running', icon: Activity, color: 'text-orange-400' }, // Bracelet
   
   // Walking
   2: { name: 'Outdoor Walking', icon: Footprints, color: 'text-green-500' },
   135: { name: 'Indoor Walking', icon: Footprints, color: 'text-green-400' },
   208: { name: 'Walking', icon: Footprints, color: 'text-green-500' },
+  251: { name: 'Outdoor Walking', icon: Footprints, color: 'text-green-500' }, // Bracelet
   
   // Hiking/Trekking
   4: { name: 'Trekking', icon: Mountain, color: 'text-emerald-600' },
   5: { name: 'Trail Running', icon: Mountain, color: 'text-emerald-500' },
   13: { name: 'Outdoor Hiking', icon: Mountain, color: 'text-emerald-600' },
   229: { name: 'Hiking', icon: Mountain, color: 'text-emerald-600' },
+  249: { name: 'Hiking', icon: Mountain, color: 'text-emerald-600' }, // Bracelet
+  252: { name: 'Trail Running', icon: Mountain, color: 'text-emerald-500' }, // Bracelet
   
   // Cycling
   6: { name: 'Outdoor Cycling', icon: Bike, color: 'text-blue-500' },
@@ -54,12 +59,16 @@ const SPORT_TYPES: Record<number, { name: string; icon: typeof Activity; color: 
   209: { name: 'Indoor Cycling', icon: Bike, color: 'text-blue-400' },
   210: { name: 'Outdoor Cycling', icon: Bike, color: 'text-blue-500' },
   221: { name: 'Cycling', icon: Bike, color: 'text-blue-500' },
+  244: { name: 'Outdoor Cycling', icon: Bike, color: 'text-blue-500' }, // Bracelet
+  245: { name: 'Indoor Cycling', icon: Bike, color: 'text-blue-400' }, // Bracelet
+  253: { name: 'Spinning Bike', icon: Bike, color: 'text-blue-400' }, // Bracelet
   
   // Swimming
   21: { name: 'Pool Swimming', icon: Waves, color: 'text-cyan-500' },
   22: { name: 'Open Water', icon: Waves, color: 'text-cyan-600' },
   200: { name: 'Pool Swimming', icon: Waves, color: 'text-cyan-500' },
   219: { name: 'Swimming', icon: Waves, color: 'text-cyan-500' },
+  248: { name: 'Swimming', icon: Waves, color: 'text-cyan-500' }, // Bracelet
   
   // Gym/Fitness
   8: { name: 'Freestyle', icon: Dumbbell, color: 'text-purple-500' },
