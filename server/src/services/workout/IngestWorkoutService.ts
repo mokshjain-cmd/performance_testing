@@ -10,7 +10,7 @@ import { PolarWorkoutParser, IPolarWorkout } from "../../parsers/workout/PolarWo
 import { CorosWorkoutParser, ICorosWorkout } from "../../parsers/workout/CorosWorkoutParser";
 import { WhoopWorkoutParser, IWhoopWorkout } from "../../parsers/workout/WhoopWorkoutParser";
 import { extractHRForWorkoutComparison } from "../../parsers/appleHRparser";
-import { extractAppleHealthZip, deleteDirectory } from "../../tools/zipExtractor";
+import { extractAppleHealthZip, extractLunaZip, deleteDirectory } from "../../tools/zipExtractor";
 import { mailService } from "../mail.service";
 import { updateUserAccuracySummary } from "../userAccuracySummary.service";
 import { updateFirmwarePerformanceForLuna } from "../firmwarePerformance.service";
@@ -100,10 +100,22 @@ export class IngestWorkoutService {
       throw new Error(`Luna device with firmware ${firmwareVersion} not found. Register the device first.`);
     }
     
+    // Handle ZIP file extraction for Luna
+    let lunaFilePath = lunaFile.path;
+    let extractedFolder: string | undefined;
+    
+    if (lunaFile.path.toLowerCase().endsWith('.zip')) {
+      console.log('[IngestWorkoutService] 📦 Luna ZIP file detected, extracting...');
+      const extracted = await extractLunaZip(lunaFile.path);
+      lunaFilePath = extracted.logFilePath;
+      extractedFolder = extracted.extractedFolder;
+      console.log(`[IngestWorkoutService] ✅ Extracted Luna log file: ${lunaFilePath}`);
+    }
+    
     // Parse workouts from Luna log (quick operation)
     console.log(`[IngestWorkoutService] Parsing Luna log for workouts on ${workoutDate.toISOString().split('T')[0]}`);
     const parsedWorkouts = await LunaWorkoutParser.parseWorkoutsFromLog(
-      lunaFile.path,
+      lunaFilePath,
       workoutDate
     );
     
@@ -121,7 +133,7 @@ export class IngestWorkoutService {
       result.message = 'No workouts found for this date';
       
       // Clean up files immediately
-      this.cleanupFiles(lunaFile, benchmarkFile);
+      this.cleanupFiles(lunaFile, benchmarkFile, extractedFolder);
       
       return result;
     }
@@ -166,10 +178,12 @@ export class IngestWorkoutService {
       workoutDate,
       firmwareVersion,
       lunaFile,
+      lunaFilePath,
       benchmarkFile,
       benchmarkDeviceType,
       sessionInfos,
-      parsedWorkouts
+      parsedWorkouts,
+      extractedFolder
     );
     
     console.log(`[IngestWorkoutService] Completed processing ${result.sessionsCreated} workout sessions`);
@@ -232,16 +246,18 @@ export class IngestWorkoutService {
     workoutDate: Date,
     firmwareVersion: string,
     lunaFile: Express.Multer.File,
+    lunaFilePath: string,
     benchmarkFile: Express.Multer.File | undefined,
     benchmarkDeviceType: string | undefined,
     sessionInfos: IWorkoutSessionInfo[],
-    parsedWorkouts: IParsedWorkout[]
+    parsedWorkouts: IParsedWorkout[],
+    extractedFolderFromZip?: string
   ): Promise<void> {
     console.log(`[IngestWorkoutService] 🔄 Starting background processing for ${sessionInfos.length} sessions...`);
     
     let userEmail: string | undefined;
     let userName: string | undefined;
-    let extractedFolder: string | undefined;
+    let extractedFolder: string | undefined = extractedFolderFromZip;
     const metric = 'Workout';
     
     try {

@@ -154,6 +154,12 @@ export class FalconLunaAndroidParser {
     userId: string,
     sleepDate?: Date
   ): Promise<ILunaSleepParseResult> {
+    console.log(`\n🚀 [FalconLunaAndroidParser] PARSE METHOD CALLED`);
+    console.log(`   - File path: ${filePath}`);
+    console.log(`   - Session ID: ${sessionId}`);
+    console.log(`   - User ID: ${userId}`);
+    console.log(`   - Sleep date: ${sleepDate?.toISOString() || 'Not specified'}`);
+    
     const parser = new FalconLunaAndroidParser(filePath);
     
     const targetDate = sleepDate || new Date();
@@ -239,6 +245,11 @@ export class FalconLunaAndroidParser {
    * Parse all onRingSleepResult entries from the app log file
    */
   private async parseAllSleepRecords(): Promise<ParsedRingSleepResult[]> {
+    console.log(`
+🔍 [Falcon Parser] START PARSING`);
+    console.log(`📂 [Falcon Parser] Log file: ${this.logFilePath}`);
+    console.log(`📏 [Falcon Parser] File size: ${fs.statSync(this.logFilePath).size} bytes`);
+    
     const records: ParsedRingSleepResult[] = [];
     const fileStream = fs.createReadStream(this.logFilePath);
     const rl = readline.createInterface({
@@ -250,10 +261,15 @@ export class FalconLunaAndroidParser {
     let inBleBlock = false;
     let appLogMatchCount = 0;
     let bleLogMatchCount = 0;
+    let totalLinesRead = 0;
+    let ringSleepResultBeanLinesFound = 0;
 
     for await (const line of rl) {
+      totalLinesRead++;
+      
       // Handle BLE multi-line format: ringSleepResultData = fitness_type_id {...}
       if (line.includes('ringSleepResultData = fitness_type_id')) {
+        console.log(`🔵 [Falcon Parser] Line ${totalLinesRead}: Found BLE protobuf format`);
         inBleBlock = true;
         bleMultilineBuffer = line;
         continue;
@@ -262,7 +278,8 @@ export class FalconLunaAndroidParser {
       // Continue accumulating BLE block until we see the next log line (starts with date pattern)
       if (inBleBlock) {
         // Check if this line starts a new log entry (date pattern)
-        if (/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}/.test(line)) {
+        // Match both: 2026-04-27 07:31:57 AND 2026-04-27 07:31:57:960 (BLE format with milliseconds)
+        if (/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}([:\.]\d{3})?/.test(line)) {
           // Process the accumulated BLE block
           try {
             const record = this.extractBleRingSleepResult(bleMultilineBuffer);
@@ -283,35 +300,52 @@ export class FalconLunaAndroidParser {
         }
       }
 
-      // Look for onRingSleepResult lines in the app log
-      if (!line.includes('onRingSleepResult') || !line.includes('RingSleepResultBean')) {
+      // Look for RingSleepResultBean lines in the app log
+      // Matches both: "onRingSleepResult : RingSleepResultBean" AND "ringSleepResultData = RingSleepResultBean"
+      if (!line.includes('RingSleepResultBean')) {
         continue;
       }
+
+      ringSleepResultBeanLinesFound++;
+      console.log(`🟢 [Falcon Parser] Line ${totalLinesRead}: Found RingSleepResultBean`);
+      console.log(`📝 [Falcon Parser] Line preview: ${line.substring(0, 150)}...`);
 
       try {
         const record = this.extractRingSleepResultBean(line);
         if (record && record.isExistSleep) {
+          console.log(`✅ [Falcon Parser] Successfully parsed sleep record: entry=${record.entryTime}, exit=${record.exitTime}, date=${record.date}`);
           records.push(record);
           appLogMatchCount++;
+        } else {
+          console.log(`⚠️ [Falcon Parser] Record parsed but isExistSleep=${record?.isExistSleep}`);
         }
       } catch (error) {
-        // Silently skip parse errors
+        console.error(`❌ [Falcon Parser] Error parsing RingSleepResultBean:`, error);
       }
     }
 
     // Process any remaining BLE block at end of file
     if (inBleBlock && bleMultilineBuffer) {
+      console.log(`🔵 [Falcon Parser] Processing remaining BLE block at EOF`);
       try {
         const record = this.extractBleRingSleepResult(bleMultilineBuffer);
         if (record && record.isExistSleep) {
+          console.log(`✅ [Falcon Parser] BLE record parsed successfully`);
           records.push(record);
           bleLogMatchCount++;
         }
       } catch (error) {
-        // Silently skip parse errors
+        console.error(`❌ [Falcon Parser] Error parsing BLE block:`, error);
       }
     }
 
+    console.log(`
+📊 [Falcon Parser] PARSING SUMMARY:`);
+    console.log(`   - Total lines read: ${totalLinesRead}`);
+    console.log(`   - RingSleepResultBean lines found: ${ringSleepResultBeanLinesFound}`);
+    console.log(`   - App log records parsed: ${appLogMatchCount}`);
+    console.log(`   - BLE log records parsed: ${bleLogMatchCount}`);
+    console.log(`   - Total sleep records: ${records.length}`);
     console.log(`📖 [Falcon] Parsed ${records.length} total sleep records (App: ${appLogMatchCount}, BLE: ${bleLogMatchCount})`);
     return records;
   }

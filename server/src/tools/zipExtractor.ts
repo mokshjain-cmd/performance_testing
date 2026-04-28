@@ -163,3 +163,72 @@ export async function extractWhoopZip(zipFilePath: string): Promise<string> {
     throw error;
   }
 }
+
+/**
+ * Find first Luna log file in a directory (recursively)
+ * Searches for .txt, .csv, or .log files
+ * @param dirPath - Directory to search in
+ * @returns Full path to the first log file found, or null if none found
+ */
+function findLunaLogFile(dirPath: string): string | null {
+  try {
+    const files = fs.readdirSync(dirPath);
+
+    for (const file of files) {
+      const fullPath = path.join(dirPath, file);
+      const stat = fs.statSync(fullPath);
+
+      if (stat.isDirectory()) {
+        // Recursively search subdirectories
+        const found = findLunaLogFile(fullPath);
+        if (found) return found;
+      } else {
+        // Check if it's a Luna log file (.txt, .csv, or .log)
+        const ext = path.extname(file).toLowerCase();
+        if (ext === '.txt' || ext === '.csv' || ext === '.log') {
+          return fullPath;
+        }
+      }
+    }
+
+    return null;
+  } catch (error) {
+    console.error(`❌ Error searching for Luna log file in ${dirPath}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Extract Luna ZIP and find the log file
+ * @param zipFilePath - Path to the uploaded Luna ZIP file
+ * @returns Object containing path to log file and extraction folder
+ */
+export async function extractLunaZip(zipFilePath: string): Promise<{
+  logFilePath: string;
+  extractedFolder: string;
+}> {
+  try {
+    console.log(`📦 Extracting Luna ZIP: ${zipFilePath}`);
+    
+    // Extract the ZIP
+    const extractedFolder = await extractZipFile(zipFilePath);
+
+    // Find the first Luna log file (.txt, .csv, or .log)
+    const logFilePath = findLunaLogFile(extractedFolder);
+
+    if (!logFilePath) {
+      throw new Error('No Luna log file (.txt, .csv, or .log) found in the uploaded ZIP file');
+    }
+
+    console.log(`✅ Found Luna log file at: ${logFilePath}`);
+    console.log(`📁 Extracted folder: ${extractedFolder}`);
+
+    return {
+      logFilePath,
+      extractedFolder,
+    };
+  } catch (error) {
+    console.error(`❌ Error extracting Luna ZIP:`, error);
+    throw error;
+  }
+}

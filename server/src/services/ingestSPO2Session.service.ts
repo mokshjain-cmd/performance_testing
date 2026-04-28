@@ -16,6 +16,7 @@ import { updateAdminGlobalSummary } from './adminGlobalSummary.service';
 import { updateBenchmarkComparisonSummariesForSession } from './benchmarkComparisonSummary.service';
 import { mailService } from './mail.service';
 import { convertLunaTxtToCsv } from '../tools/lunaTxtToCsv';
+import { extractLunaZip, deleteDirectory } from '../tools/zipExtractor';
 import fs from 'fs';
 import { promisify } from 'util';
 
@@ -100,6 +101,7 @@ export async function ingestSPO2SessionFiles({
     }
 
     let anyInserted = false;
+    const extractedFolders: string[] = []; // Track extracted folders for cleanup
 
     for (const file of files) {
       const deviceType = file.fieldname;
@@ -136,18 +138,31 @@ export async function ingestSPO2SessionFiles({
         console.log("🩺 Parsing Luna SPO2 file...");
         console.log(`📱 Mobile Type: ${mobileType}, Activity Type: ${activityType}`);
         
+        // Handle ZIP file extraction for Luna
+        let lunaFilePath = filePath;
+        let extractedFolder: string | null = null;
+        
+        if (filePath.toLowerCase().endsWith('.zip')) {
+          console.log('📦 Luna ZIP file detected, extracting...');
+          const extracted = await extractLunaZip(filePath);
+          lunaFilePath = extracted.logFilePath;
+          extractedFolder = extracted.extractedFolder;
+          extractedFolders.push(extractedFolder); // Track for cleanup
+          console.log(`✅ Extracted Luna log file: ${lunaFilePath}`);
+        }
+        
         // Convert .txt to .csv with header if needed
         
         
         // Use different parsers based on mobileType and activityType
         if (activityType === "daily" && mobileType?.toLowerCase() === "ios") {
           console.log("🍎 Using Luna iOS SPO2 parser for daily activity...");
-          readings = await parseLunaIosSpo2Csv(filePath, meta, startTime, endTime);
+          readings = await parseLunaIosSpo2Csv(lunaFilePath, meta, startTime, endTime);
         } else if (activityType === "daily" && (mobileType?.toLowerCase() === "android")) {
           console.log("🤖 Using Luna Android SPO2 parser...");
-          readings = await parseLunaAndroidSpo2(filePath, meta, startTime, endTime);
+          readings = await parseLunaAndroidSpo2(lunaFilePath, meta, startTime, endTime);
         } else {
-          const csvFilePath = await convertLunaTxtToCsv(filePath);
+          const csvFilePath = await convertLunaTxtToCsv(lunaFilePath);
           console.log("📊 Using standard Luna SPO2 parser...");
           readings = await parseLunaSpo2Csv(csvFilePath, meta, startTime, endTime);
         }
@@ -244,6 +259,21 @@ export async function ingestSPO2SessionFiles({
         }
       })
     );
+    
+    // Clean up extracted folders (from ZIP files)
+    if (extractedFolders.length > 0) {
+      console.log(`\n🗑️ Cleaning up ${extractedFolders.length} extracted folders...`);
+      await Promise.allSettled(
+        extractedFolders.map(async (folderPath: string) => {
+          try {
+            await deleteDirectory(folderPath);
+            console.log(`✅ Deleted extracted folder: ${folderPath}`);
+          } catch (deleteError) {
+            console.warn(`⚠️ Could not delete extracted folder ${folderPath}:`, deleteError);
+          }
+        })
+      );
+    }
 
     console.log("\n===============================");
     console.log("✅ SPO2 Session Ingestion Complete!");

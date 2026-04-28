@@ -10,7 +10,7 @@ import { mailService } from "../mail.service";
 import fs from 'fs';
 import path from 'path';
 import { promisify } from 'util';
-import { extractAppleHealthZip, deleteDirectory, deleteFile } from '../../tools/zipExtractor';
+import { extractAppleHealthZip, extractLunaZip, deleteDirectory, deleteFile } from '../../tools/zipExtractor';
 
 const unlinkAsync = promisify(fs.unlink);
 
@@ -94,7 +94,7 @@ export class IngestActivityService {
 
         if (deviceType === "luna") {
           // Process Luna activity data
-          const recordsInserted = await this.processLunaActivityData(
+          const result = await this.processLunaActivityData(
             sessionId,
             userId,
             filePath,
@@ -103,7 +103,11 @@ export class IngestActivityService {
             sessionStartTime,
             sessionEndTime
           );
-          if (recordsInserted > 0) anyInserted = true;
+          if (result.recordsInserted > 0) anyInserted = true;
+          // Track extracted folder if ZIP was extracted
+          if (result.extractedFolder) {
+            extractedFolders.push(result.extractedFolder);
+          }
         } else if (benchmarkDeviceType && deviceType === benchmarkDeviceType) {
           // Process benchmark activity data (Apple, Garmin, etc.)
           const result = await this.processBenchmarkActivityData(
@@ -219,7 +223,7 @@ export class IngestActivityService {
    * @param appPlatform Optional app platform (NoiseFit/Luna) to determine parser format
    * @param startDate Optional start date to filter activity data
    * @param endDate Optional end date to filter activity data
-   * @returns Number of records inserted
+   * @returns Object with number of records inserted and extracted folder path (if ZIP was extracted)
    */
   private static async processLunaActivityData(
     sessionId: Types.ObjectId | string,
@@ -229,13 +233,25 @@ export class IngestActivityService {
     appPlatform?: string,
     startDate?: Date,
     endDate?: Date
-  ): Promise<number> {
+  ): Promise<{ recordsInserted: number; extractedFolder?: string }> {
     try {
       console.log(`[IngestActivityService] Processing Luna activity data from: ${filePath}`);
-      console.log(`[IngestActivityService] Mobile type: ${mobileType || 'Android (default)'}`);      
-      console.log(`[IngestActivityService] App platform: ${appPlatform || 'NoiseFit (default)'}`);      
+      console.log(`[IngestActivityService] Mobile type: ${mobileType || 'Android (default)'}`);
+      console.log(`[IngestActivityService] App platform: ${appPlatform || 'NoiseFit (default)'}`);
       if (startDate && endDate) {
         console.log(`[IngestActivityService] 📅 Date range: ${startDate.toISOString().split('T')[0]} to ${endDate.toISOString().split('T')[0]}`);
+      }
+
+      // Handle ZIP file extraction for Luna
+      let lunaFilePath = filePath;
+      let extractedFolder: string | undefined;
+      
+      if (filePath.toLowerCase().endsWith('.zip')) {
+        console.log('[IngestActivityService] 📦 Luna ZIP file detected, extracting...');
+        const extracted = await extractLunaZip(filePath);
+        lunaFilePath = extracted.logFilePath;
+        extractedFolder = extracted.extractedFolder;
+        console.log(`[IngestActivityService] ✅ Extracted Luna log file: ${lunaFilePath}`);
       }
 
       let parseResult;
@@ -244,14 +260,14 @@ export class IngestActivityService {
       if (appPlatform === 'Luna' && mobileType?.toLowerCase() === 'android') {
         // Use Falcon Luna Android parser for app logs
         console.log(`[IngestActivityService] Using Falcon Luna Activity parser (App Logs)`);
-        parseResult = await FalconLunaActivityParser.parseFalconLunaActivityFile(filePath, startDate, endDate);
+        parseResult = await FalconLunaActivityParser.parseFalconLunaActivityFile(lunaFilePath, startDate, endDate);
       } else if (appPlatform === 'Luna' && mobileType?.toLowerCase() === 'ios') {
         console.log(`[IngestActivityService] Using iOS Luna parser`);
-        parseResult = await LunaActivityParser.parseLunaActivityFileIOS(filePath, startDate, endDate);
+        parseResult = await LunaActivityParser.parseLunaActivityFileIOS(lunaFilePath, startDate, endDate);
       } else {
         // Default to Android parser for backward compatibility
         console.log(`[IngestActivityService] Using Android Luna parser`);
-        parseResult = await LunaActivityParser.parseLunaActivityFileAndroid(filePath, startDate, endDate);
+        parseResult = await LunaActivityParser.parseLunaActivityFileAndroid(lunaFilePath, startDate, endDate);
       }
 
       // Get firmware version from session devices
@@ -281,10 +297,10 @@ export class IngestActivityService {
         await ActivityDailyReading.insertMany(dailyDocs);
         console.log(`[IngestActivityService] ✅ Inserted ${dailyDocs.length} Luna activity daily records`);
         
-        return dailyDocs.length;
+        return { recordsInserted: dailyDocs.length, extractedFolder };
       } else {
         console.warn(`[IngestActivityService] No Luna activity records parsed from file`);
-        return 0;
+        return { recordsInserted: 0, extractedFolder };
       }
 
     } catch (error) {

@@ -10,7 +10,7 @@ import { mailService } from "../mail.service";
 import fs from 'fs';
 import path from 'path';
 import { promisify } from 'util';
-import { extractAppleHealthZip, extractWhoopZip, deleteDirectory, deleteFile } from '../../tools/zipExtractor';
+import { extractAppleHealthZip, extractWhoopZip, extractLunaZip, deleteDirectory, deleteFile } from '../../tools/zipExtractor';
 
 const unlinkAsync = promisify(fs.unlink);
 
@@ -92,7 +92,7 @@ export class IngestSleepService {
 
         if (deviceType === "luna") {
           // Process Luna sleep data
-          const epochsInserted = await this.processLunaSleepData(
+          const result = await this.processLunaSleepData(
             sessionId,
             userId,
             filePath,
@@ -100,7 +100,11 @@ export class IngestSleepService {
             appPlatform,
             sessionEndTime
           );
-          if (epochsInserted > 0) anyInserted = true;
+          if (result.epochsInserted > 0) anyInserted = true;
+          // Track extracted folder if ZIP was extracted
+          if (result.extractedFolder) {
+            extractedFolders.push(result.extractedFolder);
+          }
         } else if (benchmarkDeviceType && deviceType === benchmarkDeviceType) {
           // Process benchmark sleep data (Apple, Garmin, etc.)
           const result = await this.processBenchmarkSleepData(
@@ -214,7 +218,7 @@ export class IngestSleepService {
    * @param mobileType Optional mobile type (Android/iOS) to determine which parser to use
    * @param appPlatform Optional app platform (NoiseFit/Luna) to determine parser format
    * @param sleepDate Optional date for which to extract sleep data (session end time)
-   * @returns Number of epochs inserted
+   * @returns Object with number of epochs inserted and extracted folder path (if ZIP was extracted)
    */
   private static async processLunaSleepData(
     sessionId: Types.ObjectId | string,
@@ -223,11 +227,23 @@ export class IngestSleepService {
     mobileType?: string,
     appPlatform?: string,
     sleepDate?: Date
-  ): Promise<number> {
+  ): Promise<{ epochsInserted: number; extractedFolder?: string }> {
     try {
       console.log(`[IngestSleepService] Processing Luna sleep data from: ${filePath}`);
       console.log(`[IngestSleepService] Mobile type: ${mobileType || 'Android (default)'}`);
       console.log(`[IngestSleepService] App platform: ${appPlatform || 'NoiseFit (default)'}`);
+
+      // Handle ZIP file extraction for Luna
+      let lunaFilePath = filePath;
+      let extractedFolder: string | undefined;
+      
+      if (filePath.toLowerCase().endsWith('.zip')) {
+        console.log('[IngestSleepService] 📦 Luna ZIP file detected, extracting...');
+        const extracted = await extractLunaZip(filePath);
+        lunaFilePath = extracted.logFilePath;
+        extractedFolder = extracted.extractedFolder;
+        console.log(`[IngestSleepService] ✅ Extracted Luna log file: ${lunaFilePath}`);
+      }
 
       // Import parsers dynamically to avoid circular dependencies
       let parseResult;
@@ -237,16 +253,16 @@ export class IngestSleepService {
         // Use Falcon Luna Android parser for app logs
         console.log(`[IngestSleepService] Using Falcon Luna Android parser (App Logs)`);
         const { FalconLunaAndroidParser } = await import('../../parsers/sleep/FalconLunaAndroidParser');
-        parseResult = await FalconLunaAndroidParser.parse(filePath, sessionId.toString(), userId.toString(), sleepDate);
+        parseResult = await FalconLunaAndroidParser.parse(lunaFilePath, sessionId.toString(), userId.toString(), sleepDate);
       } else if (mobileType === 'iOS') {
         // Use iOS Luna parser for iOS devices
         console.log(`[IngestSleepService] Using iOS Luna parser (NoiseFit)`);
         const { LunaSleepParserIOS } = await import('../../parsers/sleep/LunaSleepParserIOS');
-        parseResult = await LunaSleepParserIOS.parse(filePath, sessionId.toString(), userId.toString(), sleepDate);
+        parseResult = await LunaSleepParserIOS.parse(lunaFilePath, sessionId.toString(), userId.toString(), sleepDate);
       } else {
         // Default to Android parser for NoiseFit or backward compatibility
         console.log(`[IngestSleepService] Using Android Luna parser (NoiseFit)`);
-        parseResult = await LunaSleepParser.parse(filePath, sessionId.toString(), userId.toString(), sleepDate);
+        parseResult = await LunaSleepParser.parse(lunaFilePath, sessionId.toString(), userId.toString(), sleepDate);
       }
 
       // Get firmware version from session devices
@@ -277,10 +293,10 @@ export class IngestSleepService {
           // TODO: Store this in SessionAnalysis or a separate metadata collection
         }
         
-        return epochDocs.length;
+        return { epochsInserted: epochDocs.length, extractedFolder };
       } else {
         console.warn(`[IngestSleepService] No Luna epochs parsed from file`);
-        return 0;
+        return { epochsInserted: 0, extractedFolder };
       }
 
     } catch (error) {
