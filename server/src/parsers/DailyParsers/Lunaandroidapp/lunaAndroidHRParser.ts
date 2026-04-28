@@ -140,8 +140,11 @@ export class LunaAndroidHRParser {
           // Check if we already have an entry for this date
           const existingEntry = dateEntries.get(dateKey);
 
-          // Keep the latest entry (based on log timestamp)
-          if (!existingEntry || logTimestamp > existingEntry.logTimestamp) {
+          // Keep the entry with the most non-zero values (ring clears buffer after sync)
+          const nonZeroCount = hrValues.filter(v => v > 0 && v !== 255).length;
+          const existingNonZeroCount = existingEntry ? existingEntry.hrValues.filter(v => v > 0 && v !== 255).length : 0;
+          
+          if (!existingEntry || nonZeroCount > existingNonZeroCount) {
             dateEntries.set(dateKey, {
               date: recordDateOnly,
               frequency,
@@ -152,7 +155,7 @@ export class LunaAndroidHRParser {
               logTimestamp,
             });
 
-            console.log(`📱 Found HR data for ${dateKey}: ${hrValues.length} readings, frequency: ${frequency} sec`);
+            console.log(`📱 Found HR data for ${dateKey}: ${hrValues.length} readings (${nonZeroCount} valid), frequency: ${frequency} sec`);
           }
         } catch (parseError) {
           // Skip malformed JSON entries
@@ -161,7 +164,89 @@ export class LunaAndroidHRParser {
         }
       }
 
-      console.log(`📱 Total matches found: ${matchCount}`);
+      console.log(`📱 Total app log matches found: ${matchCount}`);
+
+      // BLE Log Pattern: fitnessparsing continuousHeartRateData = ContinuousHeartRateBean{...}
+      // Format: 2026-04-27 01:46:00:452 ----> fitnessparsing ----------->  parsingFitness continuousHeartRateData = ContinuousHeartRateBean{continuousHeartRateFrequency=30, heartRateData=[78, 71, 80, ...], max=99, min=42, restingRate=0, heartRateHourMaxValue=[], heartRateHourMinValue=[], date='2026-04-27 00:00:00'}
+      // Note: Use [\d,\s]+ to capture HR array, and .*? to skip intermediate fields (max, min, restingRate, etc.) before date
+      const blePattern = /(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2}:\d+)\s+---+>\s+fitnessparsing\s+---+>\s+parsingFitness\s+continuousHeartRateData\s+=\s+ContinuousHeartRateBean\{continuousHeartRateFrequency=(\d+),\s*heartRateData=\[([\d,\s]+)\].*?date='([^']+)'/g;
+
+      let bleMatch;
+      let bleMatchCount = 0;
+
+      while ((bleMatch = blePattern.exec(content)) !== null) {
+        try {
+          const logDateStr = bleMatch[1]; // e.g., "2026-04-27"
+          const logTimeStr = bleMatch[2]; // e.g., "00:00:17:509" (colon before ms)
+          const frequency = parseInt(bleMatch[3]) || 30; // Default 30 seconds
+          const hrValuesStr = bleMatch[4]; // e.g., "78, 71, 80, 77, 72"
+          const dateField = bleMatch[5]; // e.g., "2026-04-27 00:00:00"
+
+          // Parse HR values from comma-separated string
+          const hrValues: number[] = hrValuesStr
+            .split(',')
+            .map(v => parseInt(v.trim()))
+            .filter(v => !isNaN(v));
+
+          if (!dateField || hrValues.length === 0) {
+            continue;
+          }
+
+          // Parse the date field to get the date key
+          const [datePart] = dateField.split(' ');
+          const [year, month, day] = datePart.split('-').map(Number);
+
+          // Create date object for this record (midnight UTC)
+          const recordDateOnly = new Date(Date.UTC(year, month - 1, day, 0, 0, 0));
+
+          // Check if this record matches our target date
+          if (recordDateOnly < targetDate || recordDateOnly > targetDateEnd) {
+            continue;
+          }
+
+          bleMatchCount++;
+
+          // Parse BLE log timestamp (uses colon before ms: HH:MM:SS:mmm)
+          const [logHour, logMin, logSec] = logTimeStr.split(':');
+          const logTimestamp = new Date(Date.UTC(
+            parseInt(logDateStr.split('-')[0]),
+            parseInt(logDateStr.split('-')[1]) - 1,
+            parseInt(logDateStr.split('-')[2]),
+            parseInt(logHour),
+            parseInt(logMin),
+            parseInt(logSec)
+          ));
+
+          // Create a unique key for this date
+          const dateKey = datePart;
+
+          // Check if we already have an entry for this date
+          const existingEntry = dateEntries.get(dateKey);
+
+          // Keep the entry with the most non-zero values (ring clears buffer after sync)
+          const nonZeroCount = hrValues.filter(v => v > 0 && v !== 255).length;
+          const existingNonZeroCount = existingEntry ? existingEntry.hrValues.filter(v => v > 0 && v !== 255).length : 0;
+          
+          if (!existingEntry || nonZeroCount > existingNonZeroCount) {
+            dateEntries.set(dateKey, {
+              date: recordDateOnly,
+              frequency,
+              hrMax: Math.max(...hrValues),
+              hrMin: Math.min(...hrValues.filter(v => v > 0)),
+              restingHr: 0,
+              hrValues,
+              logTimestamp,
+            });
+
+            console.log(`📱 [BLE] Found HR data for ${dateKey}: ${hrValues.length} readings (${nonZeroCount} valid), frequency: ${frequency} sec`);
+          }
+        } catch (parseError) {
+          console.warn('📱 ⚠️ Skipping malformed BLE entry:', parseError);
+          continue;
+        }
+      }
+
+      console.log(`📱 Total BLE log matches found: ${bleMatchCount}`);
       console.log(`📱 Unique dates with HR data: ${dateEntries.size}`);
 
       if (dateEntries.size === 0) {

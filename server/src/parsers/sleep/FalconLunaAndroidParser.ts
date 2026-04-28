@@ -246,7 +246,43 @@ export class FalconLunaAndroidParser {
       crlfDelay: Infinity,
     });
 
+    let bleMultilineBuffer = '';
+    let inBleBlock = false;
+    let appLogMatchCount = 0;
+    let bleLogMatchCount = 0;
+
     for await (const line of rl) {
+      // Handle BLE multi-line format: ringSleepResultData = fitness_type_id {...}
+      if (line.includes('ringSleepResultData = fitness_type_id')) {
+        inBleBlock = true;
+        bleMultilineBuffer = line;
+        continue;
+      }
+
+      // Continue accumulating BLE block until we see the next log line (starts with date pattern)
+      if (inBleBlock) {
+        // Check if this line starts a new log entry (date pattern)
+        if (/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}/.test(line)) {
+          // Process the accumulated BLE block
+          try {
+            const record = this.extractBleRingSleepResult(bleMultilineBuffer);
+            if (record && record.isExistSleep) {
+              records.push(record);
+              bleLogMatchCount++;
+            }
+          } catch (error) {
+            // Silently skip parse errors
+          }
+          bleMultilineBuffer = '';
+          inBleBlock = false;
+          // Continue processing this line as a potential app log line
+        } else {
+          // Accumulate multi-line content
+          bleMultilineBuffer += '\n' + line;
+          continue;
+        }
+      }
+
       // Look for onRingSleepResult lines in the app log
       if (!line.includes('onRingSleepResult') || !line.includes('RingSleepResultBean')) {
         continue;
@@ -256,14 +292,132 @@ export class FalconLunaAndroidParser {
         const record = this.extractRingSleepResultBean(line);
         if (record && record.isExistSleep) {
           records.push(record);
+          appLogMatchCount++;
         }
       } catch (error) {
         // Silently skip parse errors
       }
     }
 
-    console.log(`📖 [Falcon] Parsed ${records.length} total sleep records from app log`);
+    // Process any remaining BLE block at end of file
+    if (inBleBlock && bleMultilineBuffer) {
+      try {
+        const record = this.extractBleRingSleepResult(bleMultilineBuffer);
+        if (record && record.isExistSleep) {
+          records.push(record);
+          bleLogMatchCount++;
+        }
+      } catch (error) {
+        // Silently skip parse errors
+      }
+    }
+
+    console.log(`📖 [Falcon] Parsed ${records.length} total sleep records (App: ${appLogMatchCount}, BLE: ${bleLogMatchCount})`);
     return records;
+  }
+
+  /**
+   * Extract sleep data from BLE log format
+   * Format: ringSleepResultData = fitness_type_id { ... exsit_sleep: true ... sleep_distribution_data_list { list { ... } } }
+   */
+  private extractBleRingSleepResult(content: string): ParsedRingSleepResult | null {
+    try {
+      // Extract basic fields
+      const isExistSleep = /exsit_sleep:\s*true/i.test(content);
+      const entryTime = this.extractBleNumber(content, 'entry_time');
+      const exitTime = this.extractBleNumber(content, 'exit_time');
+      const sleepDuration = this.extractBleNumber(content, 'sleep_duration');
+      const timeInBedTime = this.extractBleNumber(content, 'time_in_bed_time');
+      const sleepLatency = this.extractBleNumber(content, 'sleep_latency');
+      const sleepEfficiency = this.extractBleNumber(content, 'sleep_efficiency');
+      const sleepScore = this.extractBleNumber(content, 'sleep_score');
+      const awakeTime = this.extractBleNumber(content, 'awake_time');
+      const lightSleepTime = this.extractBleNumber(content, 'light_sleep_time');
+      const deepSleepTime = this.extractBleNumber(content, 'deep_sleep_time');
+      const rapidEyeMovementTime = this.extractBleNumber(content, 'rapid_eye_movement_time');
+
+      // Extract date from time block
+      const yearMatch = content.match(/year:\s*(\d+)/);
+      const monthMatch = content.match(/month:\s*(\d+)/);
+      const dayMatch = content.match(/day:\s*(\d+)/);
+      const year = yearMatch ? yearMatch[1] : '2026';
+      const month = monthMatch ? monthMatch[1].padStart(2, '0') : '01';
+      const day = dayMatch ? dayMatch[1].padStart(2, '0') : '01';
+      const date = `${year}-${month}-${day} 00:00:00`;
+
+      // Extract sleep distribution data from BLE format
+      const sleepDistributionData = this.extractBleSleepDistributionArray(content);
+
+      return {
+        isExistSleep,
+        entryTime,
+        exitTime,
+        sleepDuration,
+        timeInBedTime,
+        sleepLatency,
+        sleepEfficiency,
+        sleepScore,
+        awakeTime,
+        lightSleepTime,
+        deepSleepTime,
+        rapidEyeMovementTime,
+        sleepDistributionData,
+        date,
+      };
+    } catch (error) {
+      return null;
+    }
+  }
+
+  /**
+   * Extract sleep distribution array from BLE log format
+   * Format: sleep_distribution_data_list { list { start_timestamp: X sleep_duration: Y sleep_distribution_type: LIGHT_SLEEP } list { ... } }
+   */
+  private extractBleSleepDistributionArray(content: string): SleepDistributionData[] {
+    const distributions: SleepDistributionData[] = [];
+    
+    // Find all "list { ... }" blocks within sleep_distribution_data_list
+    const listPattern = /list\s*\{\s*start_timestamp:\s*(\d+)\s*sleep_duration:\s*(\d+)\s*sleep_distribution_type:\s*(\w+)\s*\}/g;
+    
+    let match;
+    while ((match = listPattern.exec(content)) !== null) {
+      const startTimestamp = parseInt(match[1]);
+      const sleepDuration = parseInt(match[2]);
+      const typeStr = match[3];
+      
+      // Map BLE type string to numeric type
+      const sleepDistributionType = this.mapBleSleepTypeToNumber(typeStr);
+
+      distributions.push({
+        startTimestamp,
+        sleepDuration,
+        sleepDistributionType,
+      });
+    }
+
+    return distributions;
+  }
+
+  /**
+   * Map BLE sleep type string to numeric value
+   */
+  private mapBleSleepTypeToNumber(typeStr: string): number {
+    switch (typeStr.toUpperCase()) {
+      case 'AWAKE': return 0;
+      case 'LIGHT_SLEEP': return 1;
+      case 'DEEP_SLEEP': return 2;
+      case 'RAPID_EYE_MOVEMENT': return 3;
+      default: return 0;
+    }
+  }
+
+  /**
+   * Extract number from BLE log format (key: value)
+   */
+  private extractBleNumber(content: string, key: string): number {
+    const pattern = new RegExp(`${key}:\\s*(\\d+)`);
+    const match = content.match(pattern);
+    return match ? parseInt(match[1]) : 0;
   }
 
   /**

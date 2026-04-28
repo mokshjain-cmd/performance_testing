@@ -137,8 +137,11 @@ export class LunaAndroidSkinTempParser {
           // Check if we already have an entry for this date
           const existingEntry = dateEntries.get(dateKey);
 
-          // Keep the latest entry (based on log timestamp)
-          if (!existingEntry || logTimestamp > existingEntry.logTimestamp) {
+          // Keep the entry with the most non-zero values (ring clears buffer after sync)
+          const nonZeroCount = tempValues.filter(v => v > 0).length;
+          const existingNonZeroCount = existingEntry ? existingEntry.tempValues.filter(v => v > 0).length : 0;
+          
+          if (!existingEntry || nonZeroCount > existingNonZeroCount) {
             dateEntries.set(dateKey, {
               date: recordDateOnly,
               frequency,
@@ -146,7 +149,7 @@ export class LunaAndroidSkinTempParser {
               logTimestamp,
             });
 
-            console.log(`🌡️ Found SkinTemp data for ${dateKey}: ${tempValues.length} readings, frequency: ${frequency} min`);
+            console.log(`🌡️ Found SkinTemp data for ${dateKey}: ${tempValues.length} readings (${nonZeroCount} valid), frequency: ${frequency} min`);
           }
         } catch (parseError) {
           // Skip malformed entries
@@ -155,7 +158,85 @@ export class LunaAndroidSkinTempParser {
         }
       }
 
-      console.log(`🌡️ Total matches found: ${matchCount}`);
+      console.log(`🌡️ Total app log matches found: ${matchCount}`);
+
+      // BLE Log Pattern: fitnessparsing continuousTemperatureData = ContinuousTemperatureBean{...}
+      // Format: 2026-04-27 00:00:17:509 ----> fitnessparsing -----------> parsingFitness continuousTemperatureData = ContinuousTemperatureBean{temperatureFrequency=5, temperatureData=[3242, 3303, ...], date='2026-04-27 00:00:00'}
+      const blePattern = /(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2}:\d+)\s+---+>\s+fitnessparsing\s+---+>\s+parsingFitness\s+continuousTemperatureData\s+=\s+ContinuousTemperatureBean\{temperatureFrequency=(\d+),\s*temperatureData=\[([\d,\s]*)\],\s*date='([^']+)'\}/g;
+
+      let bleMatch;
+      let bleMatchCount = 0;
+
+      while ((bleMatch = blePattern.exec(content)) !== null) {
+        try {
+          const logDateStr = bleMatch[1]; // e.g., "2026-04-27"
+          const logTimeStr = bleMatch[2]; // e.g., "00:00:17:509" (colon before ms)
+          const frequency = parseInt(bleMatch[3], 10) || 5; // Default 5 minutes
+          const tempDataStr = bleMatch[4]; // e.g., "3242, 3303, 3347, ..."
+          const dateField = bleMatch[5]; // e.g., "2026-04-27 00:00:00"
+
+          // Parse temperature values array
+          const tempValues: number[] = tempDataStr
+            .split(',')
+            .map(v => parseInt(v.trim(), 10))
+            .filter(v => !isNaN(v));
+
+          if (tempValues.length === 0) {
+            continue;
+          }
+
+          // Parse the date field to get the date key
+          const [datePart] = dateField.split(' ');
+          const [year, month, day] = datePart.split('-').map(Number);
+
+          // Create date object for this record (midnight UTC)
+          const recordDateOnly = new Date(Date.UTC(year, month - 1, day, 0, 0, 0));
+
+          // Check if this record matches our target date
+          if (recordDateOnly < targetDate || recordDateOnly > targetDateEnd) {
+            continue;
+          }
+
+          bleMatchCount++;
+
+          // Parse BLE log timestamp (uses colon before ms: HH:MM:SS:mmm)
+          const [logHour, logMin, logSec] = logTimeStr.split(':');
+          const logTimestamp = new Date(Date.UTC(
+            parseInt(logDateStr.split('-')[0]),
+            parseInt(logDateStr.split('-')[1]) - 1,
+            parseInt(logDateStr.split('-')[2]),
+            parseInt(logHour),
+            parseInt(logMin),
+            parseInt(logSec)
+          ));
+
+          // Create a unique key for this date
+          const dateKey = datePart;
+
+          // Check if we already have an entry for this date
+          const existingEntry = dateEntries.get(dateKey);
+
+          // Keep the entry with the most non-zero values (ring clears buffer after sync)
+          const nonZeroCount = tempValues.filter(v => v > 0).length;
+          const existingNonZeroCount = existingEntry ? existingEntry.tempValues.filter(v => v > 0).length : 0;
+          
+          if (!existingEntry || nonZeroCount > existingNonZeroCount) {
+            dateEntries.set(dateKey, {
+              date: recordDateOnly,
+              frequency,
+              tempValues,
+              logTimestamp,
+            });
+
+            console.log(`🌡️ [BLE] Found SkinTemp data for ${dateKey}: ${tempValues.length} readings (${nonZeroCount} valid), frequency: ${frequency} min`);
+          }
+        } catch (parseError) {
+          console.warn('🌡️ ⚠️ Skipping malformed BLE entry:', parseError);
+          continue;
+        }
+      }
+
+      console.log(`🌡️ Total BLE log matches found: ${bleMatchCount}`);
       console.log(`🌡️ Unique dates with SkinTemp data: ${dateEntries.size}`);
 
       if (dateEntries.size === 0) {

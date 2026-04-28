@@ -142,9 +142,12 @@ const POLAR_TO_LUNA_SPORT_TYPE: Record<string, number> = {
  * - Summary header (rows 1-2)
  * - Per-second HR data (rows 3+)
  * 
- * NOTE: Polar timestamps are already in IST - NO timezone offset applied
+ * NOTE: Polar CSV timestamps are in IST (India Standard Time)
+ * We convert them to UTC by subtracting 5.5 hours to align with Luna timestamps
  */
 export class PolarWorkoutParser {
+  // IST offset: 5 hours 30 minutes in milliseconds
+  private static readonly IST_OFFSET_MS = 19800000;
   
   /**
    * Parse a Polar workout CSV file
@@ -300,18 +303,25 @@ export class PolarWorkoutParser {
     const timeStr = getVal('Start time') || '';    // 10:41:10
     const durationStr = getVal('Duration') || '';  // 00:29:06
     
-    // Parse start time - Polar time is already in IST
-    // Store as UTC-equivalent (same as Luna approach) so times align for comparison
+    // Parse start time - Polar CSV time is in IST
+    // Convert to UTC by subtracting IST offset to align with Luna timestamps
     let startTime: Date | undefined;
     let endTime: Date | undefined;
     let durationSec = 0;
     
     if (dateStr && timeStr) {
-      // Polar CSV time is already IST - store directly as UTC for comparison with Luna
-      // Luna applies IST offset so its timestamps show IST values as UTC
-      // We do the same here: 15:33:26 IST becomes 15:33:26.000Z
-      const dateTimeStr = `${dateStr}T${timeStr}Z`; // Treat as UTC directly
-      startTime = new Date(dateTimeStr);
+      // Polar CSV time is in IST (e.g., 2026-04-26 07:06:46 IST)
+      // Luna stores UTC timestamps (e.g., 2026-04-26 01:36:46 UTC for same moment)
+      // Convert: Parse components as UTC, then subtract IST offset
+      
+      const [year, month, day] = dateStr.split('-').map(Number);
+      const [hour, minute, second] = timeStr.split(':').map(Number);
+      
+      // Create UTC timestamp from IST components
+      // IST = UTC + 5:30, so UTC_ms = IST_components_as_UTC - 5:30
+      const istAsUtcMs = Date.UTC(year, month - 1, day, hour, minute, second || 0);
+      const utcMs = istAsUtcMs - PolarWorkoutParser.IST_OFFSET_MS;
+      startTime = new Date(utcMs);
     }
     
     // Parse duration (HH:MM:SS)

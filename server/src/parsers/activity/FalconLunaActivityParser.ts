@@ -56,8 +56,13 @@ export class FalconLunaActivityParser {
       const dailyRecordsByDate = new Map<string, ParsedDailyBean>();
 
       for await (const line of rl) {
-        // Look for onDailyData lines
-        if (!line.includes('LUNA-> onDailyData : DailyBean{')) {
+        // Look for onDailyData lines - support both App Log and BLE Log formats
+        // App Log: "LUNA-> onDailyData : DailyBean{...}"
+        // BLE Log: "fitnessparsing ----------->  parsingFitness dailyData = DailyBean{...}"
+        const isAppLogLine = line.includes('LUNA-> onDailyData : DailyBean{');
+        const isBleLogLine = line.includes('fitnessparsing') && line.includes('dailyData = DailyBean{');
+        
+        if (!isAppLogLine && !isBleLogLine) {
           continue;
         }
 
