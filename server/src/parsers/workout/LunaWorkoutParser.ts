@@ -74,8 +74,13 @@ export class LunaWorkoutParser {
       });
       
       for await (const line of rl) {
-        // Look for RECORD_WORKOUT received workout lines specifically
-        if (!line.includes('RECORD_WORKOUT received workout DevSportInfoBean{')) {
+        // Look for workout lines - support both App Log and BLE Log formats
+        // App Log: "RECORD_WORKOUT received workout DevSportInfoBean{...}"
+        // BLE Log: "----> sportparsing -------------> devSportInfoBean --->DevSportInfoBean{...}"
+        const isAppLogLine = line.includes('RECORD_WORKOUT received workout DevSportInfoBean{');
+        const isBleLogLine = line.includes('sportparsing') && line.includes('devSportInfoBean --->DevSportInfoBean{');
+        
+        if (!isAppLogLine && !isBleLogLine) {
           continue;
         }
         

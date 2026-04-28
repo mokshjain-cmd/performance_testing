@@ -137,8 +137,11 @@ export class LunaAndroidSPO2Parser {
           // Check if we already have an entry for this date
           const existingEntry = dateEntries.get(dateKey);
 
-          // Keep the latest entry (based on log timestamp)
-          if (!existingEntry || logTimestamp > existingEntry.logTimestamp) {
+          // Keep the entry with the most non-zero values (ring clears buffer after sync)
+          const nonZeroCount = spo2Values.filter(v => v > 0).length;
+          const existingNonZeroCount = existingEntry ? existingEntry.spo2Values.filter(v => v > 0).length : 0;
+          
+          if (!existingEntry || nonZeroCount > existingNonZeroCount) {
             dateEntries.set(dateKey, {
               date: recordDateOnly,
               frequency,
@@ -148,7 +151,7 @@ export class LunaAndroidSPO2Parser {
               logTimestamp,
             });
 
-            console.log(`🩺 ${existingEntry ? 'Updated' : 'Found'} SPO2 data for ${dateKey}: ${spo2Values.length} readings, frequency: ${frequency} min, LOG: ${logTimestamp.toISOString()}`);
+            console.log(`🩺 ${existingEntry ? 'Updated' : 'Found'} SPO2 data for ${dateKey}: ${spo2Values.length} readings (${nonZeroCount} valid), frequency: ${frequency} min, LOG: ${logTimestamp.toISOString()}`);
           }
         } catch (parseError) {
           // Skip malformed entries
@@ -157,7 +160,89 @@ export class LunaAndroidSPO2Parser {
         }
       }
 
-      console.log(`🩺 Total matches found: ${matchCount}`);
+      console.log(`🩺 Total app log matches found: ${matchCount}`);
+
+      // BLE Log Pattern: fitnessparsing continuousBloodOxygenData = ContinuousBloodOxygenBean{...}
+      // Format: 2026-04-27 00:00:17:509 ----> fitnessparsing -----------> parsingFitness continuousBloodOxygenData = ContinuousBloodOxygenBean{bloodOxygenFrequency=5, bloodOxygenData=[...], max=0, min=0, ..., date='2026-04-27 00:00:00'}
+      const blePattern = /(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2}:\d+)\s+---+>\s+fitnessparsing\s+---+>\s+parsingFitness\s+continuousBloodOxygenData\s+=\s+ContinuousBloodOxygenBean\{bloodOxygenFrequency=(\d+),\s*bloodOxygenData=\[([\d,\s]*)\],\s*max=(\d+),\s*min=(\d+),.*?date='(\d{4}-\d{2}-\d{2})\s+\d{2}:\d{2}:\d{2}'\}/g;
+
+      let bleMatch;
+      let bleMatchCount = 0;
+
+      while ((bleMatch = blePattern.exec(content)) !== null) {
+        try {
+          const logDateStr = bleMatch[1]; // e.g., "2026-04-27"
+          const logTimeStr = bleMatch[2]; // e.g., "00:00:17:509" (colon before ms)
+          const frequency = parseInt(bleMatch[3]); // e.g., 5 (frequency value)
+          const spo2DataStr = bleMatch[4]; // e.g., "0, 0, 0, 98, 99, ..."
+          const spo2Max = parseInt(bleMatch[5]);
+          const spo2Min = parseInt(bleMatch[6]);
+          const dateField = bleMatch[7]; // e.g., "2026-04-27"
+
+          // Parse SPO2 values array
+          const spo2Values = spo2DataStr
+            .split(',')
+            .map(v => v.trim())
+            .filter(v => v.length > 0)
+            .map(v => parseInt(v));
+
+          if (spo2Values.length === 0) {
+            continue;
+          }
+
+          // Parse the date field
+          const [year, month, day] = dateField.split('-').map(Number);
+
+          // Create date object for this record (midnight UTC)
+          const recordDateOnly = new Date(Date.UTC(year, month - 1, day, 0, 0, 0));
+
+          // Check if this record matches our target date
+          if (recordDateOnly < targetDate || recordDateOnly > targetDateEnd) {
+            continue;
+          }
+
+          bleMatchCount++;
+
+          // Parse BLE log timestamp (uses colon before ms: HH:MM:SS:mmm)
+          const [logHour, logMin, logSec] = logTimeStr.split(':');
+          const logTimestamp = new Date(Date.UTC(
+            parseInt(logDateStr.split('-')[0]),
+            parseInt(logDateStr.split('-')[1]) - 1,
+            parseInt(logDateStr.split('-')[2]),
+            parseInt(logHour),
+            parseInt(logMin),
+            parseInt(logSec)
+          ));
+
+          // Create a unique key for this date
+          const dateKey = dateField;
+
+          // Check if we already have an entry for this date
+          const existingEntry = dateEntries.get(dateKey);
+
+          // Keep the entry with the most non-zero values (ring clears buffer after sync)
+          const nonZeroCount = spo2Values.filter(v => v > 0).length;
+          const existingNonZeroCount = existingEntry ? existingEntry.spo2Values.filter(v => v > 0).length : 0;
+          
+          if (!existingEntry || nonZeroCount > existingNonZeroCount) {
+            dateEntries.set(dateKey, {
+              date: recordDateOnly,
+              frequency,
+              spo2Max,
+              spo2Min,
+              spo2Values,
+              logTimestamp,
+            });
+
+            console.log(`🩺 [BLE] ${existingEntry ? 'Updated' : 'Found'} SPO2 data for ${dateKey}: ${spo2Values.length} readings (${nonZeroCount} valid), frequency: ${frequency}, LOG: ${logTimestamp.toISOString()}`);
+          }
+        } catch (parseError) {
+          console.warn('🩺 ⚠️ Skipping malformed BLE entry:', parseError);
+          continue;
+        }
+      }
+
+      console.log(`🩺 Total BLE log matches found: ${bleMatchCount}`);
       console.log(`🩺 Unique dates with SPO2 data: ${dateEntries.size}`);
 
       if (dateEntries.size === 0) {
