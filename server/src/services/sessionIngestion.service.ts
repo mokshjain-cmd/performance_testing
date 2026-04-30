@@ -5,7 +5,7 @@ import User from '../models/Users';
 import NormalizedReading from '../models/NormalizedReadings';
 import { parseLunaCsv } from '../parsers/lunaParser';
 import { parsePolarCsv } from '../parsers/polarParser';
-import { LunaIOSHRParser } from '../parsers/lunaiosHRparser';
+import { LunaIOSHRParser } from '../parsers/DailyParsers/Lunaiosapp';
 import { LunaAndroidHRParser } from '../parsers/DailyParsers/Lunaandroidapp';
 import { parseAppleHR } from '../parsers/appleHRparser';
 import { analyzeSession } from './sessionAnalysis.service';

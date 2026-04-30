@@ -27,6 +27,36 @@ const HeartRateChart: React.FC<Props> = ({ points, analysis, metric = 'HR' }) =>
     new Set(deviceTypes.flatMap(dt => points[dt].map(p => p.timestamp)))
   ).sort();
 
+  // Fill gaps in timestamps with null values to show disconnects visually
+  // This creates a static X-axis with regular time intervals
+  const fillTimeGaps = (timestamps: string[]): string[] => {
+    if (timestamps.length < 2) return timestamps;
+    
+    const filled: string[] = [];
+    for (let i = 0; i < timestamps.length - 1; i++) {
+      const current = new Date(timestamps[i]).getTime();
+      const next = new Date(timestamps[i + 1]).getTime();
+      const diffMs = next - current;
+      
+      filled.push(timestamps[i]);
+      
+      // If gap is more than 5 minutes, fill with intermediate null points every 5 minutes
+      if (diffMs > 5 * 60 * 1000) {
+        const fiveMinMs = 5 * 60 * 1000;
+        let intermediateTime = current + fiveMinMs;
+        
+        while (intermediateTime < next) {
+          filled.push(new Date(intermediateTime).toISOString());
+          intermediateTime += fiveMinMs;
+        }
+      }
+    }
+    filled.push(timestamps[timestamps.length - 1]);
+    return filled;
+  };
+
+  const filledTimestamps = fillTimeGaps(timestamps);
+
   // Get metric field name and details
   const getMetricField = (m: string) => {
     switch (m) {
@@ -70,7 +100,7 @@ const HeartRateChart: React.FC<Props> = ({ points, analysis, metric = 'HR' }) =>
   // Use camelCase for deviceStats lookup (skinTemp, not skintemp)
   const metricKey = metric === 'SkinTemp' ? 'skinTemp' : metric.toLowerCase();
 
-  const chartData = timestamps.map(ts => {
+  const chartData = filledTimestamps.map(ts => {
     const row: any = { timestamp: ts };
     deviceTypes.forEach(dt => {
       const point = points[dt].find(p => p.timestamp === ts);
@@ -191,6 +221,8 @@ const HeartRateChart: React.FC<Props> = ({ points, analysis, metric = 'HR' }) =>
                 tickLine={false}
                 stroke="#9ca3af"
                 tickFormatter={(ts) => splitDateTime(ts).time}
+                interval={Math.max(0, Math.floor(chartData.length / 12))}
+                tickCount={12}
               />
               <YAxis
                 tick={{ fontSize: 12, fill: '#6b7280' }}
@@ -232,6 +264,7 @@ const HeartRateChart: React.FC<Props> = ({ points, analysis, metric = 'HR' }) =>
                   dot={false}
                   activeDot={{ r: 3 }}
                   stroke={getDeviceColor(index)}
+                  connectNulls={false}
                 />
               )
             ))}
