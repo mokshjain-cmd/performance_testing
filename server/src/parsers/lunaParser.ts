@@ -129,7 +129,7 @@ export async function parseLunaCsv(
             //console.log("⚠️ Invalid timestamp found:", tsFull);
             return;
           }
-          console.log(`${ts} here is the time for this row as our time matching is statitme : ${startTime} and endtime : ${endTime}`);
+          //console.log(`${ts} here is the time for this row as our time matching is statitme : ${startTime} and endtime : ${endTime}`);
           // Filter only required range
           if (ts < startTime || ts > endTime) {
             skippedRows++;
