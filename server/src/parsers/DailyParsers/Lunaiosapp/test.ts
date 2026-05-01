@@ -3,7 +3,7 @@
  * Tests parsing of the ZHDRingsLogs.txt sample provided
  */
 
-import { LunaIOSHRParser } from '../../parsers/DailyParsers/Lunaiosapp';
+import { LunaIOSHRParser } from './index';
 import path from 'path';
 
 async function testIOSParser() {
@@ -36,12 +36,12 @@ async function testIOSParser() {
     
     if (readings.length > 0) {
       console.log('\nFirst 5 readings:');
-      readings.slice(0, 5).forEach((r, idx) => {
+      readings.slice(0, 5).forEach((r: any, idx: number) => {
         console.log(`  [${idx}] ${r.timestamp.toISOString()} -> HR: ${r.metrics.heartRate} bpm (valid: ${r.isValid})`);
       });
 
       console.log('\nLast 5 readings:');
-      readings.slice(-5).forEach((r, idx) => {
+      readings.slice(-5).forEach((r: any, idx: number) => {
         const actualIdx = readings.length - 5 + idx;
         console.log(`  [${actualIdx}] ${r.timestamp.toISOString()} -> HR: ${r.metrics.heartRate} bpm (valid: ${r.isValid})`);
       });
