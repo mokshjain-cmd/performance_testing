@@ -1,8 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 
-const LUNA_CSV_HEADER = 'Unknown,SySTime,ACC_X,ACC_Y,ACC_Z,G_RawData,R_RawData,IR_RawData,AMB_Rawdata,G_Scale_PPG,R_Scale_PPG,IR_Scale_PPG,g_agin,r_agin,ir_agin,Hr_Qi,Hrs,Spo2_Qi,Spo2';
-
+// Updated to 21 columns to match your log data
+const LUNA_CSV_HEADER = 'Unknown,SySTime,ACC_X,ACC_Y,ACC_Z,G_RawData,R_RawData,IR_RawData,AMB_Rawdata,G_Scale_PPG,R_Scale_PPG,IR_Scale_PPG,g_agin,r_agin,ir_agin,Stat2,Stat3,Hr_Qi,Hrs,Spo2_Qi,Spo2';
 /**
  * Convert Luna .txt file to .csv by adding the header if missing.
  * If the file is already a .csv or already has a header, it returns the original path.
