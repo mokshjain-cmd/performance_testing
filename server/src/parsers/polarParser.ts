@@ -275,11 +275,8 @@ export async function parsePolarCsv(
   console.log("📌 Skipped Rows:", skippedRows);
   console.log("📌 Per-Second Readings:", perSecondReadings.length);
 
-  // Bucket into 30-second intervals
-  const bucketedReadings = bucketReadingsTo30Sec(perSecondReadings, startTime, endTime);
-
-  // Convert to normalized format
-  const normalized: NormalizedReadingInput[] = bucketedReadings.map((bucket) => ({
+  // Convert to normalized format (per-second, no bucketing)
+  const normalized: NormalizedReadingInput[] = perSecondReadings.map((reading) => ({
     meta: {
       sessionId: meta.sessionId,
       userId: meta.userId,
@@ -288,14 +285,14 @@ export async function parsePolarCsv(
       bandPosition: meta.bandPosition,
       firmwareVersion: meta.firmwareVersion,
     },
-    timestamp: bucket.timestamp,
+    timestamp: reading.timestamp,
     metrics: {
-      heartRate: bucket.avgHr,
+      heartRate: reading.hr,
     },
     isValid: true,
   }));
 
-  console.log("📌 Final 30-Second Buckets:", normalized.length);
+  console.log("📌 Final Per-Second Readings:", normalized.length);
 
   if (normalized.length > 0) {
     console.log("📌 First Bucket:", normalized[0].timestamp.toISOString(), "HR:", normalized[0].metrics.heartRate);

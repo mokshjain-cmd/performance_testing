@@ -5,7 +5,7 @@ import User from '../models/Users';
 import NormalizedReading from '../models/NormalizedReadings';
 import { parseLunaCsv } from '../parsers/lunaParser';
 import { parsePolarCsv } from '../parsers/polarParser';
-import { LunaIOSHRParser } from '../parsers/lunaiosHRparser';
+import { LunaIOSHRParser } from '../parsers/DailyParsers/Lunaiosapp';
 import { LunaAndroidHRParser } from '../parsers/DailyParsers/Lunaandroidapp';
 import { parseAppleHR } from '../parsers/appleHRparser';
 import { analyzeSession } from './sessionAnalysis.service';
@@ -107,49 +107,58 @@ export async function ingestSessionFiles({
         let lunaFilePath = filePath;
         let extractedFolder: string | null = null;
         
-        if (filePath.toLowerCase().endsWith('.zip')) {
-          console.log('📦 Luna ZIP file detected, extracting...');
-          const extracted = await extractLunaZip(filePath);
-          lunaFilePath = extracted.logFilePath;
-          extractedFolder = extracted.extractedFolder;
-          extractedFolders.push(extractedFolder); // Track for cleanup
-          console.log(`✅ Extracted Luna log file: ${lunaFilePath}`);
-        }
-        
-        // Check if it's iOS - use iOS-specific parser
-        if (mobileType === "iOS") {
-          console.log('Using Luna iOS HR parser');
-          try {
-            readings = await LunaIOSHRParser.parse(lunaFilePath, meta, startTime, endTime);
-            console.log(`Parsed ${readings.length} readings from Luna iOS file.`);
-          } catch (iosParseError) {
-            console.error('❌ Luna iOS HR parser failed, falling back to standard parser:', iosParseError);
-            // Fallback to standard parser if iOS parser fails
-            const csvFilePath = await convertLunaTxtToCsv(lunaFilePath);
-            readings = await parseLunaCsv(csvFilePath, meta, startTime, endTime);
-            console.log(`Parsed ${readings.length} readings from Luna file (fallback).`);
-          }
-        } else if (mobileType === "Android") {
-          // Use Android-specific parser for ALL Android activities
-          // This parser uses onContinuousHeartRateData JSON format (30-sec intervals)
-          console.log('Using Luna Android HR parser (onContinuousHeartRateData format)');
-          try {
-            readings = await LunaAndroidHRParser.parse(lunaFilePath, meta, startTime, endTime);
-            console.log(`Parsed ${readings.length} readings from Luna Android file.`);
-          } catch (androidParseError) {
-            console.error('❌ Luna Android HR parser failed, falling back to standard parser:', androidParseError);
-            // Fallback to standard parser if Android parser fails
-            const csvFilePath = await convertLunaTxtToCsv(lunaFilePath);
-            readings = await parseLunaCsv(csvFilePath, meta, startTime, endTime);
-            console.log(`Parsed ${readings.length} readings from Luna file (fallback).`);
-          }
-        } else {
-          // No mobileType specified - use standard Luna parser (fallback)
+        if(activityType!=="daily") {
+          console.log(`Activity type for this session: ${activityType}`);
           console.log('Using standard Luna HR parser (no mobileType specified)');
           const csvFilePath = await convertLunaTxtToCsv(lunaFilePath);
           readings = await parseLunaCsv(csvFilePath, meta, startTime, endTime);
           console.log(`Parsed ${readings.length} readings from Luna file.`);
+        }else{
+            if (filePath.toLowerCase().endsWith('.zip')) {
+            console.log('📦 Luna ZIP file detected, extracting...');
+            const extracted = await extractLunaZip(filePath);
+            lunaFilePath = extracted.logFilePath;
+            extractedFolder = extracted.extractedFolder;
+            extractedFolders.push(extractedFolder); // Track for cleanup
+            console.log(`✅ Extracted Luna log file: ${lunaFilePath}`);
+          }
+          
+          // Check if it's iOS - use iOS-specific parser
+          if (mobileType === "iOS") {
+            console.log('Using Luna iOS HR parser');
+            try {
+              readings = await LunaIOSHRParser.parse(lunaFilePath, meta, startTime, endTime);
+              console.log(`Parsed ${readings.length} readings from Luna iOS file.`);
+            } catch (iosParseError) {
+              console.error('❌ Luna iOS HR parser failed, falling back to standard parser:', iosParseError);
+              // Fallback to standard parser if iOS parser fails
+              const csvFilePath = await convertLunaTxtToCsv(lunaFilePath);
+              readings = await parseLunaCsv(csvFilePath, meta, startTime, endTime);
+              console.log(`Parsed ${readings.length} readings from Luna file (fallback).`);
+            }
+          } else if (mobileType === "Android") {
+            // Use Android-specific parser for ALL Android activities
+            // This parser uses onContinuousHeartRateData JSON format (30-sec intervals)
+            console.log('Using Luna Android HR parser (onContinuousHeartRateData format)');
+            try {
+              readings = await LunaAndroidHRParser.parse(lunaFilePath, meta, startTime, endTime);
+              console.log(`Parsed ${readings.length} readings from Luna Android file.`);
+            } catch (androidParseError) {
+              console.error('❌ Luna Android HR parser failed, falling back to standard parser:', androidParseError);
+              // Fallback to standard parser if Android parser fails
+              const csvFilePath = await convertLunaTxtToCsv(lunaFilePath);
+              readings = await parseLunaCsv(csvFilePath, meta, startTime, endTime);
+              console.log(`Parsed ${readings.length} readings from Luna file (fallback).`);
+            }
+          } else {
+            // No mobileType specified - use standard Luna parser (fallback)
+            console.log('Using standard Luna HR parser (no mobileType specified)');
+            const csvFilePath = await convertLunaTxtToCsv(lunaFilePath);
+            readings = await parseLunaCsv(csvFilePath, meta, startTime, endTime);
+            console.log(`Parsed ${readings.length} readings from Luna file.`);
+          }
         }
+        
       }
       if (deviceType === "apple") {
         console.log('Parsing Apple HR file:', filePath);
