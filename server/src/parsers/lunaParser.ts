@@ -18,23 +18,15 @@ type NormalizedReadingInput = {
   isValid: boolean;
 };
 function parseLocalDateTime(dateTimeStr: string): Date {
-  const [datePart, timePart] = dateTimeStr.split(" ");
+  const [datePart, timePart] = dateTimeStr.trim().split(/\s+/);
   if (!datePart || !timePart) {
     throw new Error(`Invalid datetime format: ${dateTimeStr}`);
   }
 
-  const [year, month, day] = datePart.split("-").map(Number);
+  // Handle both 2026-05-01 and 2026/5/1
+  const [year, month, day] = datePart.split(/[-/]/).map(Number);
   const [hour, minute, second = "0"] = timePart.split(":");
-
-  // Create UTC date to match how startTime/endTime are parsed
-  return new Date(Date.UTC(
-    Number(year),
-    Number(month) - 1,
-    Number(day),
-    Number(hour),
-    Number(minute),
-    Number(second)
-  ));
+return new Date(Date.UTC(year, month - 1, day, Number(hour), Number(minute), Number(second)));
 }
 
 
@@ -95,7 +87,7 @@ export async function parseLunaCsv(
       })
       .on("data", (row: any) => {
         totalRows++;
-
+        const count =0;
         try {
           if (!timestampCol) {
             skippedRows++;
@@ -111,25 +103,39 @@ export async function parseLunaCsv(
 
           let tsFull = tsRaw;
 
-          // If only time exists (HH:MM:SS) prepend fileDate
+// Case 1: time-only
           if (tsRaw.length <= 8 && tsRaw.includes(":")) {
+            const fileDate = startTime.toISOString().split("T")[0];
             tsFull = `${fileDate} ${tsRaw}`;
+          }
+
+          // Case 2: date with slashes → normalize
+          else if (tsRaw.includes("/")) {
+            const [datePart, timePart] = tsRaw.split(" ");
+
+            const [y, m, d] = datePart.split("/");
+            const mm = m.padStart(2, "0");
+            const dd = d.padStart(2, "0");
+
+            tsFull = `${y}-${mm}-${dd} ${timePart}`;
           }
 
           const ts = parseLocalDateTime(tsFull);
 
+
           if (isNaN(ts.getTime())) {
             invalidTimestampRows++;
             skippedRows++;
-            console.log("⚠️ Invalid timestamp found:", tsFull);
+            //console.log("⚠️ Invalid timestamp found:", tsFull);
             return;
           }
-          
+          console.log(`${ts} here is the time for this row as our time matching is statitme : ${startTime} and endtime : ${endTime}`);
           // Filter only required range
           if (ts < startTime || ts > endTime) {
             skippedRows++;
             return;
           }
+
 
           inRangeRows++;
 
