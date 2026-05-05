@@ -34,6 +34,7 @@ const METRIC_OPTIONS = [
 
 const BENCHMARK_DEVICE_OPTIONS = [
   { value: 'polar', label: 'Polar' },
+  { value: 'zepp', label: 'AmazeFit' },
   { value: 'apple', label: 'Apple Watch' },
   { value: 'whoop', label: 'WHOOP' },
   { value: 'coros', label: 'Coros' },
@@ -453,7 +454,7 @@ export default function SessionFormPage() {
                   key={`${formData.benchmarkDeviceType}-${fileInputKey}`}
                   type="file"
                   accept={
-                    formData.benchmarkDeviceType === 'apple' || formData.benchmarkDeviceType === 'whoop' 
+                    formData.benchmarkDeviceType === 'apple' || formData.benchmarkDeviceType === 'whoop' || formData.benchmarkDeviceType === 'zepp'
                       ? '.xml,.XML,.zip,.ZIP,.csv,.CSV' 
                       : formData.benchmarkDeviceType === 'coros'
                         ? '.fit,.FIT'
