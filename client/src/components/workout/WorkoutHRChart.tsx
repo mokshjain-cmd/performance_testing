@@ -20,7 +20,14 @@ interface WorkoutHRChartProps {
   maxHr?: number;
   showIntensity?: boolean;
 }
-
+const formatClockTime = (timestamp: string): string => {
+  const date = new Date(timestamp);
+  return date.toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+};
 const formatTime = (timestamp: string, startTime: string): string => {
   const start = new Date(startTime).getTime();
   const current = new Date(timestamp).getTime();
@@ -47,36 +54,38 @@ export const WorkoutHRChart: React.FC<WorkoutHRChartProps> = ({
 }) => {
   // Create a map for benchmark readings by time offset in seconds
   const benchmarkMap = useMemo(() => {
-    const map = new Map<number, number>();
-    if (benchmarkReadings && benchmarkReadings.length > 0 && readings.length > 0) {
-      const benchmarkStart = new Date(benchmarkReadings[0].timestamp).getTime();
-      
-      benchmarkReadings.forEach(r => {
-        // Calculate offset from benchmark start
-        const benchmarkTimeMs = new Date(r.timestamp).getTime();
-        // Map to luna timeline: find the equivalent second in luna timeline
-        const offsetFromBenchmarkStart = Math.floor((benchmarkTimeMs - benchmarkStart) / 1000);
-        map.set(offsetFromBenchmarkStart, r.heartRate);
-      });
-    }
-    return map;
-  }, [benchmarkReadings, readings]);
+  const map = new Map<number, number>();
+
+  if (benchmarkReadings?.length && readings.length) {
+    const lunaStart = new Date(readings[0].timestamp).getTime();
+
+    benchmarkReadings.forEach(r => {
+      const t = new Date(r.timestamp).getTime();
+      const offset = Math.floor((t - lunaStart) / 1000);
+
+      map.set(offset, r.heartRate);
+    });
+  }
+
+  return map;
+}, [benchmarkReadings, readings]);
 
   const chartData = useMemo(() => {
     if (!readings || readings.length === 0) return [];
     
-    const startTime = readings[0].timestamp;
-    
-    // Prepare data with relative time - show ALL readings (no downsampling)
-    const data = readings.map((reading, index) => ({
-      index,
-      time: formatTime(reading.timestamp, startTime),
-      timestamp: reading.timestamp,
-      heartRate: reading.heartRate,
-      benchmarkHr: benchmarkMap.get(index) ?? null,
-      confidence: reading.heartRateConfidence,
-      intensity: reading.exerciseIntensity,
-    }));
+    const startTime = new Date(readings[0].timestamp).getTime();
+
+const data = readings.map((reading) => {
+  const t = new Date(reading.timestamp).getTime();
+  const offset = Math.floor((t - startTime) / 1000);
+
+  return {
+    time: formatClockTime(reading.timestamp),
+    timestamp: reading.timestamp,
+    heartRate: reading.heartRate,
+    benchmarkHr: benchmarkMap.get(offset) ?? null,
+  };
+});
     
     return data;
   }, [readings, benchmarkMap]);
@@ -134,12 +143,14 @@ export const WorkoutHRChart: React.FC<WorkoutHRChartProps> = ({
           <ComposedChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 10 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
             <XAxis 
-              dataKey="time" 
-              stroke="#9CA3AF"
-              tick={{ fontSize: 11 }}
-              interval="preserveStartEnd"
-              tickCount={8}
-            />
+                dataKey="time"
+                stroke="#9CA3AF"
+                tick={{ fontSize: 11 }}
+                interval="preserveStartEnd"
+                minTickGap={20}
+                angle={-30}
+                textAnchor="end"
+              />
             <YAxis 
               stroke="#9CA3AF"
               tick={{ fontSize: 11 }}
