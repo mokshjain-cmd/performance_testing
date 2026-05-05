@@ -542,9 +542,14 @@ export async function extractHRForWorkoutComparison(
           
           // Check if from Apple Watch
           const normalizedSource = sourceName.replace(/\xa0/g, ' ').replace(/\u00A0/g, ' ');
-          const isAppleWatch = normalizedSource.includes('Apple Watch') ;
+          const normalized = normalizedSource.toLowerCase();
+
+          const isSupportedSource =
+            normalized.includes('apple watch') ||
+            normalized.includes('zepp') ||
+            normalized.includes('whoop');
           
-          if (isAppleWatch) {
+          if (isSupportedSource) {
             // Parse timestamp with timezone - Apple format: "2026-04-23 07:28:33 +0530"
             // JavaScript Date constructor handles the timezone offset correctly
             const timestamp = new Date(startDateStr);
