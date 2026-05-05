@@ -8,7 +8,7 @@ import { WorkoutAnalysisService, IBenchmarkWorkoutMeta } from "./WorkoutAnalysis
 import { AppleHealthWorkoutParser, IAppleWorkout } from "../../parsers/workout/AppleHealthWorkoutParser";
 import { PolarWorkoutParser, IPolarWorkout } from "../../parsers/workout/PolarWorkoutParser";
 import { CorosWorkoutParser, ICorosWorkout } from "../../parsers/workout/CorosWorkoutParser";
-import { WhoopWorkoutParser, IWhoopWorkout } from "../../parsers/workout/WhoopWorkoutParser";
+//import { WhoopWorkoutParser, IWhoopWorkout } from "../../parsers/workout/WhoopWorkoutParser";
 import { extractHRForWorkoutComparison } from "../../parsers/appleHRparser";
 import { extractAppleHealthZip, extractLunaZip, deleteDirectory } from "../../tools/zipExtractor";
 import { mailService } from "../mail.service";
@@ -272,11 +272,12 @@ export class IngestWorkoutService {
       let appleWorkouts: IAppleWorkout[] = [];
       let polarWorkout: IPolarWorkout | null = null;
       let corosWorkout: ICorosWorkout | null = null;
-      let whoopWorkouts: IWhoopWorkout[] = [];
+      //let whoopWorkouts: IWhoopWorkout[] = [];
       let benchmarkFilePath: string | undefined;
       
       // Handle Apple Health benchmark file
-      if (benchmarkFile && benchmarkDeviceType === 'apple') {
+      const isAppleBasedDevice = ['apple', 'whoop', 'zepp', 'garmin'].includes(benchmarkDeviceType || '');
+      if (benchmarkFile && isAppleBasedDevice) {
         console.log(`[IngestWorkoutService] 🍎 Parsing Apple Health benchmark file...`);
         
         const fileExtension = path.extname(benchmarkFile.path).toLowerCase();
@@ -302,7 +303,8 @@ export class IngestWorkoutService {
           appleWorkouts = await AppleHealthWorkoutParser.parseWorkouts(
             benchmarkFilePath,
             minStartTime,
-            maxEndTime
+            maxEndTime,
+            benchmarkDeviceType
           );
           console.log(`[IngestWorkoutService] Found ${appleWorkouts.length} Apple workouts in time range`);
           
@@ -347,38 +349,7 @@ export class IngestWorkoutService {
       }
       
       // Handle Whoop benchmark file (from Apple Health export, filtered by sourceName)
-      if (benchmarkFile && benchmarkDeviceType === 'whoop') {
-        console.log(`[IngestWorkoutService] 🏋️ Parsing Whoop workout from Apple Health export...`);
-        
-        const fileExtension = path.extname(benchmarkFile.path).toLowerCase();
-        if (fileExtension === '.zip') {
-          try {
-            const extracted = await extractAppleHealthZip(benchmarkFile.path);
-            benchmarkFilePath = extracted.exportXmlPath;
-            extractedFolder = extracted.extractedFolder;
-          } catch (zipError) {
-            console.error('[IngestWorkoutService] ❌ Error extracting Apple Health ZIP for Whoop:', zipError);
-          }
-        } else {
-          benchmarkFilePath = benchmarkFile.path;
-        }
-        
-        if (benchmarkFilePath) {
-          const minStartTime = new Date(Math.min(...parsedWorkouts.map(w => w.startTime.getTime())) - 900000);
-          const maxEndTime = new Date(Math.max(...parsedWorkouts.map(w => w.endTime.getTime())) + 900000);
-          
-          try {
-            whoopWorkouts = await WhoopWorkoutParser.parseWorkouts(
-              benchmarkFilePath,
-              minStartTime,
-              maxEndTime
-            );
-            console.log(`[IngestWorkoutService] 🏋️ Found ${whoopWorkouts.length} Whoop workouts in time range`);
-          } catch (whoopError) {
-            console.error('[IngestWorkoutService] ❌ Error parsing Whoop workouts:', whoopError);
-          }
-        }
-      }
+      
       
       // Process each session
       for (const { sessionId, workout } of sessionInfos) {
@@ -390,7 +361,7 @@ export class IngestWorkoutService {
           let benchmarkWorkoutMeta: IBenchmarkWorkoutMeta | undefined;
           
           // Match Apple workout
-          if (appleWorkouts.length > 0 && benchmarkDeviceType === 'apple' && benchmarkFilePath) {
+          if (appleWorkouts.length > 0 && isAppleBasedDevice && benchmarkFilePath) {
             console.log(`[IngestWorkoutService] Matching Luna workout: ${workout.startTime.toISOString()} - ${workout.endTime.toISOString()}`);
             
             const match = AppleHealthWorkoutParser.findMatchingWorkout(
@@ -420,7 +391,7 @@ export class IngestWorkoutService {
                 userId,
                 workout,
                 benchmarkFilePath,
-                benchmarkDeviceType
+                benchmarkDeviceType || 'apple'
               );
             } else {
               console.log(`[IngestWorkoutService] ❌ No matching Apple workout found for Luna workout at ${workout.startTime.toISOString()}`);
@@ -482,31 +453,7 @@ export class IngestWorkoutService {
           }
           
           // Match Whoop workout (same pattern as Apple)
-          if (whoopWorkouts.length > 0 && benchmarkDeviceType === 'whoop') {
-            const match = WhoopWorkoutParser.findMatchingWorkout(
-              whoopWorkouts,
-              workout.startTime,
-              workout.endTime,
-              50
-            );
-            
-            if (match) {
-              benchmarkWorkoutMeta = {
-                activeCalories: match.workout.calories,
-                // Whoop doesn't provide distance/steps
-              };
-              
-              // Process Whoop HR data
-              await this.processWhoopBenchmarkHR(
-                sessionId,
-                userId,
-                workout,
-                match.workout
-              );
-              
-              console.log(`[IngestWorkoutService] 🏋️ Matched Whoop workout: ${match.overlapPercent.toFixed(1)}% overlap`);
-            }
-          }
+        
           
           // Run analysis
           await WorkoutAnalysisService.analyzeSession(sessionId.toString(), workout, benchmarkWorkoutMeta);
@@ -665,12 +612,13 @@ export class IngestWorkoutService {
       console.log(`[IngestWorkoutService] Extracting ${benchmarkDeviceType} HR for workout ${workout.workoutId}`);
       
       let hrReadings: Array<{ timestamp: Date; heartRate: number }> = [];
-      
-      if (benchmarkDeviceType === 'apple') {
+      const isAppleBasedDevice = ['apple', 'whoop', 'zepp', 'garmin'].includes(benchmarkDeviceType || '');
+      if (isAppleBasedDevice) {
         hrReadings = await extractHRForWorkoutComparison(
           benchmarkFilePath,
           workout.startTime,
-          workout.endTime
+          workout.endTime,
+          benchmarkDeviceType
         );
       }
       // Add other benchmark device types here as needed
@@ -811,56 +759,6 @@ export class IngestWorkoutService {
     }
   }
   
-  /**
-   * Process Whoop HR data for a workout session
-   * Uses pre-parsed Whoop workout data (already in memory from Apple Health parsing)
-   */
-  private static async processWhoopBenchmarkHR(
-    sessionId: Types.ObjectId,
-    userId: Types.ObjectId | string,
-    workout: IParsedWorkout,
-    whoopWorkout: IWhoopWorkout
-  ): Promise<void> {
-    try {
-      console.log(`[IngestWorkoutService] 🏋️ Processing Whoop HR for workout ${workout.workoutId}`);
-      
-      // Extract Whoop HR readings within the Luna workout time window
-      const hrReadings = WhoopWorkoutParser.extractHRInTimeWindow(
-        whoopWorkout,
-        workout.startTime,
-        workout.endTime
-      );
-      
-      if (hrReadings.length === 0) {
-        console.log(`[IngestWorkoutService] No Whoop HR readings found in workout time range`);
-        return;
-      }
-      
-      console.log(`[IngestWorkoutService] 🏋️ Found ${hrReadings.length} Whoop HR readings in workout window (6-sec intervals)`);
-      
-      // Insert benchmark readings
-      const benchmarkReadings = hrReadings.map(reading => ({
-        meta: {
-          sessionId: sessionId,
-          workoutId: workout.workoutId,
-          userId: new Types.ObjectId(userId.toString()),
-          deviceType: 'whoop',
-          firmwareVersion: undefined,
-        },
-        timestamp: reading.timestamp,
-        heartRate: reading.heartRate,
-        heartRateConfidence: 90, // Whoop optical HR - good but not chest strap level
-        exerciseIntensity: 0,
-        isValid: true,
-      }));
-      
-      await WorkoutReading.insertMany(benchmarkReadings);
-      console.log(`[IngestWorkoutService] 🏋️ Inserted ${benchmarkReadings.length} Whoop readings for session ${sessionId}`);
-      
-    } catch (error) {
-      console.error(`[IngestWorkoutService] ❌ Error processing Whoop HR:`, error);
-      // Don't throw - we still want the session to be created even without benchmark
-    }
-  }
+  
 }
  

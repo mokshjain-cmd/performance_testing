@@ -491,7 +491,12 @@ function createNormalizedReadings(
 
   return normalizedReadings;
 }
-
+const DEVICE_SOURCE_MAP: Record<string, string[]> = {
+  apple: ['apple watch'],
+  whoop: ['whoop'],
+  zepp: ['zepp', 'amazfit'],
+  garmin: ['garmin'],
+};
 /**
  * Extract raw HR readings for workout comparison (no bucketing)
  * Returns per-second readings for accurate benchmark comparison
@@ -504,7 +509,8 @@ function createNormalizedReadings(
 export async function extractHRForWorkoutComparison(
   filePath: string,
   startTime: Date,
-  endTime: Date
+  endTime: Date,
+  benchmarkdevice: string
 ): Promise<Array<{ timestamp: Date; heartRate: number }>> {
   console.log(`\n🍎 ========================================`);
   console.log(`🍎 Apple HR Extraction for Workout Comparison`);
@@ -542,9 +548,15 @@ export async function extractHRForWorkoutComparison(
           
           // Check if from Apple Watch
           const normalizedSource = sourceName.replace(/\xa0/g, ' ').replace(/\u00A0/g, ' ');
-          const isAppleWatch = normalizedSource.includes('Apple Watch') ;
+          const normalized = normalizedSource.toLowerCase();
+
+          const allowedSources = DEVICE_SOURCE_MAP[benchmarkdevice] || [];
+
+          const isSupportedSource = allowedSources.some(source =>
+            normalized.includes(source)
+          );
           
-          if (isAppleWatch) {
+          if (isSupportedSource) {
             // Parse timestamp with timezone - Apple format: "2026-04-23 07:28:33 +0530"
             // JavaScript Date constructor handles the timezone offset correctly
             const timestamp = new Date(startDateStr);

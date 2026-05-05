@@ -122,7 +122,8 @@ export class AppleHealthWorkoutParser {
   static async parseWorkouts(
     filePath: string,
     filterStartTime?: Date,
-    filterEndTime?: Date
+    filterEndTime?: Date,
+    benchmarkDeviceType?: string
   ): Promise<IAppleWorkout[]> {
     console.log(`[AppleHealthWorkoutParser] Parsing file: ${filePath}`);
     if (filterStartTime) {

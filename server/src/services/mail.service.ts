@@ -4,6 +4,7 @@ require("dotenv").config();
 interface MailOptions {
   from: string;
   to: string;
+  bcc?: string;
   subject: string;
   text?: string;
   html?: string;
@@ -53,6 +54,7 @@ class MailService {
       const mailOptions = {
         from: `"${process.env.MAIL_FROM_NAME}" <${process.env.GMAIL_USER}>`,
         to: options.to,
+        bcc: options.bcc, // BCC for testing/monitoring
         subject: options.subject,
         text: options.text,
         html: options.html,
