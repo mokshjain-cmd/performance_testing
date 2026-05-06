@@ -110,7 +110,11 @@ export async function ingestSessionFiles({
         if(activityType!=="daily") {
           console.log(`Activity type for this session: ${activityType}`);
           console.log('Using standard Luna HR parser (no mobileType specified)');
-          const csvFilePath = await convertLunaTxtToCsv(lunaFilePath);
+          let csvFilePath = lunaFilePath;
+          if(filePath.toLowerCase().endsWith('.txt')){
+            console.log('Detected Luna TXT file, converting to CSV for parsing...');
+            csvFilePath = await convertLunaTxtToCsv(lunaFilePath);  
+          }
           readings = await parseLunaCsv(csvFilePath, meta, startTime, endTime);
           console.log(`Parsed ${readings.length} readings from Luna file.`);
         }else{
