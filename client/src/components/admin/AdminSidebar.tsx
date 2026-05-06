@@ -271,11 +271,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
                                   </span>
                                 )}
                               </div>
-                              <>
-                              {console.log({
-                                  metric: selectedMetric,
-                                  sportType: session.sportType,
-                                })}
+                              
                               <div className="text-xs text-gray-500 capitalize">
                                   {selectedMetric === 'workout'
                                     ? (session.sportType !== undefined && SPORT_TYPES[session.sportType]
@@ -283,7 +279,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
                                         : 'Daily')
                                     : session.activityType}
                                 </div>
-                                </>
+                              
                             </div>
                           </button>
                           {onDeleteSession && (
