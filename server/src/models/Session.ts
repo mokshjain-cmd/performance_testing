@@ -14,6 +14,7 @@
     startTime: Date;
 endTime: Date;
 durationSec: number;
+sportType?: number; // Add sportType field here
 bandPosition?: string;
 devices: ISessionDeviceSnapshot[];
 benchmarkDeviceType?: string;
@@ -35,6 +36,10 @@ const SessionSchema = new Schema<ISession>(
       default: 'HR',
       index: true 
     },
+    sportType: {
+    type: Number, // or String depending on your parser
+    required: false,
+  },
     startTime: { type: Date, required: true, index: true },
     endTime: { type: Date, required: true },
     durationSec: { type: Number, required: true },

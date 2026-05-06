@@ -145,34 +145,7 @@ const AdminWorkoutSessionView: React.FC<AdminWorkoutSessionViewProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Admin Actions Bar */}
-      <Card>
-        <div className="flex items-center justify-between">
-          <div>
-            <span className="text-xs text-gray-500 uppercase tracking-wide">Session ID</span>
-            <p className="font-mono text-sm text-gray-700">{sessionId}</p>
-          </div>
-          <div className="flex items-center gap-3">
-            {readingsData.luna.length > 0 && (
-              <button
-                onClick={handleExportCSV}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium"
-              >
-                <Download size={16} />
-                Export CSV
-              </button>
-            )}
-            <button
-              onClick={handleDelete}
-              disabled={deleting}
-              className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors text-sm font-medium disabled:opacity-50"
-            >
-              <Trash2 size={16} />
-              {deleting ? 'Deleting...' : 'Delete Session'}
-            </button>
-          </div>
-        </div>
-      </Card>
+      
 
       {/* Session Header */}
       <Card>

@@ -87,6 +87,7 @@ const SPORT_TYPES: Record<number, { name: string; icon: typeof Activity; color: 
   28: { name: 'Pilates', icon: PersonStanding, color: 'text-pink-500' },
   35: { name: 'Yoga', icon: PersonStanding, color: 'text-pink-500' },
   215: { name: 'Yoga', icon: PersonStanding, color: 'text-pink-500' },
+  266: { name: 'Yoga', icon: PersonStanding, color: 'text-pink-500' },
   233: { name: 'Pilates', icon: PersonStanding, color: 'text-pink-500' },
   
   // Ball Sports

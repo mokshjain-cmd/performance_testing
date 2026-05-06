@@ -729,7 +729,7 @@ export const getSessionIdsByUserIdParam = async (
     if (metric) {
       query.metric = metric;
     }
-    const sessions = await Session.find(query, '_id name activityType startTime metric devices')
+    const sessions = await Session.find(query, '_id name activityType startTime metric devices sportType')
       .sort({ startTime: -1 }) // Sort by most recent first
       .exec();
     
@@ -740,6 +740,7 @@ export const getSessionIdsByUserIdParam = async (
         _id: session._id,
         name: session.name,
         activityType: session.activityType,
+        sportType: session.sportType,
         startTime: session.startTime,
         metric: session.metric,
         firmwareVersion: lunaDevice?.firmwareVersion || 'N/A'
