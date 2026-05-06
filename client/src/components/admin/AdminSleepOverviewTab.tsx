@@ -29,6 +29,8 @@ interface GlobalSleepSummary {
 }
 
 interface FirmwarePerformance {
+  avgRemSleepBiasSec: any;
+  avgRemSleepBias: any;
   firmwareVersion: string;
   avgAccuracyPercent: number;
   avgKappaScore: number;
@@ -50,6 +52,7 @@ interface BenchmarkComparison {
   avgKappaScore: number;
   avgDeepBiasSec: number;
   avgRemBiasSec: number;
+  avgTotalSleepBiasSec? : number;
   totalSessions: number;
   stageSensitivity: {
     AWAKE: number;
@@ -123,10 +126,22 @@ const AdminSleepOverviewTab: React.FC<AdminSleepOverviewTabProps> = ({ subTab })
       .catch(err => console.error('Error fetching accuracy trend:', err));
   }, []);
 
-  const formatTime = (seconds: number) => {
+const formatTime = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     return `${hours}h ${minutes}m`;
+  };
+
+  const formatBias = (seconds?: number) => {
+    if (seconds === undefined || seconds === null || isNaN(seconds)) return '-:-';
+    if (seconds === 0) return '0h 0m';
+    
+    const absSeconds = Math.abs(seconds);
+    const hours = Math.floor(absSeconds / 3600);
+    const minutes = Math.floor((absSeconds % 3600) / 60);
+    const sign = seconds > 0 ? '↑' : '↓';
+    
+    return `${sign} ${hours}h ${minutes}m`;
   };
 
   if (loading) {
@@ -512,8 +527,10 @@ const AdminSleepOverviewTab: React.FC<AdminSleepOverviewTabProps> = ({ subTab })
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Firmware</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Accuracy</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kappa</th>
+
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Sleep Bias</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Deep Bias</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">REM Bias</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sessions</th>
                 </tr>
               </thead>
@@ -521,8 +538,9 @@ const AdminSleepOverviewTab: React.FC<AdminSleepOverviewTabProps> = ({ subTab })
                 {firmwareData.map((fw) => (
                   <tr key={fw.firmwareVersion} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm font-medium text-gray-900">{fw.firmwareVersion}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{fw.avgAccuracyPercent.toFixed(1)}%</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{fw.avgKappaScore.toFixed(3)}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{formatBias(fw.avgTotalSleepBiasSec)}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{formatBias(fw.avgDeepBiasSec)}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{formatBias(fw.avgRemBiasSec)}</td>
                     <td className="px-4 py-3 text-sm text-gray-600">{fw.totalSessions}</td>
                   </tr>
                 ))}
@@ -605,8 +623,7 @@ const AdminSleepOverviewTab: React.FC<AdminSleepOverviewTabProps> = ({ subTab })
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Benchmark Device</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Accuracy</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kappa</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Sleep Bias</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Deep Bias</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">REM Bias</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sessions</th>
@@ -616,10 +633,9 @@ const AdminSleepOverviewTab: React.FC<AdminSleepOverviewTabProps> = ({ subTab })
                 {benchmarkData.map((bm) => (
                   <tr key={bm.benchmarkDevice} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm font-medium text-gray-900">{bm.benchmarkDevice}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{bm.avgAccuracyPercent.toFixed(1)}%</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{bm.avgKappaScore.toFixed(3)}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{formatTime(Math.abs(bm.avgDeepBiasSec))}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{formatTime(Math.abs(bm.avgRemBiasSec))}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{formatBias(bm.avgTotalSleepBiasSec)}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{formatBias(bm.avgDeepBiasSec)}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{formatBias(bm.avgRemBiasSec)}</td>
                     <td className="px-4 py-3 text-sm text-gray-600">{bm.totalSessions}</td>
                   </tr>
                 ))}
