@@ -167,7 +167,7 @@ export default function ManualSleepFormPage() {
       await apiClient.post('/sessions/create-manual-sleep', payload);
       
       alert('✅ Manual Sleep Session created successfully!');
-      navigate('/sessions'); // Redirect back to sessions list
+      navigate('/dashbaord'); // Redirect back to sessions list
 
     } catch (error: any) {
       alert(`❌ Failed to create session: ${error.response?.data?.message || error.message}`);
