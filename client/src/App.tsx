@@ -19,7 +19,7 @@ import SignUpPage from './pages/SignUpPage';
 import FirmwareConfigPage from './pages/FirmwareConfigPage';
 import UserEngagementDashboardPage from './pages/UserEngagementDashboardPage';
 import { ProtectedRoute, AdminRoute, TesterRoute } from './components/common';
-
+import ManualSleepFormPage from './pages/ManualSleepFormPage';
 function App() {
   return (
     <BrowserRouter>
@@ -118,7 +118,7 @@ function App() {
             <SkinTempSessionPage />
           </ProtectedRoute>
         } />
-        
+        <Route path="/sessions/manual-sleep" element={<ManualSleepFormPage />} />
         {/* Session creation - Available to both roles */}
         <Route path="/session/new" element={
           <ProtectedRoute>

@@ -450,7 +450,7 @@ const SleepSessionsTab: React.FC<SleepSessionsTabProps> = ({ sessionId }) => {
                   ? 'text-yellow-700' 
                   : 'text-red-700'
               }`}>
-                {sessionData.comparison.agreementPercent.toFixed(1)}%
+                {(!sessionData.comparison.agreementPercent) ? 'N/A' : sessionData.comparison.agreementPercent.toFixed(1)}%
               </div>
               <div className="text-xs text-gray-700 space-y-1">
                 <p>• ≥80%: <span className="font-semibold text-green-700">Excellent agreement</span></p>

@@ -30,7 +30,7 @@ interface IUserSleepOverview {
     avgTotalSleepDiffSec: number;
     avgDeepDiffSec: number;
     avgRemDiffSec: number;
-    avgAccuracyPercent: number;
+    avgAccuracyPercent?: number;
   };
 }
 
@@ -74,8 +74,8 @@ interface ISingleSessionView {
   
   // Comparison (if benchmark available)
   comparison?: {
-    agreementPercent: number;
-    kappaScore: number;
+    agreementPercent?: number;
+    kappaScore?: number;
     totalSleepDifferenceSec: number;
     deepDifferenceSec: number;
     remDifferenceSec: number;
@@ -186,8 +186,10 @@ export class UserSleepSummaryService {
       let sleepScoreSum = 0;
       let sleepScoreCount = 0;
       
-      // For comparison metrics
-      let comparisonCount = 0;
+     // Separate comparison metrics
+      let biasComparisonCount = 0;
+      let accuracyComparisonCount = 0;
+      
       let totalSleepDiffSum = 0;
       let deepDiffSum = 0;
       let remDiffSum = 0;
@@ -223,12 +225,17 @@ export class UserSleepSummaryService {
           sleepScoreCount++;
         }
 
-        // If comparison available
-        if (sleepStats.epochAccuracyPercent !== undefined) {
-          comparisonCount++;
-          totalSleepDiffSum += sleepStats.totalSleepDiffSec || 0;
+        // 1. Check for Biases (Works for both Manual Entry and File Upload)
+        if (sleepStats.totalSleepDiffSec !== undefined) {
+          biasComparisonCount++;
+          totalSleepDiffSum += sleepStats.totalSleepDiffSec;
           deepDiffSum += sleepStats.deepDiffSec || 0;
           remDiffSum += sleepStats.remDiffSec || 0;
+        }
+
+        // 2. Check for Accuracy (Works for File Upload only)
+        if (sleepStats.epochAccuracyPercent !== undefined) {
+          accuracyComparisonCount++;
           accuracySum += sleepStats.epochAccuracyPercent;
         }
       });
@@ -259,13 +266,13 @@ export class UserSleepSummaryService {
         sleepConsistencyScore: undefined, // TODO: Calculate variance in sleep start times
       };
 
-      // Add comparison if available
-      if (comparisonCount > 0) {
+      // Add comparison if ANY comparison data is available
+      if (biasComparisonCount > 0 || accuracyComparisonCount > 0) {
         overview.comparison = {
-          avgTotalSleepDiffSec: totalSleepDiffSum / comparisonCount,
-          avgDeepDiffSec: deepDiffSum / comparisonCount,
-          avgRemDiffSec: remDiffSum / comparisonCount,
-          avgAccuracyPercent: accuracySum / comparisonCount,
+          avgTotalSleepDiffSec: biasComparisonCount > 0 ? totalSleepDiffSum / biasComparisonCount : 0,
+          avgDeepDiffSec: biasComparisonCount > 0 ? deepDiffSum / biasComparisonCount : 0,
+          avgRemDiffSec: biasComparisonCount > 0 ? remDiffSum / biasComparisonCount : 0,
+          avgAccuracyPercent: accuracyComparisonCount > 0 ? accuracySum / accuracyComparisonCount : undefined,
         };
       }
 
@@ -357,15 +364,17 @@ export class UserSleepSummaryService {
           sleepScore: undefined, // Benchmark devices typically don't provide sleep scores
         };
 
-        // Add comparison
+        // Always add biases if a benchmark exists
+        response.comparison = {
+          totalSleepDifferenceSec: sleepStats.totalSleepDiffSec || 0,
+          deepDifferenceSec: sleepStats.deepDiffSec || 0,
+          remDifferenceSec: sleepStats.remDiffSec || 0,
+        };
+
+        // Add accuracy and kappa ONLY if available (i.e., not a manual session)
         if (sleepStats.epochAccuracyPercent !== undefined) {
-          response.comparison = {
-            agreementPercent: sleepStats.epochAccuracyPercent,
-            kappaScore: sleepStats.kappaScore || 0,
-            totalSleepDifferenceSec: sleepStats.totalSleepDiffSec || 0,
-            deepDifferenceSec: sleepStats.deepDiffSec || 0,
-            remDifferenceSec: sleepStats.remDiffSec || 0,
-          };
+          response.comparison.agreementPercent = sleepStats.epochAccuracyPercent;
+          response.comparison.kappaScore = sleepStats.kappaScore || 0;
         }
       }
 

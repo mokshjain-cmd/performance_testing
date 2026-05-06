@@ -47,7 +47,70 @@ function parseISTString(dateStr: string): Date {
 }
 
 
+// In your controller
+export const createManualSleepSession = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = req.userId;
+    const {
+      sessionName,
+      sleepDate,
+      firmwareVersion,
+      benchmarkDeviceType,
+      manualData // This matches the IManualSleepData interface
+    } = req.body;
 
+    // 1. Calculate Start/End times just like you do in standard ingestion
+    const [year, month, day] = sleepDate.split("-").map(Number);
+    const start = new Date(Date.UTC(year, month - 1, day - 1, 21, 0, 0));
+    const end = new Date(Date.UTC(year, month - 1, day, 9, 0, 0));
+    const durationSec = Math.floor((end.getTime() - start.getTime()) / 1000);
+    console.log(`\n🛌 Creating manual sleep session with data ${JSON.stringify(manualData)}`);
+    // 2. Resolve Device IDs (similar to current logic, simplified here)
+    const lunaDevice = await Device.findOne({ deviceType: 'luna', firmwareVersion });
+    if (!lunaDevice) {
+      res.status(400).json({
+        success: false,
+        message: `Luna device with firmware version ${firmwareVersion} not found. Please ensure this firmware version is registered.`
+      });
+      return;
+    }
+    const devices = [{ deviceId: lunaDevice._id, deviceType: 'luna', firmwareVersion }];
+    
+    if (benchmarkDeviceType) {
+        const benchDevice = await Device.findOne({ deviceType: benchmarkDeviceType });
+        if(benchDevice) devices.push({ deviceId: benchDevice._id, deviceType: benchmarkDeviceType, firmwareVersion: benchDevice.firmwareVersion });
+    }
+
+    // 3. Create Session DB Record (No rawFiles mapped)
+    const session = await Session.create({
+      userId,
+      name: sessionName,
+      activityType: 'daily',
+      metric: 'Sleep',
+      startTime: start,
+      endTime: end,
+      durationSec,
+      devices,
+      benchmarkDeviceType,
+    });
+
+    // 4. Analyze directly via our new Manual Analysis method
+    await SleepAnalysisService.analyzeManualSession(session._id, manualData);
+
+    // 5. Update global, firmware, and user summaries
+    await updateAdminGlobalSummary('Sleep', true);
+    await updateFirmwarePerformanceForLuna(firmwareVersion, 'Sleep');
+    if (benchmarkDeviceType) {
+        await updateBenchmarkComparisonSummariesForSession(session._id);
+    }
+    await updateAdminDailyTrend(session.startTime, 'Sleep', true);
+
+    res.status(201).json({ success: true, data: session });
+
+  } catch (error :any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
 //currently no user check , add later
 export const createSession = async (
   req: Request,

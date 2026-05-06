@@ -121,20 +121,20 @@ interface IAdminSessionSummary {
   totalSleepBiasSec: number;
   
   // Stage sensitivity/specificity
-  stageSensitivity: {
+  stageSensitivity?: {
     AWAKE: number;
     LIGHT: number;
     DEEP: number;
     REM: number;
   };
-  stageSpecificity: {
+  stageSpecificity?: {
     AWAKE: number;
     LIGHT: number;
     DEEP: number;
     REM: number;
   };
   
-  confusionMatrix: IConfusionMatrix;
+  confusionMatrix?: IConfusionMatrix;
 }
 
 interface IAdminUserSummary {
@@ -270,11 +270,11 @@ export class AdminSleepSummaryService {
       let totalSleepBiasSum = 0;
       let sleepOnsetBiasSum = 0;
       let finalWakeBiasSum = 0;
-      let timingBiasCount = 0; // Count sessions with timing comparison data
+      let timingBiasCount = 0; 
       
-      let validationCount = 0; // Count sessions with comparison data
+      let biasValidationCount = 0;     // For biases
+      let accuracyValidationCount = 0; // For epoch accuracy
       
-      // For stage sensitivity calculation
       const aggregatedMatrix: IConfusionMatrix = {
         AWAKE: { AWAKE: 0, LIGHT: 0, DEEP: 0, REM: 0 },
         LIGHT: { AWAKE: 0, LIGHT: 0, DEEP: 0, REM: 0 },
@@ -294,17 +294,14 @@ export class AdminSleepSummaryService {
         deepSum += deep;
         remSum += rem;
 
-        // If comparison data available
-        if (sleepStats.epochAccuracyPercent !== undefined) {
-          validationCount++;
-          accuracySum += sleepStats.epochAccuracyPercent;
-          kappaSum += sleepStats.kappaScore || 0;
+        // 1. Check for Biases (Manual or File Upload)
+        if (sleepStats.totalSleepDiffSec !== undefined) {
+          biasValidationCount++;
           deepBiasSum += sleepStats.deepDiffSec || 0;
           remBiasSum += sleepStats.remDiffSec || 0;
           lightBiasSum += sleepStats.lightDiffSec || 0;
           totalSleepBiasSum += sleepStats.totalSleepDiffSec || 0;
 
-          // Calculate timing biases if both luna and benchmark times are available
           if (sleepStats.lunaSleepOnsetTime && sleepStats.benchmarkSleepOnsetTime) {
             const onsetBias = (new Date(sleepStats.lunaSleepOnsetTime).getTime() - new Date(sleepStats.benchmarkSleepOnsetTime).getTime()) / 1000;
             sleepOnsetBiasSum += onsetBias;
@@ -314,8 +311,14 @@ export class AdminSleepSummaryService {
             const wakeBias = (new Date(sleepStats.lunaFinalWakeTime).getTime() - new Date(sleepStats.benchmarkFinalWakeTime).getTime()) / 1000;
             finalWakeBiasSum += wakeBias;
           }
+        }
 
-          // Aggregate confusion matrix
+        // 2. Check for Accuracy (File Upload only)
+        if (sleepStats.epochAccuracyPercent !== undefined) {
+          accuracyValidationCount++;
+          accuracySum += sleepStats.epochAccuracyPercent;
+          kappaSum += sleepStats.kappaScore || 0;
+
           if (sleepStats.confusionMatrix) {
             const cm = sleepStats.confusionMatrix;
             (Object.keys(cm) as SleepStage[]).forEach((truthStage) => {
@@ -329,7 +332,6 @@ export class AdminSleepSummaryService {
 
       const count = analyses.length;
 
-      // Calculate stage sensitivities from aggregated matrix
       const stageSensitivity = {
         AWAKE: SleepAnalysisService.calculateStageSensitivity(aggregatedMatrix, "AWAKE"),
         LIGHT: SleepAnalysisService.calculateStageSensitivity(aggregatedMatrix, "LIGHT"),
@@ -337,7 +339,6 @@ export class AdminSleepSummaryService {
         REM: SleepAnalysisService.calculateStageSensitivity(aggregatedMatrix, "REM"),
       };
 
-      // Get latest firmware version
       const latestFirmware = sessions
         .map(s => s.devices.find((d: any) => d.deviceType === "luna")?.firmwareVersion)
         .filter(Boolean)
@@ -349,14 +350,14 @@ export class AdminSleepSummaryService {
         totalUsers: uniqueUsers.size,
         totalSleepTimeSec: totalSleepSum,
         avgTotalSleepTimeSec: totalSleepSum / count,
-        avgDeepPercent: (deepSum / totalSleepSum) * 100,
-        avgRemPercent: (remSum / totalSleepSum) * 100,
-        avgEpochAccuracyPercent: validationCount > 0 ? accuracySum / validationCount : 0,
-        avgKappaScore: validationCount > 0 ? kappaSum / validationCount : 0,
-        avgDeepBiasSec: validationCount > 0 ? deepBiasSum / validationCount : 0,
-        avgRemBiasSec: validationCount > 0 ? remBiasSum / validationCount : 0,
-        avgLightBiasSec: validationCount > 0 ? lightBiasSum / validationCount : 0,
-        avgTotalSleepBiasSec: validationCount > 0 ? totalSleepBiasSum / validationCount : 0,
+        avgDeepPercent: totalSleepSum > 0 ? (deepSum / totalSleepSum) * 100 : 0,
+        avgRemPercent: totalSleepSum > 0 ? (remSum / totalSleepSum) * 100 : 0,
+        avgEpochAccuracyPercent: accuracyValidationCount > 0 ? accuracySum / accuracyValidationCount : 0,
+        avgKappaScore: accuracyValidationCount > 0 ? kappaSum / accuracyValidationCount : 0,
+        avgDeepBiasSec: biasValidationCount > 0 ? deepBiasSum / biasValidationCount : 0,
+        avgRemBiasSec: biasValidationCount > 0 ? remBiasSum / biasValidationCount : 0,
+        avgLightBiasSec: biasValidationCount > 0 ? lightBiasSum / biasValidationCount : 0,
+        avgTotalSleepBiasSec: biasValidationCount > 0 ? totalSleepBiasSum / biasValidationCount : 0,
         avgSleepOnsetBiasSec: timingBiasCount > 0 ? sleepOnsetBiasSum / timingBiasCount : 0,
         avgFinalWakeBiasSec: timingBiasCount > 0 ? finalWakeBiasSum / timingBiasCount : 0,
         stageSensitivity,
@@ -955,26 +956,26 @@ export class AdminSleepSummaryService {
 
       const sleepStats = analysis.sleepStats;
 
-      if (!sleepStats.confusionMatrix) {
-        throw new Error("Confusion matrix not available for this session");
+      let stageSensitivity;
+      let stageSpecificity;
+      let cm = sleepStats.confusionMatrix;
+
+      // Only calculate if confusion matrix exists (File upload sessions)
+      if (cm) {
+        stageSensitivity = {
+          AWAKE: SleepAnalysisService.calculateStageSensitivity(cm, "AWAKE"),
+          LIGHT: SleepAnalysisService.calculateStageSensitivity(cm, "LIGHT"),
+          DEEP: SleepAnalysisService.calculateStageSensitivity(cm, "DEEP"),
+          REM: SleepAnalysisService.calculateStageSensitivity(cm, "REM"),
+        };
+
+        stageSpecificity = {
+          AWAKE: SleepAnalysisService.calculateStageSpecificity(cm, "AWAKE"),
+          LIGHT: SleepAnalysisService.calculateStageSpecificity(cm, "LIGHT"),
+          DEEP: SleepAnalysisService.calculateStageSpecificity(cm, "DEEP"),
+          REM: SleepAnalysisService.calculateStageSpecificity(cm, "REM"),
+        };
       }
-
-      const cm = sleepStats.confusionMatrix;
-
-      // Calculate sensitivity and specificity for each stage
-      const stageSensitivity = {
-        AWAKE: SleepAnalysisService.calculateStageSensitivity(cm, "AWAKE"),
-        LIGHT: SleepAnalysisService.calculateStageSensitivity(cm, "LIGHT"),
-        DEEP: SleepAnalysisService.calculateStageSensitivity(cm, "DEEP"),
-        REM: SleepAnalysisService.calculateStageSensitivity(cm, "REM"),
-      };
-
-      const stageSpecificity = {
-        AWAKE: SleepAnalysisService.calculateStageSpecificity(cm, "AWAKE"),
-        LIGHT: SleepAnalysisService.calculateStageSpecificity(cm, "LIGHT"),
-        DEEP: SleepAnalysisService.calculateStageSpecificity(cm, "DEEP"),
-        REM: SleepAnalysisService.calculateStageSpecificity(cm, "REM"),
-      };
 
       // Get firmware version
       const lunaDevice = session.devices.find((d: any) => d.deviceType === "luna");
@@ -1178,13 +1179,13 @@ export class AdminSleepSummaryService {
           const sleepStats = analysis.sleepStats;
           if (!sleepStats) return;
 
-          if (sleepStats.epochAccuracyPercent !== undefined) {
+          // Check for bias data instead of accuracy data
+          if (sleepStats.totalSleepDiffSec !== undefined) {
             validationCount++;
             totalBiasSum += sleepStats.totalSleepDiffSec || 0;
             lightBiasSum += sleepStats.lightDiffSec || 0;
             deepBiasSum += sleepStats.deepDiffSec || 0;
             remBiasSum += sleepStats.remDiffSec || 0;
-
             // Calculate timing biases
             if (sleepStats.lunaSleepOnsetTime && sleepStats.benchmarkSleepOnsetTime) {
               const onsetBias = (new Date(sleepStats.lunaSleepOnsetTime).getTime() - new Date(sleepStats.benchmarkSleepOnsetTime).getTime()) / 1000;

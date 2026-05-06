@@ -20,6 +20,31 @@ interface ISleepStageStats {
   awakeSec: number;
 }
 
+// In SleepAnalysisService.ts
+export interface IManualSleepData {
+  luna: {
+    totalSleepSec: number;
+    deepSec: number;
+    remSec: number;
+    lightSec: number;
+    awakeSec: number;
+    sleepOnsetTime?: Date;
+    finalWakeTime?: Date;
+    sleepScore?: number;
+  };
+  benchmark?: {
+    totalSleepSec: number;
+    deepSec: number;
+    remSec: number;
+    lightSec: number;
+    awakeSec: number;
+    sleepOnsetTime?: Date;
+    finalWakeTime?: Date;
+  };
+}
+
+
+
 /**
  * SleepAnalysisService
  * Computes session-level sleep analysis metrics
@@ -401,4 +426,57 @@ export class SleepAnalysisService {
 
     return undefined;
   }
+
+  static async analyzeManualSession(sessionId: Types.ObjectId | string, manualData: IManualSleepData): Promise<void> {
+    const session = await Session.findById(sessionId);
+    if (!session) throw new Error(`Session ${sessionId} not found`);
+
+    // Calculate Luna Efficiency
+    const lunaTimeInBed = manualData.luna.totalSleepSec + manualData.luna.awakeSec;
+    const sleepEfficiency = lunaTimeInBed > 0 ? (manualData.luna.totalSleepSec / lunaTimeInBed) * 100 : undefined;
+
+    // Check if benchmark is provided to calculate biases
+    const hasBenchmark = !!manualData.benchmark;
+
+    const sleepStats = {
+      sleepScore: manualData.luna.sleepScore,
+      sleepEfficiency,
+      totalSleepLunaSec: manualData.luna.totalSleepSec,
+      totalSleepBenchmarkSec: manualData.benchmark?.totalSleepSec,
+      totalSleepDiffSec: hasBenchmark ? manualData.luna.totalSleepSec - manualData.benchmark!.totalSleepSec : undefined,
+      deepLunaSec: manualData.luna.deepSec,
+      deepBenchmarkSec: manualData.benchmark?.deepSec,
+      deepDiffSec: hasBenchmark ? manualData.luna.deepSec - manualData.benchmark!.deepSec : undefined,
+      remLunaSec: manualData.luna.remSec,
+      remBenchmarkSec: manualData.benchmark?.remSec,
+      remDiffSec: hasBenchmark ? manualData.luna.remSec - manualData.benchmark!.remSec : undefined,
+      lightLunaSec: manualData.luna.lightSec,
+      lightBenchmarkSec: manualData.benchmark?.lightSec,
+      lightDiffSec: hasBenchmark ? manualData.luna.lightSec - manualData.benchmark!.lightSec : undefined,
+      awakeLunaSec: manualData.luna.awakeSec,
+      awakeBenchmarkSec: manualData.benchmark?.awakeSec,
+      awakeDiffSec: hasBenchmark ? manualData.luna.awakeSec - manualData.benchmark!.awakeSec : undefined,
+      lunaSleepOnsetTime: manualData.luna.sleepOnsetTime,
+      lunaFinalWakeTime: manualData.luna.finalWakeTime,
+      benchmarkSleepOnsetTime: manualData.benchmark?.sleepOnsetTime,
+      benchmarkFinalWakeTime: manualData.benchmark?.finalWakeTime,
+      // Leave epochAccuracyPercent, kappaScore, and confusionMatrix as undefined
+    };
+
+    await SessionAnalysis.findOneAndUpdate(
+      { sessionId },
+      {
+        sessionId,
+        userId: session.userId,
+        activityType: session.activityType,
+        metric: session.metric,
+        startTime: session.startTime,
+        endTime: session.endTime,
+        sleepStats,
+        isValid: session.isValid,
+        computedAt: new Date(),
+      },
+      { upsert: true, new: true }
+    );
+}
 }
