@@ -28,21 +28,7 @@ const formatClockTime = (timestamp: string): string => {
     second: '2-digit',
   });
 };
-const formatTime = (timestamp: string, startTime: string): string => {
-  const start = new Date(startTime).getTime();
-  const current = new Date(timestamp).getTime();
-  const diffSec = Math.floor((current - start) / 1000);
-  
-  const mins = Math.floor(diffSec / 60);
-  const secs = diffSec % 60;
-  
-  if (mins >= 60) {
-    const hrs = Math.floor(mins / 60);
-    const remainMins = mins % 60;
-    return `${hrs}:${remainMins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  }
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
-};
+
 
 export const WorkoutHRChart: React.FC<WorkoutHRChartProps> = ({ 
   readings, 
