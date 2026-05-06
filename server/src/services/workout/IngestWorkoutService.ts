@@ -219,6 +219,7 @@ export class IngestWorkoutService {
       metric: 'Workout',
       startTime: workout.startTime,
       endTime: workout.endTime,
+      sportType: workout.sportType,
       durationSec: workout.durationSec,
       devices: [{
         deviceId: lunaDeviceId,
