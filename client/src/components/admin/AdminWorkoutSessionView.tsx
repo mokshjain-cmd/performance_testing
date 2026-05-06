@@ -10,8 +10,8 @@ import {
   WorkoutComparisonCard 
 } from '../workout';
 import type { WorkoutSessionDetails, WorkoutStats, WorkoutReadingsResult } from '../../types';
-import { Calendar, Clock, Cpu, MapPin, FileText, Trash2, Download } from 'lucide-react';
-import apiClient from '../../services/api';
+import { Calendar, Clock, Cpu, MapPin, FileText } from 'lucide-react';
+
 
 interface AdminWorkoutSessionViewProps {
   sessionId: string;
@@ -48,14 +48,12 @@ const formatDuration = (seconds: number): string => {
 
 const AdminWorkoutSessionView: React.FC<AdminWorkoutSessionViewProps> = ({ 
   sessionId,
-  onSessionDeleted 
 }) => {
   const [sessionData, setSessionData] = useState<WorkoutSessionDetails | null>(null);
   const [readingsData, setReadingsData] = useState<WorkoutReadingsResult>({ luna: [], benchmark: null });
   const [loading, setLoading] = useState(true);
   const [readingsLoading, setReadingsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -83,44 +81,8 @@ const AdminWorkoutSessionView: React.FC<AdminWorkoutSessionViewProps> = ({
     }
   }, [sessionId]);
 
-  const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this workout session? This action cannot be undone.')) {
-      return;
-    }
-
-    try {
-      setDeleting(true);
-      await apiClient.delete(`/sessions/${sessionId}`);
-      alert('Session deleted successfully');
-      onSessionDeleted?.();
-    } catch (err: any) {
-      console.error('Error deleting session:', err);
-      alert(err.message || 'Failed to delete session');
-    } finally {
-      setDeleting(false);
-    }
-  };
-
-  const handleExportCSV = () => {
-    if (!readingsData.luna.length) return;
-
-    const headers = ['Timestamp', 'Heart Rate (BPM)', 'Confidence', 'Intensity'];
-    const rows = readingsData.luna.map(r => [
-      r.timestamp,
-      r.heartRate,
-      r.heartRateConfidence || '',
-      r.exerciseIntensity || ''
-    ]);
-
-    const csv = [headers, ...rows].map(row => row.join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `workout_${sessionId}_readings.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
+  
+  
 
   if (loading) return <Loader />;
 
