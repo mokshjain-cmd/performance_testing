@@ -12,6 +12,7 @@ const BENCHMARK_DEVICE_OPTIONS = [
   { value: 'coros', label: 'Coros' },
   { value: 'masimo', label: 'Masimo' },
   { value: 'garmin', label: 'Garmin' },
+  {value : 'luna ring', label: 'Luna Ring'},
 ];
 
 // --- Custom Component for Hours & Minutes Input ---
