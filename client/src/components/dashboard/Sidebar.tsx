@@ -64,7 +64,9 @@ const Sidebar: React.FC<Props> = ({
           ) : (
             sessions.map((s) => {
               const isSessionSelected = activeTab === 'sessions' && selectedSessionId === s._id;
-              
+              console.log("Current session data:", s);
+              const lunaDevice = s.devices?.find(d => d.deviceType === 'luna');
+              const firmware = lunaDevice?.firmwareVersion;
               return (
                 <button
                   key={s._id}
@@ -82,9 +84,9 @@ const Sidebar: React.FC<Props> = ({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="truncate">{s.name || `Session ${s._id.slice(-8)}`}</span>
-                      {s.metric && (
+                      {firmware && (
                         <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium flex-shrink-0">
-                          {s.metric}
+                          {firmware}
                         </span>
                       )}
                     </div>
