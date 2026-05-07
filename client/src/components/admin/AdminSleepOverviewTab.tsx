@@ -205,7 +205,90 @@ const formatTime = (seconds: number) => {
           </div>
         </Card>
       </div>
+      
+      {/* Bias Breakdown */}
+      <Card>
+        <h3 className="text-lg font-semibold mb-4">Stage-wise Bias (Falcon vs Benchmark)</h3>
+        <p className="text-sm text-gray-600 mb-4">Average difference between Falcon and benchmark devices</p>
+        
+        {/* Sleep Timing Biases */}
+        <div className="mb-6">
+          <h4 className="text-md font-medium mb-3 text-gray-700">Sleep Timing Bias</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="text-center p-4 bg-amber-50 rounded-lg border border-amber-200">
+              <p className="text-sm text-amber-700 mb-1">Sleep Onset</p>
+              <p className="text-xl font-bold text-amber-900">
+                {formatTime(Math.abs(globalSummary?.avgSleepOnsetBiasSec || 0))}
+              </p>
+              <p className="text-xs text-amber-600 mt-1">
+                {(globalSummary?.avgSleepOnsetBiasSec || 0) > 0 ? '↑ Falcon detects later' : '↓ Falcon detects earlier'}
+              </p>
+            </div>
+            <div className="text-center p-4 bg-orange-50 rounded-lg border border-orange-200">
+              <p className="text-sm text-orange-700 mb-1">Final Wake</p>
+              <p className="text-xl font-bold text-orange-900">
+                {formatTime(Math.abs(globalSummary?.avgFinalWakeBiasSec || 0))}
+              </p>
+              <p className="text-xs text-orange-600 mt-1">
+                {(globalSummary?.avgFinalWakeBiasSec || 0) > 0 ? '↑ Falcon detects later' : '↓ Falcon detects earlier'}
+              </p>
+            </div>
+          </div>
+        </div>
 
+        {/* Stage Duration Biases */}
+        <div className="mb-6">
+          <h4 className="text-md font-medium mb-3 text-gray-700">Stage Duration Bias</h4>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="text-center p-4 bg-gray-50 rounded-lg">
+              <p className="text-sm text-gray-600 mb-1">Total Sleep</p>
+              <p className="text-xl font-bold text-gray-900">
+                {formatTime(Math.abs(globalSummary?.avgTotalSleepBiasSec || 0))}
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                {(globalSummary?.avgTotalSleepBiasSec || 0) > 0 ? '↑ Over' : '↓ Under'}
+              </p>
+            </div>
+            <div className="text-center p-4 bg-blue-50 rounded-lg">
+              <p className="text-sm text-blue-600 mb-1">Light Sleep</p>
+              <p className="text-xl font-bold text-blue-900">
+                {formatTime(Math.abs(globalSummary?.avgLightBiasSec || 0))}
+              </p>
+              <p className="text-xs text-blue-500 mt-1">
+                {(globalSummary?.avgLightBiasSec || 0) > 0 ? '↑ Over' : '↓ Under'}
+              </p>
+            </div>
+            <div className="text-center p-4 bg-indigo-50 rounded-lg">
+              <p className="text-sm text-indigo-600 mb-1">Deep Sleep</p>
+              <p className="text-xl font-bold text-indigo-900">
+                {formatTime(Math.abs(globalSummary?.avgDeepBiasSec || 0))}
+              </p>
+              <p className="text-xs text-indigo-500 mt-1">
+                {(globalSummary?.avgDeepBiasSec || 0) > 0 ? '↑ Over' : '↓ Under'}
+              </p>
+            </div>
+            <div className="text-center p-4 bg-purple-50 rounded-lg">
+              <p className="text-sm text-purple-600 mb-1">REM Sleep</p>
+              <p className="text-xl font-bold text-purple-900">
+                {formatTime(Math.abs(globalSummary?.avgRemBiasSec || 0))}
+              </p>
+              <p className="text-xs text-purple-500 mt-1">
+                {(globalSummary?.avgRemBiasSec || 0) > 0 ? '↑ Over' : '↓ Under'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 text-sm text-purple-900">
+          <p className="font-semibold mb-2">Interpreting Bias:</p>
+          <ul className="space-y-1 ml-4 list-disc">
+            <li><strong>Timing Bias:</strong> ↑ = Falcon detects event later than benchmark, ↓ = earlier. Target: ±5 min.</li>
+            <li><strong>Duration Bias:</strong> ↑ Over = Falcon overestimates (detects more than benchmark), ↓ Under = underestimates.</li>
+            <li>Systematic bias helps identify calibration opportunities.</li>
+          </ul>
+        </div>
+      </Card>
+      
       {/* Accuracy Metrics */}
       <Card>
         <h3 className="text-lg font-semibold mb-6">System Validation Metrics</h3>
@@ -344,88 +427,7 @@ const formatTime = (seconds: number) => {
         </div>
       </Card>
 
-      {/* Bias Breakdown */}
-      <Card>
-        <h3 className="text-lg font-semibold mb-4">Stage-wise Bias (Falcon vs Benchmark)</h3>
-        <p className="text-sm text-gray-600 mb-4">Average difference between Falcon and benchmark devices</p>
-        
-        {/* Sleep Timing Biases */}
-        <div className="mb-6">
-          <h4 className="text-md font-medium mb-3 text-gray-700">Sleep Timing Bias</h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="text-center p-4 bg-amber-50 rounded-lg border border-amber-200">
-              <p className="text-sm text-amber-700 mb-1">Sleep Onset</p>
-              <p className="text-xl font-bold text-amber-900">
-                {formatTime(Math.abs(globalSummary?.avgSleepOnsetBiasSec || 0))}
-              </p>
-              <p className="text-xs text-amber-600 mt-1">
-                {(globalSummary?.avgSleepOnsetBiasSec || 0) > 0 ? '↑ Falcon detects later' : '↓ Falcon detects earlier'}
-              </p>
-            </div>
-            <div className="text-center p-4 bg-orange-50 rounded-lg border border-orange-200">
-              <p className="text-sm text-orange-700 mb-1">Final Wake</p>
-              <p className="text-xl font-bold text-orange-900">
-                {formatTime(Math.abs(globalSummary?.avgFinalWakeBiasSec || 0))}
-              </p>
-              <p className="text-xs text-orange-600 mt-1">
-                {(globalSummary?.avgFinalWakeBiasSec || 0) > 0 ? '↑ Falcon detects later' : '↓ Falcon detects earlier'}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Stage Duration Biases */}
-        <div className="mb-6">
-          <h4 className="text-md font-medium mb-3 text-gray-700">Stage Duration Bias</h4>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="text-center p-4 bg-gray-50 rounded-lg">
-              <p className="text-sm text-gray-600 mb-1">Total Sleep</p>
-              <p className="text-xl font-bold text-gray-900">
-                {formatTime(Math.abs(globalSummary?.avgTotalSleepBiasSec || 0))}
-              </p>
-              <p className="text-xs text-gray-500 mt-1">
-                {(globalSummary?.avgTotalSleepBiasSec || 0) > 0 ? '↑ Over' : '↓ Under'}
-              </p>
-            </div>
-            <div className="text-center p-4 bg-blue-50 rounded-lg">
-              <p className="text-sm text-blue-600 mb-1">Light Sleep</p>
-              <p className="text-xl font-bold text-blue-900">
-                {formatTime(Math.abs(globalSummary?.avgLightBiasSec || 0))}
-              </p>
-              <p className="text-xs text-blue-500 mt-1">
-                {(globalSummary?.avgLightBiasSec || 0) > 0 ? '↑ Over' : '↓ Under'}
-              </p>
-            </div>
-            <div className="text-center p-4 bg-indigo-50 rounded-lg">
-              <p className="text-sm text-indigo-600 mb-1">Deep Sleep</p>
-              <p className="text-xl font-bold text-indigo-900">
-                {formatTime(Math.abs(globalSummary?.avgDeepBiasSec || 0))}
-              </p>
-              <p className="text-xs text-indigo-500 mt-1">
-                {(globalSummary?.avgDeepBiasSec || 0) > 0 ? '↑ Over' : '↓ Under'}
-              </p>
-            </div>
-            <div className="text-center p-4 bg-purple-50 rounded-lg">
-              <p className="text-sm text-purple-600 mb-1">REM Sleep</p>
-              <p className="text-xl font-bold text-purple-900">
-                {formatTime(Math.abs(globalSummary?.avgRemBiasSec || 0))}
-              </p>
-              <p className="text-xs text-purple-500 mt-1">
-                {(globalSummary?.avgRemBiasSec || 0) > 0 ? '↑ Over' : '↓ Under'}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 text-sm text-purple-900">
-          <p className="font-semibold mb-2">Interpreting Bias:</p>
-          <ul className="space-y-1 ml-4 list-disc">
-            <li><strong>Timing Bias:</strong> ↑ = Falcon detects event later than benchmark, ↓ = earlier. Target: ±5 min.</li>
-            <li><strong>Duration Bias:</strong> ↑ Over = Falcon overestimates (detects more than benchmark), ↓ Under = underestimates.</li>
-            <li>Systematic bias helps identify calibration opportunities.</li>
-          </ul>
-        </div>
-      </Card>
+      
 
       {/* Daily Accuracy & Kappa Trends */}
       <Card>
