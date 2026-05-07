@@ -158,7 +158,7 @@ export default function ManualSleepFormPage() {
             remSec: benchmarkData.remSec,
             lightSec: benchmarkData.lightSec,
             awakeSec: benchmarkData.awakeSec,
-            ssleepOnsetTime: benchmarkData.sleepOnsetTime ? `${benchmarkData.sleepOnsetTime}:00.000Z` : undefined,
+            sleepOnsetTime: benchmarkData.sleepOnsetTime ? `${benchmarkData.sleepOnsetTime}:00.000Z` : undefined,
             finalWakeTime: benchmarkData.finalWakeTime ? `${benchmarkData.finalWakeTime}:00.000Z` : undefined,
           } : undefined
         }
@@ -167,7 +167,7 @@ export default function ManualSleepFormPage() {
       await apiClient.post('/sessions/create-manual-sleep', payload);
       
       alert('✅ Manual Sleep Session created successfully!');
-      navigate('/dashbaord'); // Redirect back to sessions list
+      navigate('/dashboard'); // Redirect back to sessions list
 
     } catch (error: any) {
       alert(`❌ Failed to create session: ${error.response?.data?.message || error.message}`);
