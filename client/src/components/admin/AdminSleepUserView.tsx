@@ -213,117 +213,7 @@ const AdminSleepUserView: React.FC<AdminSleepUserViewProps> = ({ userId }) => {
         </Card>
       </div>
 
-      {/* Average Sleep Metrics - Horizontal Card */}
-      <Card>
-        <h3 className="text-lg font-semibold mb-4">Average Sleep Metrics (Falcon)</h3>
-        <div className="bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 rounded-lg p-4">
-          <div className="flex items-center justify-between gap-2">
-            <div className="min-w-[100px] pr-4 border-r border-purple-300">
-              <p className="text-sm font-semibold text-purple-700 uppercase">Falcon </p>
-              <p className="text-xs text-purple-600">Avg per session</p>
-            </div>
-            <div className="flex-1 grid grid-cols-2 gap-4">
-              <div className="text-center">
-                <p className="text-xs text-gray-600 mb-1">Time in Bed</p>
-                <p className="text-lg font-bold text-gray-900">{formatTime(userSummary.avgTimeInBedSec)}</p>
-              </div>
-              <div className="text-center">
-                <p className="text-xs text-gray-600 mb-1">Total Sleep</p>
-                <p className="text-lg font-bold text-gray-900">{formatTime(userSummary.avgTotalSleepTimeSec)}</p>
-              </div>
-            </div>
-          </div>
-          <div className="mt-4 pt-4 border-t border-purple-200">
-            <div className="grid grid-cols-4 gap-3">
-              <div className="text-center">
-                <p className="text-xs text-indigo-600 mb-1">Deep Sleep</p>
-                <p className="text-lg font-bold text-indigo-900">{formatTime(userSummary.avgDeepSec)}</p>
-                <p className="text-xs text-indigo-600 mt-0.5">{userSummary.avgDeepPercent.toFixed(1)}%</p>
-              </div>
-              <div className="text-center">
-                <p className="text-xs text-blue-600 mb-1">Light Sleep</p>
-                <p className="text-lg font-bold text-blue-900">{formatTime(userSummary.avgLightSec)}</p>
-                <p className="text-xs text-blue-600 mt-0.5">{userSummary.avgLightPercent.toFixed(1)}%</p>
-              </div>
-              <div className="text-center">
-                <p className="text-xs text-purple-600 mb-1">REM Sleep</p>
-                <p className="text-lg font-bold text-purple-900">{formatTime(userSummary.avgRemSec)}</p>
-                <p className="text-xs text-purple-600 mt-0.5">{userSummary.avgRemPercent.toFixed(1)}%</p>
-              </div>
-              <div className="text-center">
-                <p className="text-xs text-gray-600 mb-1">Awake Time</p>
-                <p className="text-lg font-bold text-gray-900">{formatTime(userSummary.avgAwakeSec)}</p>
-                <p className="text-xs text-gray-600 mt-0.5">{userSummary.avgAwakePercent.toFixed(1)}%</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      {/* Validation Metrics */}
-      <Card>
-        <h3 className="text-lg font-semibold mb-6">Validation Metrics</h3>
-        
-        {/* Main Metrics - Prominent Display */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg p-6">
-            <div className="flex items-center justify-between mb-3">
-              <div>
-                <p className="text-sm font-medium text-gray-600 uppercase tracking-wide">Epoch Accuracy</p>
-                <p className="text-xs text-gray-500 mt-0.5">30-second agreement rate</p>
-              </div>
-              <div className="text-right">
-                <p className={`text-4xl font-bold ${getAccuracyColor(userSummary.avgEpochAccuracyPercent)}`}>
-                  {userSummary.avgEpochAccuracyPercent.toFixed(1)}%
-                </p>
-              </div>
-            </div>
-            <div className="pt-3 border-t border-blue-200">
-              {userSummary.avgEpochAccuracyPercent >= 85 && <p className="text-sm text-green-700 font-semibold">Excellent: Clinical-grade accuracy</p>}
-              {userSummary.avgEpochAccuracyPercent >= 75 && userSummary.avgEpochAccuracyPercent < 85 && <p className="text-sm text-yellow-700 font-semibold">Good: Approaching target</p>}
-              {userSummary.avgEpochAccuracyPercent < 75 && <p className="text-sm text-red-700 font-semibold">Below target (&lt;85%)</p>}
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200 rounded-lg p-6">
-            <div className="flex items-center justify-between mb-3">
-              <div>
-                <p className="text-sm font-medium text-gray-600 uppercase tracking-wide">Cohen's Kappa</p>
-                <p className="text-xs text-gray-500 mt-0.5">Statistical agreement</p>
-              </div>
-              <div className="text-right">
-                <p className={`text-4xl font-bold ${getKappaColor(userSummary.avgKappaScore)}`}>
-                  {userSummary.avgKappaScore.toFixed(3)}
-                </p>
-              </div>
-            </div>
-            <div className="pt-3 border-t border-purple-200">
-              {userSummary.avgKappaScore >= 0.8 && <p className="text-sm text-green-700 font-semibold">Excellent agreement (&gt;0.8)</p>}
-              {userSummary.avgKappaScore >= 0.6 && userSummary.avgKappaScore < 0.8 && <p className="text-sm text-yellow-700 font-semibold">Good agreement (0.6-0.8)</p>}
-              {userSummary.avgKappaScore >= 0.4 && userSummary.avgKappaScore < 0.6 && <p className="text-sm text-orange-700 font-semibold">Moderate agreement (0.4-0.6)</p>}
-              {userSummary.avgKappaScore < 0.4 && <p className="text-sm text-red-700 font-semibold">Poor agreement (&lt;0.4)</p>}
-            </div>
-          </div>
-        </div>
-
-        {/* Interpretation Guide - Collapsed */}
-        <details className="group">
-          <summary className="cursor-pointer text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center">
-            <svg className="h-4 w-4 mr-1 transform group-open:rotate-90 transition-transform" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-            </svg>
-            What do these metrics mean?
-          </summary>
-          <div className="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <div className="text-sm text-blue-900 space-y-2">
-              <p><strong>Epoch Accuracy:</strong> Percentage of 30-second epochs where Falcon agrees with the benchmark device. Target: &gt;85% for clinical-grade accuracy.</p>
-              <p><strong>Cohen's Kappa:</strong> Statistical measure of agreement beyond chance. &gt;0.8 = Excellent, 0.6-0.8 = Good, 0.4-0.6 = Moderate, &lt;0.4 = Poor.</p>
-            </div>
-          </div>
-        </details>
-      </Card>
-
-      {/* Stage Bias Analysis */}
+       {/* Stage Bias Analysis */}
       <Card>
         <h3 className="text-lg font-semibold mb-4">Stage Bias Analysis (Falcon vs Benchmark)</h3>
         
@@ -434,6 +324,118 @@ const AdminSleepUserView: React.FC<AdminSleepUserViewProps> = ({ userId }) => {
           </div>
         </div>
       </Card>
+      
+      {/* Average Sleep Metrics - Horizontal Card */}
+      <Card>
+        <h3 className="text-lg font-semibold mb-4">Average Sleep Metrics (Falcon)</h3>
+        <div className="bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 rounded-lg p-4">
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-[100px] pr-4 border-r border-purple-300">
+              <p className="text-sm font-semibold text-purple-700 uppercase">Falcon </p>
+              <p className="text-xs text-purple-600">Avg per session</p>
+            </div>
+            <div className="flex-1 grid grid-cols-2 gap-4">
+              <div className="text-center">
+                <p className="text-xs text-gray-600 mb-1">Time in Bed</p>
+                <p className="text-lg font-bold text-gray-900">{formatTime(userSummary.avgTimeInBedSec)}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-xs text-gray-600 mb-1">Total Sleep</p>
+                <p className="text-lg font-bold text-gray-900">{formatTime(userSummary.avgTotalSleepTimeSec)}</p>
+              </div>
+            </div>
+          </div>
+          <div className="mt-4 pt-4 border-t border-purple-200">
+            <div className="grid grid-cols-4 gap-3">
+              <div className="text-center">
+                <p className="text-xs text-indigo-600 mb-1">Deep Sleep</p>
+                <p className="text-lg font-bold text-indigo-900">{formatTime(userSummary.avgDeepSec)}</p>
+                <p className="text-xs text-indigo-600 mt-0.5">{userSummary.avgDeepPercent.toFixed(1)}%</p>
+              </div>
+              <div className="text-center">
+                <p className="text-xs text-blue-600 mb-1">Light Sleep</p>
+                <p className="text-lg font-bold text-blue-900">{formatTime(userSummary.avgLightSec)}</p>
+                <p className="text-xs text-blue-600 mt-0.5">{userSummary.avgLightPercent.toFixed(1)}%</p>
+              </div>
+              <div className="text-center">
+                <p className="text-xs text-purple-600 mb-1">REM Sleep</p>
+                <p className="text-lg font-bold text-purple-900">{formatTime(userSummary.avgRemSec)}</p>
+                <p className="text-xs text-purple-600 mt-0.5">{userSummary.avgRemPercent.toFixed(1)}%</p>
+              </div>
+              <div className="text-center">
+                <p className="text-xs text-gray-600 mb-1">Awake Time</p>
+                <p className="text-lg font-bold text-gray-900">{formatTime(userSummary.avgAwakeSec)}</p>
+                <p className="text-xs text-gray-600 mt-0.5">{userSummary.avgAwakePercent.toFixed(1)}%</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      {/* Validation Metrics */}
+      <Card>
+        <h3 className="text-lg font-semibold mb-6">Validation Metrics</h3>
+        
+        {/* Main Metrics - Prominent Display */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg p-6">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <p className="text-sm font-medium text-gray-600 uppercase tracking-wide">Epoch Accuracy</p>
+                <p className="text-xs text-gray-500 mt-0.5">30-second agreement rate</p>
+              </div>
+              <div className="text-right">
+                <p className={`text-4xl font-bold ${getAccuracyColor(userSummary.avgEpochAccuracyPercent)}`}>
+                  {userSummary.avgEpochAccuracyPercent.toFixed(1)}%
+                </p>
+              </div>
+            </div>
+            <div className="pt-3 border-t border-blue-200">
+              {userSummary.avgEpochAccuracyPercent >= 85 && <p className="text-sm text-green-700 font-semibold">Excellent: Clinical-grade accuracy</p>}
+              {userSummary.avgEpochAccuracyPercent >= 75 && userSummary.avgEpochAccuracyPercent < 85 && <p className="text-sm text-yellow-700 font-semibold">Good: Approaching target</p>}
+              {userSummary.avgEpochAccuracyPercent < 75 && <p className="text-sm text-red-700 font-semibold">Below target (&lt;85%)</p>}
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200 rounded-lg p-6">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <p className="text-sm font-medium text-gray-600 uppercase tracking-wide">Cohen's Kappa</p>
+                <p className="text-xs text-gray-500 mt-0.5">Statistical agreement</p>
+              </div>
+              <div className="text-right">
+                <p className={`text-4xl font-bold ${getKappaColor(userSummary.avgKappaScore)}`}>
+                  {userSummary.avgKappaScore.toFixed(3)}
+                </p>
+              </div>
+            </div>
+            <div className="pt-3 border-t border-purple-200">
+              {userSummary.avgKappaScore >= 0.8 && <p className="text-sm text-green-700 font-semibold">Excellent agreement (&gt;0.8)</p>}
+              {userSummary.avgKappaScore >= 0.6 && userSummary.avgKappaScore < 0.8 && <p className="text-sm text-yellow-700 font-semibold">Good agreement (0.6-0.8)</p>}
+              {userSummary.avgKappaScore >= 0.4 && userSummary.avgKappaScore < 0.6 && <p className="text-sm text-orange-700 font-semibold">Moderate agreement (0.4-0.6)</p>}
+              {userSummary.avgKappaScore < 0.4 && <p className="text-sm text-red-700 font-semibold">Poor agreement (&lt;0.4)</p>}
+            </div>
+          </div>
+        </div>
+
+        {/* Interpretation Guide - Collapsed */}
+        <details className="group">
+          <summary className="cursor-pointer text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center">
+            <svg className="h-4 w-4 mr-1 transform group-open:rotate-90 transition-transform" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+            </svg>
+            What do these metrics mean?
+          </summary>
+          <div className="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="text-sm text-blue-900 space-y-2">
+              <p><strong>Epoch Accuracy:</strong> Percentage of 30-second epochs where Falcon agrees with the benchmark device. Target: &gt;85% for clinical-grade accuracy.</p>
+              <p><strong>Cohen's Kappa:</strong> Statistical measure of agreement beyond chance. &gt;0.8 = Excellent, 0.6-0.8 = Good, 0.4-0.6 = Moderate, &lt;0.4 = Poor.</p>
+            </div>
+          </div>
+        </details>
+      </Card>
+
+     
 
       {/* Daily Bias Trend Chart */}
       {dailyBiasTrend.length > 0 && (
