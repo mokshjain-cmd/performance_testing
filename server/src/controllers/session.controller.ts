@@ -17,6 +17,7 @@ import { updateAdminGlobalSummary } from '../services/adminGlobalSummary.service
 import { updateFirmwarePerformanceForLuna } from '../services/firmwarePerformance.service';
 import { updateBenchmarkComparisonSummariesForSession } from '../services/benchmarkComparisonSummary.service';
 import { updateAdminDailyTrend } from '../services/adminDailyTrend.service';
+import { ManualActivityService } from '../services/activity/ManualActivityService';
 
 /**
  * Create a new session with device files
@@ -45,7 +46,248 @@ function parseISTString(dateStr: string): Date {
     second
   ));
 }
+export const createManualActivitySession = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const userId = req.userId;
 
+    const {
+      sessionName,
+      activityDate,
+      firmwareVersion,
+      benchmarkDeviceType,
+      bandPosition,
+      luna,
+      benchmark,
+    } = req.body;
+
+    /**
+     * VALIDATIONS
+     */
+
+    if (!userId) {
+      res.status(400).json({
+        success: false,
+        message: "Missing userId",
+      });
+      return;
+    }
+
+    if (!activityDate) {
+      res.status(400).json({
+        success: false,
+        message: "activityDate is required",
+      });
+      return;
+    }
+
+    if (!firmwareVersion) {
+      res.status(400).json({
+        success: false,
+        message: "firmwareVersion is required",
+      });
+      return;
+    }
+
+    if (!luna && !benchmark) {
+      res.status(400).json({
+        success: false,
+        message:
+          "At least one of luna or benchmark data is required",
+      });
+      return;
+    }
+
+    /**
+     * DATE RANGE
+     */
+
+    const [year, month, day] = activityDate
+      .split("-")
+      .map(Number);
+
+    const start = new Date(
+      Date.UTC(year, month - 1, day, 0, 0, 0)
+    );
+
+    const end = new Date(
+      Date.UTC(year, month - 1, day, 23, 59, 59)
+    );
+
+    const durationSec = Math.floor(
+      (end.getTime() - start.getTime()) / 1000
+    );
+
+    /**
+     * DEVICES
+     */
+
+    const devices: any[] = [];
+
+    /**
+     * LUNA DEVICE
+     */
+
+    if (luna) {
+      const lunaDevice = await Device.findOne({
+        deviceType: "luna",
+        firmwareVersion,
+      });
+
+      if (!lunaDevice) {
+        throw new Error(
+          `Luna device with firmware ${firmwareVersion} not found`
+        );
+      }
+
+      devices.push({
+        deviceId: lunaDevice._id,
+        deviceType: "luna",
+        firmwareVersion,
+      });
+    }
+
+    /**
+     * BENCHMARK DEVICE
+     */
+
+    if (benchmark && benchmarkDeviceType) {
+      const benchmarkDevice = await Device.findOne({
+        deviceType: benchmarkDeviceType,
+      });
+
+      if (!benchmarkDevice) {
+        throw new Error(
+          `Benchmark device ${benchmarkDeviceType} not found`
+        );
+      }
+
+      devices.push({
+        deviceId: benchmarkDevice._id,
+        deviceType: benchmarkDeviceType,
+        firmwareVersion:
+          benchmarkDevice.firmwareVersion,
+      });
+    }
+
+    /**
+     * CREATE SESSION
+     */
+
+    const session = await Session.create({
+      userId,
+      name: sessionName || "Manual Activity Session",
+
+      activityType: "daily",
+      metric: "Activity",
+
+      startTime: start,
+      endTime: end,
+
+      durationSec,
+
+      devices,
+
+      benchmarkDeviceType,
+
+      bandPosition,
+    });
+
+    console.log(
+      `✅ Manual activity session created: ${session._id}`
+    );
+
+    /**
+     * INSERT MANUAL READINGS
+     */
+    console.log("data for luna : ", luna);
+    console.log("data for benchmark : ", benchmark);
+      await ManualActivityService.insertManualActivityReadings(
+      session._id,
+      userId,
+      start,
+      {
+        luna,
+        benchmark,
+      },
+      benchmarkDeviceType
+    );
+
+    console.log(
+      `✅ Manual activity readings inserted`
+    );
+
+    /**
+     * ANALYSIS
+     */
+
+    await ActivityAnalysisService.analyzeSession(
+      session._id
+    );
+
+    console.log(
+      `✅ Activity analysis completed`
+    );
+
+    /**
+     * SUMMARIES
+     */
+
+    const lunaFirmware = firmwareVersion;
+
+    await ActivitySummaryService.updateUserActivitySummary(
+      userId
+    );
+
+    if (benchmarkDeviceType) {
+      await ActivitySummaryService.updateBenchmarkComparisonSummary(
+        benchmarkDeviceType
+      );
+    }
+
+    await ActivitySummaryService.updateAdminGlobalSummary();
+
+    await ActivitySummaryService.updateAdminDailyTrend(
+      session.startTime
+    );
+
+    if (lunaFirmware) {
+      await ActivitySummaryService.updateFirmwarePerformance(
+        lunaFirmware
+      );
+    }
+
+    console.log(
+      `✅ Activity summaries updated`
+    );
+
+    /**
+     * RESPONSE
+     */
+
+    res.status(201).json({
+      success: true,
+      message:
+        "Manual activity session created successfully",
+      data: session,
+    });
+  } catch (error) {
+    console.error(
+      "❌ Error creating manual activity session:",
+      error
+    );
+
+    res.status(500).json({
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Unknown error",
+    });
+  }
+};
 
 // In your controller
 export const createManualSleepSession = async (req: Request, res: Response): Promise<void> => {
