@@ -111,6 +111,19 @@ export default function ManualSleepFormPage() {
     finalWakeTime: '',
   });
 
+  // --- Auto-calculate Luna Light Sleep ---
+  useEffect(() => {
+    const { totalSleepSec, deepSec, remSec, awakeSec } = lunaData;
+    const calculatedLight = totalSleepSec - (deepSec + remSec + awakeSec);
+    
+    // Ensure we don't set a negative value
+    const finalLight = Math.max(0, calculatedLight);
+
+    if (finalLight !== lunaData.lightSec) {
+      setLunaData(prev => ({ ...prev, lightSec: finalLight }));
+    }
+  }, [lunaData.totalSleepSec, lunaData.deepSec, lunaData.remSec, lunaData.awakeSec]);
+
   useEffect(() => {
     apiClient.get('/devices/firmware?deviceType=luna')
       .then(res => {
@@ -214,7 +227,14 @@ export default function ManualSleepFormPage() {
             <DurationInput label="Total Time in Bed" valueSec={lunaData.totalSleepSec} onChange={(val) => setLunaData({ ...lunaData, totalSleepSec: val })} required />
             <DurationInput label="Deep Sleep" valueSec={lunaData.deepSec} onChange={(val) => setLunaData({ ...lunaData, deepSec: val })} required />
             <DurationInput label="REM Sleep" valueSec={lunaData.remSec} onChange={(val) => setLunaData({ ...lunaData, remSec: val })} required />
-            <DurationInput label="Light Sleep" valueSec={lunaData.lightSec} onChange={(val) => setLunaData({ ...lunaData, lightSec: val })} required />
+            <div className="bg-blue-50/50 p-1 rounded-md">
+              <DurationInput 
+                label="Light Sleep (Calculated)" 
+                valueSec={lunaData.lightSec} 
+                onChange={() => {}} // No manual change allowed
+                required 
+              />
+            </div>
             <DurationInput label="Awake Time" valueSec={lunaData.awakeSec} onChange={(val) => setLunaData({ ...lunaData, awakeSec: val })} required />
             <Input type="number" label="Sleep Score (Optional)" name="sleepScore" value={lunaData.sleepScore} onChange={handleLunaTextChange} />
           </div>
