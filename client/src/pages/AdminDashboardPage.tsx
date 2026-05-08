@@ -83,7 +83,7 @@ const AdminDashboardPage: React.FC = () => {
       .then(res => {
         const usersData = res.data.data || [];
         // Filter to show only tester users
-        const testerUsers = usersData.filter((user: User) => user.role === 'tester');
+        const testerUsers = usersData;
         const usersWithSessions = testerUsers.map((user: User) => ({
           _id: user._id,
           name: user.name,

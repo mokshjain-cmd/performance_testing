@@ -20,6 +20,7 @@ import { updateAdminDailyTrend } from "../adminDailyTrend.service";
 import fs from 'fs';
 import path from 'path';
 import { promisify } from 'util';
+import { NFAIosWorkoutParser } from "../../parsers/workout/NFAapplogworkoutparser";
 
 const unlinkAsync = promisify(fs.unlink);
 
@@ -114,10 +115,23 @@ export class IngestWorkoutService {
     
     // Parse workouts from Luna log (quick operation)
     console.log(`[IngestWorkoutService] Parsing Luna log for workouts on ${workoutDate.toISOString().split('T')[0]}`);
-    const parsedWorkouts = await LunaWorkoutParser.parseWorkoutsFromLog(
-      lunaFilePath,
-      workoutDate
-    );
+    let parsedWorkouts: IParsedWorkout[] = [];
+
+    if(mobileType?.toLowerCase()=='ios'){
+      console.log('[IngestWorkoutService] 🍎 Using NFA iOS workout parser');
+
+        parsedWorkouts = await NFAIosWorkoutParser.parseWorkoutsFromLog(
+          lunaFilePath,
+          workoutDate
+        );
+
+    }else{
+        parsedWorkouts = await LunaWorkoutParser.parseWorkoutsFromLog(
+          lunaFilePath,
+          workoutDate
+        );
+    }
+    
     
     // Log each Luna workout found with start/end times
     console.log(`[IngestWorkoutService] Found ${parsedWorkouts.length} Luna workouts`);
