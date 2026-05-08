@@ -9,11 +9,14 @@ interface MetricsSelectorProps {
 }
 
 const METRICS = [
-  { value: 'hr' as Metric, label: 'Heart Rate', icon: Activity, color: 'text-red-500' },
-  { value: 'spo2' as Metric, label: 'SpO₂', icon: Droplet, color: 'text-blue-500' },
-  { value: 'sleep' as Metric, label: 'Sleep', icon: Moon, color: 'text-indigo-500' },
-  { value: 'activity' as Metric, label: 'Activity', icon: TrendingUp, color: 'text-green-500' },
   { value: 'workout' as Metric, label: 'Workout', icon: Dumbbell, color: 'text-purple-500' },
+  { value: 'sleep' as Metric, label: 'Sleep', icon: Moon, color: 'text-indigo-500' },
+  { value: 'hr' as Metric, label: 'Heart Rate', icon: Activity, color: 'text-red-500' },
+  
+  
+  { value: 'activity' as Metric, label: 'Activity', icon: TrendingUp, color: 'text-green-500' },
+  { value: 'spo2' as Metric, label: 'SpO₂', icon: Droplet, color: 'text-blue-500' },
+  
   { value: 'skintemp' as Metric, label: 'Skin Temp', icon: Thermometer, color: 'text-orange-500' },
 ];
 

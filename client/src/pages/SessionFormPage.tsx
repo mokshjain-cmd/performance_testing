@@ -519,6 +519,8 @@ useEffect(() => {
                       ? '.xml,.XML,.zip,.ZIP,.csv,.CSV' 
                       : formData.benchmarkDeviceType === 'coros'
                         ? '.fit,.FIT'
+                        : formData.benchmarkDeviceType === 'garmin'
+                          ? '.csv,.CSV,.tcx,.TCX'
                         : '.csv,.CSV'
                   }
                   onChange={(e) => handleFileChange(formData.benchmarkDeviceType, e.target.files?.[0] || null)}

@@ -39,7 +39,7 @@ const AdminDashboardPage: React.FC = () => {
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   
   // Metric and tab state
-  const [selectedMetric, setSelectedMetric] = useState<Metric>('hr');
+  const [selectedMetric, setSelectedMetric] = useState<Metric>('workout');
   const [selectedSubTab, setSelectedSubTab] = useState<SubTab>('overview');
   const [latestFirmware, setLatestFirmware] = useState<string>('');
 

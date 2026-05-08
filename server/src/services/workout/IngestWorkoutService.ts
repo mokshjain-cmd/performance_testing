@@ -21,6 +21,7 @@ import fs from 'fs';
 import path from 'path';
 import { promisify } from 'util';
 import { NFAIosWorkoutParser } from "../../parsers/workout/NFAapplogworkoutparser";
+import { GarminWorkoutParser, IGarminWorkout } from "../../parsers/workout/GarminWorkoutParser";
 
 const unlinkAsync = promisify(fs.unlink);
 
@@ -287,11 +288,12 @@ export class IngestWorkoutService {
       let appleWorkouts: IAppleWorkout[] = [];
       let polarWorkout: IPolarWorkout | null = null;
       let corosWorkout: ICorosWorkout | null = null;
+      let garminWorkout: IGarminWorkout | null = null
       //let whoopWorkouts: IWhoopWorkout[] = [];
       let benchmarkFilePath: string | undefined;
       
       // Handle Apple Health benchmark file
-      const isAppleBasedDevice = ['apple', 'whoop', 'zepp', 'garmin'].includes(benchmarkDeviceType || '');
+      const isAppleBasedDevice = ['apple', 'whoop', 'zepp'].includes(benchmarkDeviceType || '');
       if (benchmarkFile && isAppleBasedDevice) {
         console.log(`[IngestWorkoutService] 🍎 Parsing Apple Health benchmark file...`);
         
@@ -360,6 +362,19 @@ export class IngestWorkoutService {
           }
         } catch (corosError) {
           console.error('[IngestWorkoutService] ❌ Error parsing Coros FIT:', corosError);
+        }
+      }
+      if (benchmarkFile && benchmarkDeviceType === 'garmin') {
+        console.log(`[IngestWorkoutService] ⌚ Parsing Garmin TCX file...`);
+        benchmarkFilePath = benchmarkFile.path;
+      
+        try {
+          garminWorkout = await GarminWorkoutParser.parseWorkout(benchmarkFilePath);
+          if (garminWorkout) {
+            console.log(`[IngestWorkoutService] ⌚ Garmin workout parsed: ${garminWorkout.hrReadings.length} HR readings`);
+          }
+        } catch (garminError) {
+          console.error('[IngestWorkoutService] ❌ Error parsing Garmin TCX:', garminError);
         }
       }
       
@@ -467,8 +482,34 @@ export class IngestWorkoutService {
             }
           }
           
-          // Match Whoop workout (same pattern as Apple)
+          // Match garmin workout (same pattern as Apple)
+        if (garminWorkout && benchmarkDeviceType === 'garmin') {
+          const overlap = GarminWorkoutParser.findWorkoutOverlap(
+            garminWorkout,
+            workout.startTime,
+            workout.endTime,
+            50,
+          );
         
+          if (overlap?.isMatch) {
+            benchmarkWorkoutMeta = {
+              // Garmin provides calories and distance in the TCX summary
+              activeCalories: garminWorkout.calories,
+              distance:       garminWorkout.totalDistanceKm
+                ? garminWorkout.totalDistanceKm * 1000
+                : undefined,
+            };
+        
+            await this.processGarminBenchmarkHR(
+              sessionId,
+              userId,
+              workout,
+              garminWorkout,
+            );
+        
+            console.log(`[IngestWorkoutService] ⌚ Matched Garmin workout: ${overlap.overlapPercent.toFixed(1)}% overlap`);
+          }
+        }
           
           // Run analysis
           await WorkoutAnalysisService.analyzeSession(sessionId.toString(), workout, benchmarkWorkoutMeta);
@@ -627,7 +668,7 @@ export class IngestWorkoutService {
       console.log(`[IngestWorkoutService] Extracting ${benchmarkDeviceType} HR for workout ${workout.workoutId}`);
       
       let hrReadings: Array<{ timestamp: Date; heartRate: number }> = [];
-      const isAppleBasedDevice = ['apple', 'whoop', 'zepp', 'garmin'].includes(benchmarkDeviceType || '');
+      const isAppleBasedDevice = ['apple', 'whoop', 'zepp'  ].includes(benchmarkDeviceType || '');
       if (isAppleBasedDevice) {
         hrReadings = await extractHRForWorkoutComparison(
           benchmarkFilePath,
@@ -773,7 +814,49 @@ export class IngestWorkoutService {
       // Don't throw - we still want the session to be created even without benchmark
     }
   }
-  
-  
-}
+  private static async processGarminBenchmarkHR(
+  sessionId: Types.ObjectId,
+  userId: Types.ObjectId | string,
+  workout: IParsedWorkout,
+  garminWorkout: IGarminWorkout,
+): Promise<void> {
+  try {
+    console.log(`[IngestWorkoutService] ⌚ Processing Garmin HR for workout ${workout.workoutId}`);
  
+    const hrReadings = GarminWorkoutParser.extractHRInTimeWindow(
+      garminWorkout,
+      workout.startTime,
+      workout.endTime,
+    );
+ 
+    if (hrReadings.length === 0) {
+      console.log(`[IngestWorkoutService] No Garmin HR readings found in workout time range`);
+      return;
+    }
+ 
+    console.log(`[IngestWorkoutService] ⌚ Found ${hrReadings.length} Garmin HR readings in workout window`);
+ 
+    const benchmarkReadings = hrReadings.map(reading => ({
+      meta: {
+        sessionId:       sessionId,
+        workoutId:       workout.workoutId,
+        userId:          new Types.ObjectId(userId.toString()),
+        deviceType:      'garmin',
+        firmwareVersion: undefined,
+      },
+      timestamp:            reading.timestamp,
+      heartRate:            reading.heartRate,
+      heartRateConfidence:  95,   // Garmin optical HR — same confidence as Coros
+      exerciseIntensity:    0,
+      isValid:              true,
+    }));
+ 
+    await WorkoutReading.insertMany(benchmarkReadings);
+    console.log(`[IngestWorkoutService] ⌚ Inserted ${benchmarkReadings.length} Garmin readings for session ${sessionId}`);
+ 
+  } catch (error) {
+    console.error(`[IngestWorkoutService] ❌ Error processing Garmin HR:`, error);
+    // Don't throw — session should still be created without benchmark
+  }
+}
+}
