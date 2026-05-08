@@ -314,24 +314,55 @@ export default function SessionFormPage() {
               })}
             </div>
           </div>
-              {selectedMetrics.includes('Sleep') && (
-            <div className="mt-4 p-4 bg-indigo-50 border border-indigo-200 rounded-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <div>
-                <h4 className="text-sm font-bold text-indigo-900">Have manual summary data instead of log files?</h4>
-                <p className="text-xs text-indigo-700 mt-1">
-                  If you only have the total durations (Deep, Light, REM) and no log files, you can manually enter the sleep stages.
-                </p>
-              </div>
-              <Button 
-                type="button" 
-                variant="primary" 
-                className="whitespace-nowrap border-indigo-300 text-indigo-700 hover:bg-indigo-100"
-                onClick={() => navigate('/sessions/manual-sleep')}
-              >
-                Go to Manual Entry
-              </Button>
-            </div>
-          )}
+              <div className="space-y-4">
+                  {selectedMetrics.includes('Sleep') && (
+                    <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                      <div>
+                        <h4 className="text-sm font-bold text-indigo-900">
+                          Have manual summary data instead of log files?
+                        </h4>
+
+                        <p className="text-xs text-indigo-700 mt-1">
+                          If you only have the total durations (Deep, Light, REM) and no log files,
+                          you can manually enter the sleep stages.
+                        </p>
+                      </div>
+
+                      <Button
+                        type="button"
+                        variant="primary"
+                        className="whitespace-nowrap border-indigo-300 text-indigo-700 hover:bg-indigo-100"
+                        onClick={() => navigate('/sessions/manual-sleep')}
+                      >
+                        Go to Manual Entry
+                      </Button>
+                    </div>
+                  )}
+
+                  {selectedMetrics.includes('Activity') && (
+                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                      <div>
+                        <h4 className="text-sm font-bold text-green-900">
+                          Have manual activity summary data instead of log files?
+                        </h4>
+
+                        <p className="text-xs text-green-700 mt-1">
+                          If you only have steps, calories, distance, or active minutes,
+                          you can manually enter the activity summary.
+                        </p>
+                      </div>
+
+                      <Button
+                        type="button"
+                        variant="primary"
+                        className="whitespace-nowrap border-green-300 text-green-700 hover:bg-green-100"
+                        onClick={() => navigate('/sessions/manual-activity')}
+                      >
+                        Go to Manual Entry
+                      </Button>
+                    </div>
+                  )}
+                </div>
           {selectedMetrics.length === 1 ? (
             <Select
               label="Activity Type"

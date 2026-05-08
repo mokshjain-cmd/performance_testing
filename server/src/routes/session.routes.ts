@@ -1,6 +1,6 @@
 
 import { Router } from 'express';
-import { createSession, getSession,createManualSleepSession, getAllSessions, deleteSession, getSessionsByUserId, getSessionIdsByUserId, getSessionIdsByUserIdParam } from '../controllers/session.controller';
+import { createSession, getSession,createManualSleepSession, getAllSessions, deleteSession, getSessionsByUserId, getSessionIdsByUserId, getSessionIdsByUserIdParam, createManualActivitySession } from '../controllers/session.controller';
 import { getSessionFullDetails } from '../controllers/sessionDetails.controller';
 import { uploadDeviceFiles } from '../middleware/upload.middleware';
 import { requireRole } from '../middleware';
@@ -12,7 +12,7 @@ const router = Router();
 // Create a new session with device files
 router.post('/create', requireRole(['admin','tester']),uploadDeviceFiles, createSession);
 router.post('/create-manual-sleep', requireRole(['admin','tester']), createManualSleepSession);
-
+router.post('/create-manual-activity', requireRole(['admin','tester']), createManualActivitySession);
 // Get current user's sessions (from JWT)
 // Optional query param: ?metric=HR|SPO2|Sleep|Activity
 router.get('/all', requireRole(['admin','tester']),getAllSessions);
