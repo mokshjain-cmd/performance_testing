@@ -30,6 +30,7 @@ const METRIC_OPTIONS = [
   { value: 'Workout', label: 'Workout', icon: '💪' },
   // { value: 'Stress', label: 'Stress (Beta)', icon: '😰' }, // Hidden - not yet implemented
   { value: 'SkinTemp', label: 'Skin Temperature (Beta)', icon: '🌡️' },
+  
 ];
 
 const BENCHMARK_DEVICE_OPTIONS = [
@@ -40,6 +41,7 @@ const BENCHMARK_DEVICE_OPTIONS = [
   { value: 'coros', label: 'Coros' },
   { value: 'masimo', label: 'Masimo' },
   { value: 'garmin', label: 'Garmin' },
+  { value: 'evie', label: 'Evie' },
 ];
 
 const BAND_POSITION_OPTIONS = [
@@ -98,8 +100,18 @@ export default function SessionFormPage() {
       })
       .catch(err => console.error('Error fetching firmware versions:', err));
   }, []);
-
-  const shouldShowDateOnly = selectedMetrics.length > 1 || formData.activityType === 'daily';
+useEffect(() => {
+  if (selectedMetrics.includes('Workout')) {
+    setFormData(prev => ({
+      ...prev,
+      activityType: 'daily',
+    }));
+  }
+}, [selectedMetrics]);
+  const shouldShowDateOnly =
+  selectedMetrics.length > 1 ||
+  selectedMetrics.includes('Workout') ||
+  formData.activityType === 'daily';
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -363,7 +375,7 @@ export default function SessionFormPage() {
                     </div>
                   )}
                 </div>
-          {selectedMetrics.length === 1 ? (
+          {selectedMetrics.length === 1 && !selectedMetrics.includes('Workout') ?(
             <Select
               label="Activity Type"
               name="activityType"
@@ -385,7 +397,7 @@ export default function SessionFormPage() {
                 className="block w-full px-4 py-2.5 text-sm text-gray-500 bg-gray-100 border border-gray-300 rounded-lg cursor-not-allowed"
               />
               <p className="text-xs text-gray-500 mt-1">
-                Multiple metrics selected - automatically set to "daily" monitoring
+                Multiple metrics or workout selected - automatically set to "daily" monitoring
               </p>
             </div>
           )}
