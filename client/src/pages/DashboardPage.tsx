@@ -21,7 +21,7 @@ const DashboardPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'sessions'>('overview');
-  const [selectedMetric, setSelectedMetric] = useState<string>('HR');
+  const [selectedMetric, setSelectedMetric] = useState<string>('Workout');
 
   const userId = localStorage.getItem('userId');
 
