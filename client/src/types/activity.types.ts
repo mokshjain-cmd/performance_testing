@@ -5,6 +5,27 @@
 // ========================
 // ACTIVITY STATS INTERFACE
 // ========================
+
+export interface HourlyActivityData {
+  luna?: {
+    steps: number[];
+    distanceMeters: number[];
+    calories: number[];
+  };
+
+  benchmark?: {
+    deviceType: string;
+    steps: number[];
+    distanceMeters: number[];
+    calories: number[];
+  };
+
+  comparison?: {
+    stepsBias: number[];
+    distanceBias: number[];
+    caloriesBias: number[];
+  };
+}
 export interface ActivityMetricStats {
   accuracyPercent: number;
   bias: number;
@@ -106,6 +127,7 @@ export interface UserSingleActivitySessionView {
     luna: DailyActivityData[];
     benchmark?: DailyActivityData[];
   };
+  hourlyData?: HourlyActivityData;
 }
 
 // ========================

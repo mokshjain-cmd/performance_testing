@@ -127,6 +127,26 @@ export interface ISessionAnalysis extends Document {
       mae?: number;
       mape?: number;
     };
+
+    hourlyStats?: {
+    luna?: {
+      steps?: number[];
+      distanceMeters?: number[];
+      calories?: number[];
+    };
+
+    benchmark?: {
+      steps?: number[];
+      distanceMeters?: number[];
+      calories?: number[];
+    };
+
+    comparison?: {
+      stepsBias?: number[];
+      distanceBias?: number[];
+      caloriesBias?: number[];
+    };
+};
   };
   workoutStats?: {
     // Identifiers
@@ -357,6 +377,25 @@ const ActivityStatsSchema = new Schema(
       bias: Number,
       mae: Number,
       mape: Number,
+    },
+    hourlyStats: {
+      luna: {
+        steps: [Number],
+        distanceMeters: [Number],
+        calories: [Number],
+      },
+
+      benchmark: {
+        steps: [Number],
+        distanceMeters: [Number],
+        calories: [Number],
+      },
+
+      comparison: {
+        stepsBias: [Number],
+        distanceBias: [Number],
+        caloriesBias: [Number],
+      },
     },
   },
   { _id: false }

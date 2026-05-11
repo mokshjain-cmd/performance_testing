@@ -59,7 +59,16 @@ const ActivityDailyReadingSchema = new Schema<IActivityDailyReading>(
       caloriesTotal: Number,
       caloriesActive: Number,
       caloriesBasal: Number,
+
+      hourly: {
+      steps: [Number],
+      distanceMeters: [Number],
+      caloriesTotal: [Number],
+      caloriesActive: [Number],
+      caloriesBasal: [Number],
+   }
     },
+    
   },
   { timestamps: true }
 );

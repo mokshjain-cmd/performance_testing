@@ -5,6 +5,13 @@ import * as readline from 'readline';
 /**
  * Luna activity daily totals
  */
+export interface ILunaActivityHourlyData {
+  steps?: number[];            // length 24
+  distanceMeters?: number[];   // length 24
+  caloriesTotal?: number[];    // length 24
+  caloriesActive?: number[];   // length 24
+  caloriesBasal?: number[];    // length 24
+}
 export interface ILunaActivityDailyTotals {
   date: Date; // Date of the activity
   steps: number;
@@ -12,6 +19,7 @@ export interface ILunaActivityDailyTotals {
   caloriesTotal: number | null; // Null if not provided
   caloriesActive: number | null;
   caloriesBasal: number | null; // Null if not provided (no longer calculated)
+  hourly?: ILunaActivityHourlyData;
 }
 
 /**
