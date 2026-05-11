@@ -291,6 +291,22 @@
               caloriesTotal: daily.caloriesTotal,
               caloriesActive: daily.caloriesActive,
               caloriesBasal: daily.caloriesBasal,
+
+              hourly: {
+                steps: daily.hourly?.steps || new Array(24).fill(0),
+
+                distanceMeters:
+                  daily.hourly?.distanceMeters || new Array(24).fill(0),
+
+                caloriesTotal:
+                  daily.hourly?.caloriesTotal || new Array(24).fill(0),
+
+                caloriesActive:
+                  daily.hourly?.caloriesActive || new Array(24).fill(0),
+
+                caloriesBasal:
+                  daily.hourly?.caloriesBasal || new Array(24).fill(0),
+              },
             },
           }));
 

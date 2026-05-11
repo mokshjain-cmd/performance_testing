@@ -117,6 +117,19 @@ export class FalconLunaActivityParser {
     }
   }
 
+  private static normalize24(arr?: number[]): number[] {
+  const result = new Array(24).fill(0);
+
+  if (!arr || !Array.isArray(arr)) {
+    return result;
+  }
+
+  for (let i = 0; i < Math.min(arr.length, 24); i++) {
+    result[i] = Number(arr[i]) || 0;
+  }
+
+  return result;
+}
   /**
    * Extract DailyBean data from an app log line
    * Format: "2026-03-19 14:40:48.843 I/X-LOG: LUNA-> onDailyData : DailyBean{...}"
@@ -197,12 +210,26 @@ export class FalconLunaActivityParser {
     ));
 
     return {
-      date: dateObj,
-      steps: totalSteps,
-      distanceMeters: totalDistanceMeters,
-      caloriesTotal,
-      caloriesActive,
-      caloriesBasal,
-    };
+  date: dateObj,
+
+  steps: totalSteps,
+  distanceMeters: totalDistanceMeters,
+
+  caloriesTotal,
+  caloriesActive,
+  caloriesBasal,
+
+  hourly: {
+    steps: this.normalize24(record.stepsData),
+
+    distanceMeters: this.normalize24(record.distanceData),
+
+    caloriesTotal: this.normalize24(record.calorieData),
+
+    // Falcon logs don't provide hourly active/basal separately
+    caloriesActive: undefined,
+    caloriesBasal: undefined,
+  },
+};
   }
 }

@@ -5,12 +5,20 @@ import * as readline from 'readline';
  * Apple Health activity daily totals
  */
 export interface IAppleHealthActivityDailyTotals {
-  date: Date; // Date of the activity
+  date: Date;
+
   steps: number;
   distanceMeters: number;
-  caloriesTotal: number | null; // Null if not provided
+  caloriesTotal: number | null;
   caloriesActive: number | null;
   caloriesBasal: number | null;
+
+  // NEW
+  hourly?: {
+    steps: number[];
+    distanceMeters: number[];
+    calories: number[];
+  };
 }
 
 /**
@@ -245,6 +253,12 @@ export class AppleHealthActivityParser {
       distanceMeters: number;
       caloriesActive: number;
       caloriesBasal: number;
+
+      hourly: {
+        steps: number[];
+        distanceMeters: number[];
+        calories: number[];
+      };
     }> = new Map();
 
     for (const point of dataPoints) {
@@ -257,43 +271,64 @@ export class AppleHealthActivityParser {
           distanceMeters: 0,
           caloriesActive: 0,
           caloriesBasal: 0,
+
+          hourly: {
+            steps: Array(24).fill(0),
+            distanceMeters: Array(24).fill(0),
+            calories: Array(24).fill(0),
+          },
         });
       }
 
       const dayData = dailyData.get(dateKey)!;
-
+      const hour = point.startDate.getHours();
       // Aggregate based on type
       switch (point.type) {
         case 'HKQuantityTypeIdentifierStepCount':
           dayData.steps += point.value;
+          dayData.hourly.steps[hour] += point.value;
           break;
+
         case 'HKQuantityTypeIdentifierDistanceWalkingRunning':
-          // Convert to meters if not already
-          if (point.unit === 'km') {
-            dayData.distanceMeters += point.value * 1000;
-          } else if (point.unit === 'mi') {
-            dayData.distanceMeters += point.value * 1609.34;
-          } else {
-            dayData.distanceMeters += point.value; // Assume meters
+          {
+            let meters = point.value;
+
+            if (point.unit === 'km') {
+              meters = point.value * 1000;
+            } else if (point.unit === 'mi') {
+              meters = point.value * 1609.34;
+            }
+
+            dayData.distanceMeters += meters;
+            dayData.hourly.distanceMeters[hour] += meters;
           }
           break;
+
         case 'HKQuantityTypeIdentifierActiveEnergyBurned':
-          // Convert to kcal if not already
-          if (point.unit === 'kJ') {
-            dayData.caloriesActive += point.value * 0.239006; // kJ to kcal
-          } else {
-            dayData.caloriesActive += point.value; // Assume kcal
+          {
+            let kcal = point.value;
+
+            if (point.unit === 'kJ') {
+              kcal = point.value * 0.239006;
+            }
+
+            dayData.caloriesActive += kcal;
+            dayData.hourly.calories[hour] += kcal;
           }
           break;
+
         case 'HKQuantityTypeIdentifierBasalEnergyBurned':
-          // Convert to kcal if not already
-          if (point.unit === 'kJ') {
-            dayData.caloriesBasal += point.value * 0.239006; // kJ to kcal
-          } else {
-            dayData.caloriesBasal += point.value; // Assume kcal
-          }
-          break;
+    {
+      let kcal = point.value;
+
+      if (point.unit === 'kJ') {
+        kcal = point.value * 0.239006;
       }
+
+      dayData.caloriesBasal += kcal;
+    }
+    break;
+}
     }
 
     // Convert map to array
@@ -302,11 +337,35 @@ export class AppleHealthActivityParser {
     for (const [dateKey, data] of dailyData.entries()) {
       dailyTotals.push({
         date: this.parseDateKey(dateKey),
+
         steps: Math.round(data.steps),
+
         distanceMeters: Math.round(data.distanceMeters),
-        caloriesTotal: null, // Apple doesn't provide total directly - don't calculate it
-        caloriesActive: data.caloriesActive > 0 ? Math.round(data.caloriesActive) : null,
-        caloriesBasal: data.caloriesBasal > 0 ? Math.round(data.caloriesBasal) : null,
+
+        caloriesTotal: null,
+
+        caloriesActive:
+          data.caloriesActive > 0
+            ? Math.round(data.caloriesActive)
+            : null,
+
+        caloriesBasal:
+          data.caloriesBasal > 0
+            ? Math.round(data.caloriesBasal)
+            : null,
+
+        // NEW
+        hourly: {
+          steps: data.hourly.steps.map(v => Math.round(v)),
+
+          distanceMeters: data.hourly.distanceMeters.map(v =>
+            Math.round(v)
+          ),
+
+          calories: data.hourly.calories.map(v =>
+            Math.round(v)
+          ),
+        },
       });
     }
 
