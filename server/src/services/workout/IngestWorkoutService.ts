@@ -22,6 +22,7 @@ import path from 'path';
 import { promisify } from 'util';
 import { NFAIosWorkoutParser } from "../../parsers/workout/NFAapplogworkoutparser";
 import { GarminWorkoutParser, IGarminWorkout } from "../../parsers/workout/GarminWorkoutParser";
+import { ISuuntoWorkout, SuuntoWorkoutParser } from "../../parsers/workout/SuuntoWorkoutParser";
 
 const unlinkAsync = promisify(fs.unlink);
 
@@ -289,6 +290,7 @@ export class IngestWorkoutService {
       let polarWorkout: IPolarWorkout | null = null;
       let corosWorkout: ICorosWorkout | null = null;
       let garminWorkout: IGarminWorkout | null = null
+      let suuntoWorkout: ISuuntoWorkout | null = null;
       //let whoopWorkouts: IWhoopWorkout[] = [];
       let benchmarkFilePath: string | undefined;
       
@@ -348,6 +350,9 @@ export class IngestWorkoutService {
         } catch (polarError) {
           console.error('[IngestWorkoutService] ❌ Error parsing Polar CSV:', polarError);
         }
+      }
+      if (benchmarkFile && benchmarkDeviceType === 'suunto') {
+        suuntoWorkout = await SuuntoWorkoutParser.parseWorkout(benchmarkFile.path);
       }
       
       // Handle Coros benchmark file (.fit format)
@@ -479,6 +484,13 @@ export class IngestWorkoutService {
               );
               
               console.log(`[IngestWorkoutService] ⌚ Matched Coros workout: ${overlap.overlapPercent.toFixed(1)}% overlap`);
+            }
+          }
+          if (suuntoWorkout && benchmarkDeviceType === 'suunto') {
+            const overlap = SuuntoWorkoutParser.findWorkoutOverlap(suuntoWorkout, workout.startTime, workout.endTime, 50);
+            if (overlap?.isMatch) {
+              benchmarkWorkoutMeta = { activeCalories: suuntoWorkout.calories, distance: suuntoWorkout.totalDistanceKm ? suuntoWorkout.totalDistanceKm * 1000 : undefined };
+              await this.processSuuntoBenchmarkHR(sessionId, userId, workout, suuntoWorkout);
             }
           }
           
@@ -814,6 +826,49 @@ export class IngestWorkoutService {
       // Don't throw - we still want the session to be created even without benchmark
     }
   }
+  private static async processSuuntoBenchmarkHR(sessionId: Types.ObjectId,
+  userId: Types.ObjectId | string,
+  workout: IParsedWorkout,
+  suuntoWorkout: ISuuntoWorkout,
+): Promise<void> {
+  try {
+    console.log(`[IngestWorkoutService] ⌚ Processing Suunto HR for workout ${workout.workoutId}`);
+ 
+    const hrReadings = SuuntoWorkoutParser.extractHRInTimeWindow(
+      suuntoWorkout,
+      workout.startTime,
+      workout.endTime,
+    );
+ 
+    if (hrReadings.length === 0) {
+      console.log(`[IngestWorkoutService] No Suunto HR readings found in workout time range`);
+      return;
+    }
+ 
+    console.log(`[IngestWorkoutService] ⌚ Found ${hrReadings.length} Suunto HR readings in workout window`);
+ 
+    const benchmarkReadings = hrReadings.map(reading => ({
+      meta: {
+        sessionId:       sessionId,
+        workoutId:       workout.workoutId,
+        userId:          new Types.ObjectId(userId.toString()),
+        deviceType:      'suunto',
+        firmwareVersion: undefined,
+      },
+      timestamp:            reading.timestamp,
+      heartRate:            reading.heartRate,
+      heartRateConfidence:  95,   // Suunto optical HR — same confidence as Coros
+      exerciseIntensity:    0,
+      isValid:              true,
+    }));
+ 
+    await WorkoutReading.insertMany(benchmarkReadings);
+    console.log(`[IngestWorkoutService] ⌚ Inserted ${benchmarkReadings.length} Suunto readings for session ${sessionId}`);
+ 
+  } catch (error) {
+    console.error(`[IngestWorkoutService] ❌ Error processing Suunto HR:`, error);
+    // Don't throw — session should still be created without benchmark
+  }}
   private static async processGarminBenchmarkHR(
   sessionId: Types.ObjectId,
   userId: Types.ObjectId | string,

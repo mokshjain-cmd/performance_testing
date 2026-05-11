@@ -42,6 +42,7 @@ const BENCHMARK_DEVICE_OPTIONS = [
   { value: 'masimo', label: 'Masimo' },
   { value: 'garmin', label: 'Garmin' },
   { value: 'evie', label: 'Evie' },
+  { value: 'suunto', label: 'Suunto' },
 ];
 
 const BAND_POSITION_OPTIONS = [
@@ -517,7 +518,7 @@ useEffect(() => {
                   accept={
                     formData.benchmarkDeviceType === 'apple' || formData.benchmarkDeviceType === 'whoop' || formData.benchmarkDeviceType === 'zepp'
                       ? '.xml,.XML,.zip,.ZIP,.csv,.CSV' 
-                      : formData.benchmarkDeviceType === 'coros'
+                      : (formData.benchmarkDeviceType === 'coros'|| formData.benchmarkDeviceType === 'suunto')
                         ? '.fit,.FIT'
                         : formData.benchmarkDeviceType === 'garmin'
                           ? '.csv,.CSV,.tcx,.TCX'
