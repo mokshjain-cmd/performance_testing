@@ -309,7 +309,7 @@ export class WorkoutAnalysisService {
     });
     
     // Find nearest timestamps within tolerance window
-    const TOLERANCE_SECONDS = 5;
+    const TOLERANCE_SECONDS = 1;
     const pairs: Array<{ luna: number; benchmark: number }> = [];
     const benchmarkArray = Array.from(benchmarkMap.entries());
     const usedBenchmarkTs = new Set<number>();
