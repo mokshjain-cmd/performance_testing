@@ -151,7 +151,7 @@ const AdminWorkoutOverviewTab: React.FC<AdminWorkoutOverviewTabProps> = ({ subTa
               <Users className="text-blue-600" size={24} />
             </div>
             <div>
-              <p className="text-sm text-gray-500">Total Users</p>
+              <p className="text-sm text-gray-500">Total Active Users</p>
               <p className="text-2xl font-bold text-gray-900">{globalSummary?.totalUsers || 0}</p>
             </div>
           </div>
