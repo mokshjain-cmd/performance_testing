@@ -428,13 +428,24 @@ const AdminWorkoutOverviewTab: React.FC<AdminWorkoutOverviewTabProps> = ({ subTa
                   <XAxis dataKey="date" stroke="#9CA3AF" tick={{ fontSize: 11 }} />
                   <YAxis stroke="#9CA3AF" tick={{ fontSize: 11 }} />
                   <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '8px',
-                    }}
-                    formatter={(value: number | undefined) => [value?.toFixed(3) ?? 'N/A', selectedChartMetric === 'avgMae' ? 'MAE' : selectedChartMetric === 'avgRmse' ? 'RMSE' : 'Pearson R']}
-                  />
+  contentStyle={{
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    border: '1px solid #e5e7eb',
+    borderRadius: '8px',
+  }}
+  formatter={(value: number | string | undefined) => [
+    typeof value === 'number' ? value.toFixed(3) : value ?? 'N/A',
+    selectedChartMetric === 'avgMae'
+      ? 'MAE'
+      : selectedChartMetric === 'avgRmse'
+      ? 'RMSE'
+      : 'Pearson R',
+  ]}
+  labelFormatter={(label, payload) => {
+    const sessions = payload?.[0]?.payload?.totalSessions ?? 0;
+    return `${label} • Sessions: ${sessions}`;
+  }}
+/>
                   <Line 
                     type="monotone" 
                     dataKey="value" 

@@ -142,8 +142,11 @@ interface AdminSidebarProps {
   onDeleteSession?: (sessionId: string, userId: string) => void;
 }
 const getSportInfo = (sportType: number) => {
-  console.log('Getting sport info for type:', sportType);
-  return SPORT_TYPES[sportType] || SPORT_TYPES[0];
+  const sport = SPORT_TYPES[sportType] || SPORT_TYPES[0];
+
+  return sport.name.toLowerCase() === "yoga"
+    ? { ...sport, name: "Strength Training" }
+    : sport;
 };
 
 const AdminSidebar: React.FC<AdminSidebarProps> = ({
