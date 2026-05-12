@@ -177,8 +177,8 @@ export class NFAIosWorkoutParser {
         return null;
       }
 
-      const startDateTime = new Date(`${startDate}T${startTime}:00`);
-      const endDateTime = new Date(`${startDate}T${endTime}:00`);
+      const startDateTime = new Date(`${startDate}T${startTime}:00+05:30`);
+      const endDateTime = new Date(`${startDate}T${endTime}:00+05:30`);
 
       const durationSec =
         Number(workoutData.duration_seconds || 0);
