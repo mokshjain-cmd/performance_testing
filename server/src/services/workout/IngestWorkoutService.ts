@@ -210,6 +210,19 @@ export class IngestWorkoutService {
   /**
    * Create a workout session WITHOUT inserting readings (for fast sync response)
    */
+  private static formatWithOffset(date: Date, offsetMinutes: number): string {
+    const shifted = new Date(date.getTime() + offsetMinutes * 60000);
+
+    const day = String(shifted.getUTCDate()).padStart(2, '0');
+    const month = String(shifted.getUTCMonth() + 1).padStart(2, '0');
+    const year = String(shifted.getUTCFullYear()).slice(-2);
+
+    const hours = String(shifted.getUTCHours()).padStart(2, '0');
+    const minutes = String(shifted.getUTCMinutes()).padStart(2, '0');
+    const seconds = String(shifted.getUTCSeconds()).padStart(2, '0');
+
+    return `${day}-${month}-${year} | ${hours}:${minutes}:${seconds}`;
+  }
   private static async createWorkoutSessionOnly(
     userId: Types.ObjectId | string,
     workout: IParsedWorkout,
@@ -219,13 +232,7 @@ export class IngestWorkoutService {
   ): Promise<Types.ObjectId> {
     
     // Format session name as DD-MM-YY | HH:MM:SS from workout start time
-    const day = String(workout.startTime.getUTCDate()).padStart(2, '0');
-    const month = String(workout.startTime.getUTCMonth() + 1).padStart(2, '0');
-    const year = String(workout.startTime.getUTCFullYear()).slice(-2);
-    const hours = String(workout.startTime.getUTCHours()).padStart(2, '0');
-    const minutes = String(workout.startTime.getUTCMinutes()).padStart(2, '0');
-    const seconds = String(workout.startTime.getUTCSeconds()).padStart(2, '0');
-    const sessionName = `${day}-${month}-${year} | ${hours}:${minutes}:${seconds}`;
+    const sessionName = this.formatWithOffset(workout.startTime, 330);
     
     // Create session document (no readings yet)
     const session = await Session.create({
