@@ -62,6 +62,7 @@ export class WorkoutAnalysisService {
       
       // Fetch benchmark readings if benchmark device exists
       let benchmarkComparison: any = undefined;
+      let pairwiseComparisons: any[] = [];
       const benchmarkDeviceType = session.benchmarkDeviceType;
       
       if (benchmarkDeviceType) {
@@ -76,7 +77,7 @@ export class WorkoutAnalysisService {
           console.log(`   - Luna: calories=${parsedWorkout.summary.calories}, distance=${parsedWorkout.summary.distance}m, steps=${parsedWorkout.summary.steps}`);
           console.log(`   - Benchmark: calories=${benchmarkWorkoutMeta?.activeCalories || 'N/A'}, distance=${benchmarkWorkoutMeta?.distance || 'N/A'}m, steps=${benchmarkWorkoutMeta?.steps || 'N/A'}`);
           
-          benchmarkComparison = this.computeBenchmarkComparison(
+          const comparisonData = this.computeBenchmarkComparison(
             lunaReadings,
             benchmarkReadings,
             benchmarkDeviceType,
@@ -89,6 +90,12 @@ export class WorkoutAnalysisService {
               benchmarkSteps: benchmarkWorkoutMeta?.steps,
             }
           );
+
+          benchmarkComparison = comparisonData?.benchmarkComparison;
+
+          if (comparisonData?.pairwiseComparison) {
+            pairwiseComparisons = [comparisonData.pairwiseComparison];
+          }
           
           console.log(`[WorkoutAnalysisService] ✅ Benchmark comparison computed:`, {
             hrMae: benchmarkComparison.hrMae,
@@ -172,6 +179,7 @@ export class WorkoutAnalysisService {
           startTime: session.startTime,
           endTime: session.endTime,
           workoutStats,
+          pairwiseComparisons,
           lunaAccuracyPercent,
           isValid: session.isValid,
           computedAt: new Date(),
@@ -222,7 +230,47 @@ export class WorkoutAnalysisService {
       readingCount: validReadings.length,
     };
   }
-  
+  private static computeBlandAltman(
+  pairs: Array<{ luna: number; benchmark: number }>
+) {
+  const MAX_POINTS = 500;
+
+  const step = Math.max(1, Math.ceil(pairs.length / MAX_POINTS));
+  const sampledPairs = pairs.filter((_, i) => i % step === 0);
+
+  const differences = sampledPairs.map(p => p.luna - p.benchmark);
+  const averages = sampledPairs.map(p => (p.luna + p.benchmark) / 2);
+
+  const fullDifferences = pairs.map(p => p.luna - p.benchmark);
+
+  const meanDifference =
+    fullDifferences.reduce((sum, d) => sum + d, 0) / fullDifferences.length;
+
+  const variance =
+    fullDifferences.reduce(
+      (sum, d) => sum + Math.pow(d - meanDifference, 2),
+      0
+    ) / fullDifferences.length;
+
+  const stdDifference = Math.sqrt(variance);
+
+  const upperLimit = meanDifference + 1.96 * stdDifference;
+  const lowerLimit = meanDifference - 1.96 * stdDifference;
+
+  const inLimits = fullDifferences.filter(
+    d => d >= lowerLimit && d <= upperLimit
+  ).length;
+
+  return {
+    differences: differences.map(v => Math.round(v * 100) / 100),
+    averages: averages.map(v => Math.round(v * 100) / 100),
+    meanDifference: Math.round(meanDifference * 100) / 100,
+    stdDifference: Math.round(stdDifference * 100) / 100,
+    upperLimit: Math.round(upperLimit * 100) / 100,
+    lowerLimit: Math.round(lowerLimit * 100) / 100,
+    percentageInLimits: Math.round((inLimits / fullDifferences.length) * 10000) / 100,
+  };
+}
   /**
    * Compute comparison metrics between Luna and benchmark readings
    * Also compares workout-level stats (calories, distance, steps) if provided
@@ -239,41 +287,9 @@ export class WorkoutAnalysisService {
       benchmarkDistance?: number;
       benchmarkSteps?: number;
     }
-  ): {
-    benchmarkDevice: string;
-    // Luna HR summary
-    lunaHrAvg: number;
-    lunaHrMax: number;
-    lunaHrMin: number;
-    // Benchmark HR summary
-    benchmarkHrAvg: number;
-    benchmarkHrMax: number;
-    benchmarkHrMin: number;
-    // HR comparison metrics
-    hrMae: number;
-    hrRmse: number;
-    hrMape: number;
-    hrPearsonR: number;
-    hrMeanBias: number;
-    overlapCount: number;
-    overlapPercent: number;
-    // Workout-level comparisons
-    lunaCalories?: number;
-    benchmarkCalories?: number;
-    caloriesDifference?: number;
-    caloriesBias?: number;
-    caloriesAccuracyPercent?: number;
-    lunaDistance?: number;
-    benchmarkDistance?: number;
-    distanceDifference?: number;
-    distanceBias?: number;
-    distanceAccuracyPercent?: number;
-    lunaSteps?: number;
-    benchmarkSteps?: number;
-    stepsDifference?: number;
-    stepsBias?: number;
-    stepsAccuracyPercent?: number;
-  } | undefined {
+  ): { benchmarkComparison: any;
+        pairwiseComparison: any; 
+      }| undefined {
     
     // Create timestamp -> HR maps for alignment
     const lunaMap = new Map<number, number>();
@@ -433,7 +449,25 @@ export class WorkoutAnalysisService {
       }
     }
     
-    return result;
+    const blandAltman = this.computeBlandAltman(pairs);
+
+    const pairwiseComparison = {
+      d1: "luna",
+      d2: benchmarkDevice,
+      metric: "HR",
+      mae: result.hrMae,
+      rmse: result.hrRmse,
+      mape: result.hrMape,
+      pearsonR: result.hrPearsonR,
+      coverage: result.overlapPercent,
+      meanBias: result.hrMeanBias,
+      blandAltman,
+    };
+
+    return {
+      benchmarkComparison: result,
+      pairwiseComparison,
+    };
   }
   
   /**

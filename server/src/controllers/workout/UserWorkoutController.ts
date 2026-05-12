@@ -109,6 +109,7 @@ export class UserWorkoutController {
         session,
         analysis,
         workoutStats: (analysis as any)?.workoutStats || null,
+        pairwiseComparisons: (analysis as any)?.pairwiseComparisons || [],
       };
 
       // Include readings if requested
