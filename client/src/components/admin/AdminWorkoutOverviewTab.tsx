@@ -151,7 +151,7 @@ const AdminWorkoutOverviewTab: React.FC<AdminWorkoutOverviewTabProps> = ({ subTa
               <Users className="text-blue-600" size={24} />
             </div>
             <div>
-              <p className="text-sm text-gray-500">Total Users</p>
+              <p className="text-sm text-gray-500">Total Active Users</p>
               <p className="text-2xl font-bold text-gray-900">{globalSummary?.totalUsers || 0}</p>
             </div>
           </div>
@@ -428,13 +428,24 @@ const AdminWorkoutOverviewTab: React.FC<AdminWorkoutOverviewTabProps> = ({ subTa
                   <XAxis dataKey="date" stroke="#9CA3AF" tick={{ fontSize: 11 }} />
                   <YAxis stroke="#9CA3AF" tick={{ fontSize: 11 }} />
                   <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '8px',
-                    }}
-                    formatter={(value: number | undefined) => [value?.toFixed(3) ?? 'N/A', selectedChartMetric === 'avgMae' ? 'MAE' : selectedChartMetric === 'avgRmse' ? 'RMSE' : 'Pearson R']}
-                  />
+  contentStyle={{
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    border: '1px solid #e5e7eb',
+    borderRadius: '8px',
+  }}
+  formatter={(value: number | string | undefined) => [
+    typeof value === 'number' ? value.toFixed(3) : value ?? 'N/A',
+    selectedChartMetric === 'avgMae'
+      ? 'MAE'
+      : selectedChartMetric === 'avgRmse'
+      ? 'RMSE'
+      : 'Pearson R',
+  ]}
+  labelFormatter={(label, payload) => {
+    const sessions = payload?.[0]?.payload?.totalSessions ?? 0;
+    return `${label} • Sessions: ${sessions}`;
+  }}
+/>
                   <Line 
                     type="monotone" 
                     dataKey="value" 

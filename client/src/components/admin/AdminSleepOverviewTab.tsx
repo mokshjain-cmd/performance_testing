@@ -161,7 +161,7 @@ const formatTime = (seconds: number) => {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card>
           <div className="space-y-2">
-            <p className="text-sm text-gray-500 uppercase tracking-wide">Total Users</p>
+            <p className="text-sm text-gray-500 uppercase tracking-wide">Total Ative Users</p>
             <p className="text-3xl font-bold bg-gradient-to-r from-blue-500 to-blue-600 bg-clip-text text-transparent">
               {globalSummary?.totalUsers || 0}
             </p>

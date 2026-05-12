@@ -138,7 +138,11 @@ const SPORT_TYPES: Record<number, { name: string; icon: typeof Activity; color: 
 };
 
 const getSportInfo = (sportType: number) => {
-  return SPORT_TYPES[sportType] || SPORT_TYPES[0];
+  const sport = SPORT_TYPES[sportType] || SPORT_TYPES[0];
+
+  return sport.name.toLowerCase() === "yoga"
+    ? { ...sport, name: "Strength Training" }
+    : sport;
 };
 
 const sizeClasses = {
