@@ -11,6 +11,7 @@ import {
 } from '../workout';
 import type { WorkoutSessionDetails, WorkoutStats, WorkoutReadingsResult } from '../../types';
 import { Calendar, Clock, Cpu, MapPin, FileText } from 'lucide-react';
+import BlandAltmanChart from '../dashboard/BlandAltmanChart';
 
 
 interface AdminWorkoutSessionViewProps {
@@ -104,6 +105,8 @@ const AdminWorkoutSessionView: React.FC<AdminWorkoutSessionViewProps> = ({
 
   const { session, analysis } = sessionData;
   const workoutStats = analysis?.workoutStats as WorkoutStats | undefined;
+  const pairwise = (analysis as any)?.pairwiseComparisons?.[0];
+  const blandAltmanData = pairwise?.blandAltman;
 
   return (
     <div className="space-y-6">
@@ -243,6 +246,18 @@ const AdminWorkoutSessionView: React.FC<AdminWorkoutSessionViewProps> = ({
 
       {/* Benchmark Comparison */}
       <WorkoutComparisonCard comparison={workoutStats?.benchmarkComparison} />
+
+      {/* Bland-Altman Plot */}
+      {blandAltmanData && session.benchmarkDeviceType && (
+        <Card>
+          <BlandAltmanChart
+            blandAltmanData={blandAltmanData}
+            metric="HR"
+            device1="luna"
+            device2={session.benchmarkDeviceType}
+          />
+        </Card>
+      )}
     </div>
   );
 };
