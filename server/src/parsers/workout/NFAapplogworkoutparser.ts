@@ -1,10 +1,6 @@
 import * as fs from 'fs';
 import * as readline from 'readline';
 
-/**
- * Parsed workout data from NFA iOS app log
- * Structure intentionally kept SAME as Android parser
- */
 export interface IParsedWorkout {
   workoutId: string;
   sportType: number;
@@ -44,21 +40,9 @@ export interface IParsedWorkout {
   }>;
 }
 
-/**
- * iOS parser internal structure
- */
 interface IIosWorkoutBlock {
-  logDate: string;
   paramsLine: string;
-  workoutId?: string;
-
-  additionalFields: Record<string, number>;
 }
-
-/**
- * NFA iOS Workout Parser
- */
-const IST_OFFSET_MINUTES = 330; // +05:30
 
 function getUTCDateKey(date: Date): string {
   return date.toISOString().slice(0, 10);
@@ -66,9 +50,6 @@ function getUTCDateKey(date: Date): string {
 
 export class NFAIosWorkoutParser {
 
-  /**
-   * Parse workouts from iOS log file
-   */
   static async parseWorkoutsFromLog(
     filePath: string,
     targetDate: Date
@@ -85,63 +66,19 @@ export class NFAIosWorkoutParser {
       crlfDelay: Infinity,
     });
 
-    let currentWorkout: IIosWorkoutBlock | null = null;
-
     for await (const line of rl) {
 
-      if (line.includes('Workout save param [')) {
+      if (!line.includes('Workout SDK logs [')) continue;
 
-        if (currentWorkout) {
-          const parsed = this.buildWorkout(currentWorkout);
+      const parsed = this.buildWorkout({ paramsLine: line });
 
-          if (parsed) {
-            const workoutDateStr = getUTCDateKey(parsed.startTime);
-            const targetDateStr = getUTCDateKey(targetDate);
+      if (!parsed) continue;
 
-            if (workoutDateStr === targetDateStr) {
-              workouts.push(parsed);
-            }
-          }
-        }
+      const workoutDateStr = getUTCDateKey(parsed.startTime);
+      const targetDateStr = getUTCDateKey(targetDate);
 
-        const dateMatch = line.match(/(\d{4}-\d{2}-\d{2})/);
-
-        currentWorkout = {
-          logDate: dateMatch?.[1] || '',
-          paramsLine: line,
-          additionalFields: {},
-        };
-
-        continue;
-      }
-
-      if (!currentWorkout) continue;
-
-      const workoutIdMatch = line.match(/Workout id from server\s+(\d+)/);
-
-      if (workoutIdMatch) {
-        currentWorkout.workoutId = workoutIdMatch[1];
-        continue;
-      }
-
-      const additionalFieldMatch = line.match(/([A-Za-z0-9_]+)\s*=\s*(-?\d+)/);
-
-      if (additionalFieldMatch) {
-        currentWorkout.additionalFields[additionalFieldMatch[1]] =
-          parseInt(additionalFieldMatch[2]);
-      }
-    }
-
-    if (currentWorkout) {
-      const parsed = this.buildWorkout(currentWorkout);
-
-      if (parsed) {
-        const workoutDateStr = getUTCDateKey(parsed.startTime);
-        const targetDateStr = getUTCDateKey(targetDate);
-
-        if (workoutDateStr === targetDateStr) {
-          workouts.push(parsed);
-        }
+      if (workoutDateStr === targetDateStr) {
+        workouts.push(parsed);
       }
     }
 
@@ -150,9 +87,6 @@ export class NFAIosWorkoutParser {
     return workouts;
   }
 
-  /**
-   * Convert iOS block -> Android compatible structure
-   */
   private static buildWorkout(
     block: IIosWorkoutBlock
   ): IParsedWorkout | null {
@@ -164,61 +98,44 @@ export class NFAIosWorkoutParser {
 
       const workoutData = this.parsePseudoJson(jsonStr);
 
-      const startDate = workoutData.date;
-      const startTime = workoutData.start_time;
-      const endTime = workoutData.end_time;
+      const startUnix = Number(workoutData.sportTime);
+      const endUnix = Number(workoutData.sportEndTime);
 
-      if (!startDate || !startTime || !endTime) return null;
+      if (!startUnix || !endUnix) return null;
 
-      const [y, m, d] = startDate.split('-').map(Number);
-      const [hh, mm] = startTime.split(':').map(Number);
-      const [ehh, emm] = endTime.split(':').map(Number);
+      const startTime = new Date(startUnix * 1000);
+      const endTime = new Date(endUnix * 1000);
 
-      // ✅ FIXED: IST → UTC conversion (explicit and safe)
-      const startDateTime = new Date(
-        Date.UTC(y, m - 1, d, hh, mm, 0) - IST_OFFSET_MINUTES * 60 * 1000
-      );
+      const durationSec = endUnix - startUnix;
 
-      const endDateTime = new Date(
-        Date.UTC(y, m - 1, d, ehh, emm, 0) - IST_OFFSET_MINUTES * 60 * 1000
-      );
-
-      const durationSec = Number(workoutData.duration_seconds || 0);
-
-      const hrValues: number[] = Array.isArray(workoutData.hr_value)
-        ? workoutData.hr_value
+      const hrValues: number[] = Array.isArray(workoutData.hr_values)
+        ? workoutData.hr_values
         : [];
 
-      const readings = this.buildReadings(hrValues, startDateTime);
+      const readings = this.buildReadings(hrValues, startTime);
 
       return {
-        workoutId:
-          block.workoutId ||
-          `${startDate}-${startTime}-${workoutData.activity_type}`,
+        workoutId: `${startUnix}-${workoutData.recordPointSportType}`,
 
-        sportType:
-          Number(block.additionalFields.recordPointSportType || 0),
+        sportType: Number(workoutData.recordPointSportType || 0),
 
-        startTime: startDateTime,
-
-        endTime:
-          durationSec > 0
-            ? new Date(startDateTime.getTime() + durationSec * 1000)
-            : endDateTime,
-
+        startTime,
+        endTime,
         durationSec,
 
         summary: {
-          avgHeart: Number(block.additionalFields.reportAvgHeart || 0),
-          maxHeart: Number(block.additionalFields.reportMaxHeart || 0),
-          minHeart: Number(block.additionalFields.reportMinHeart || 0),
+          avgHeart: Number(workoutData.reportAvgHeart || 0),
+          maxHeart: Number(workoutData.reportMaxHeart || 0),
+          minHeart: Number(workoutData.reportMinHeart || 0),
 
-          calories: this.extractCalories(workoutData, block.paramsLine),
+          calories: Number(workoutData.calorie || 0),
 
-          steps: Number(workoutData.steps || 0),
-          distance: Number(workoutData.distance || 0),
+          steps: Number(workoutData.reportTotalStep || 0),
 
-          avgPace: Number(block.additionalFields.reportAveragePace || 0),
+          distance: Number(workoutData.reportDistance || 0),
+
+          avgPace: Number(workoutData.reportAveragePace || 0),
+
           fastPace: 0,
           slowestPace: 0,
 
@@ -228,16 +145,21 @@ export class NFAIosWorkoutParser {
           avgStepSpeed: 0,
           maxStepSpeed: 0,
 
-          trainingEffect: Number(block.additionalFields.reportTrainingEffect || 0),
-          trainingLoad: Number(block.additionalFields.reportSportTrainingLoad || 0),
+          trainingEffect: Number(workoutData.reportTrainingEffect || 0),
+
+          trainingLoad: Number(workoutData.reportSportTrainingLoad || 0),
 
           vo2max: 0,
-          recoveryTime: Number(workoutData.recovery_time || 0),
 
-          heartWarmUp: Number(block.additionalFields.reportHeartWarmUp || 0),
-          heartFatBurning: Number(block.additionalFields.reportHeartFatBurning || 0),
-          heartAerobic: Number(block.additionalFields.reportHeartAerobic || 0),
-          heartAnaerobic: Number(block.additionalFields.reportHeartAnaerobic || 0),
+          recoveryTime: Number(workoutData.reportRecoveryTime || 0),
+
+          heartWarmUp: Number(workoutData.reportHeartWarmUp || 0),
+
+          heartFatBurning: Number(workoutData.reportHeartFatBurning || 0),
+
+          heartAerobic: Number(workoutData.reportHeartAerobic || 0),
+
+          heartAnaerobic: Number(workoutData.reportHeartAnaerobic || 0),
         },
 
         readings,
@@ -250,7 +172,7 @@ export class NFAIosWorkoutParser {
   }
 
   private static extractWorkoutJson(line: string): string | null {
-    const match = line.match(/Workout save param\s+(\[.*\])/);
+    const match = line.match(/Workout SDK logs\s+(\[.*\])/);
     return match ? match[1] : null;
   }
 
@@ -312,21 +234,5 @@ export class NFAIosWorkoutParser {
     }
 
     return readings;
-  }
-
-  private static extractCalories(
-    workoutData: any,
-    rawLine: string
-  ): number {
-
-    const parsedCalories = Number(workoutData.calories);
-
-    if (!isNaN(parsedCalories) && parsedCalories > 0) {
-      return parsedCalories;
-    }
-
-    const match = rawLine.match(/"calories"\s*:\s*(\d+)/);
-
-    return match ? Number(match[1]) : 0;
   }
 }
