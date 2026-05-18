@@ -12,25 +12,7 @@ import { uploadChunk, cleanupUploadedFiles, uploadSingle } from '../controllers/
 const router = Router();
 
 // Create a new session with device files
-router.post(
-  '/upload-chunk',
-  requireRole(['admin', 'tester']),
-  (req, res, next) => {
-    console.log('Received chunk upload request');
-    uploadChunkMiddleware.single('chunk')(req, res, (err: any) => {
-      if (err) {
-        console.error('❌ multer upload-chunk error:', err);
-        return res.status(400).json({
-          success: false,
-          message: err.message,
-          code: err.code,
-        });
-      }
-      next();
-    });
-  },
-  uploadChunk
-);
+router.post('/upload-chunk', requireRole(['admin','tester']), uploadChunkMiddleware.single('chunk'), uploadChunk);
 router.post('/cleanup-upload', requireRole(['admin','tester']), cleanupUploadedFiles);
 router.post(
   '/upload-single',
