@@ -50,13 +50,25 @@ function getUTCDateKey(date: Date): string {
 
 export class NFAIosWorkoutParser {
 
+  private static getNumber(obj: any, keys: string[]): number {
+    for (const key of keys) {
+      if (obj[key] !== undefined && obj[key] !== null) {
+        return Number(obj[key]) || 0;
+      }
+    }
+    return 0;
+  }
+
   static async parseWorkoutsFromLog(
     filePath: string,
     targetDate: Date
   ): Promise<IParsedWorkout[]> {
 
-    console.log(`[NFAIosWorkoutParser] Parsing file: ${filePath}`);
+    console.log('\n🍎 ===== NFA iOS WORKOUT PARSER START =====');
+    console.log(`[NFAIosWorkoutParser] File: ${filePath}`);
+    console.log(`[NFAIosWorkoutParser] Target Date: ${targetDate.toISOString()}`);
 
+    const targetDateStr = getUTCDateKey(targetDate);
     const workouts: IParsedWorkout[] = [];
 
     const fileStream = fs.createReadStream(filePath);
@@ -66,23 +78,36 @@ export class NFAIosWorkoutParser {
       crlfDelay: Infinity,
     });
 
-    for await (const line of rl) {
+    let totalLines = 0;
+    let candidateLines = 0;
 
-      if (!line.includes('Workout SDK logs [')) continue;
+    for await (const line of rl) {
+      totalLines++;
+
+      if (!line.includes('Workout SDK logs')) continue;
+
+      candidateLines++;
 
       const parsed = this.buildWorkout({ paramsLine: line });
 
       if (!parsed) continue;
 
       const workoutDateStr = getUTCDateKey(parsed.startTime);
-      const targetDateStr = getUTCDateKey(targetDate);
 
       if (workoutDateStr === targetDateStr) {
         workouts.push(parsed);
+
+        console.log(
+          `[NFAIosWorkoutParser] Found workout: ${parsed.workoutId}, sportType: ${parsed.sportType}, ` +
+          `startTime: ${parsed.startTime.toISOString()}, endTime: ${parsed.endTime.toISOString()}, duration: ${parsed.durationSec}s`
+        );
       }
     }
 
-    console.log(`[NFAIosWorkoutParser] Total workouts: ${workouts.length}`);
+    console.log(`[NFAIosWorkoutParser] Total lines: ${totalLines}`);
+    console.log(`[NFAIosWorkoutParser] Candidate lines: ${candidateLines}`);
+    console.log(`[NFAIosWorkoutParser] Final workouts: ${workouts.length}`);
+    console.log('🍎 ===== NFA iOS WORKOUT PARSER END =====\n');
 
     return workouts;
   }
@@ -92,8 +117,8 @@ export class NFAIosWorkoutParser {
   ): IParsedWorkout | null {
 
     try {
-
       const jsonStr = this.extractWorkoutJson(block.paramsLine);
+
       if (!jsonStr) return null;
 
       const workoutData = this.parsePseudoJson(jsonStr);
@@ -106,8 +131,6 @@ export class NFAIosWorkoutParser {
       const startTime = new Date(startUnix * 1000);
       const endTime = new Date(endUnix * 1000);
 
-      const durationSec = endUnix - startUnix;
-
       const hrValues: number[] = Array.isArray(workoutData.hr_values)
         ? workoutData.hr_values
         : [];
@@ -116,77 +139,135 @@ export class NFAIosWorkoutParser {
 
       return {
         workoutId: `${startUnix}-${workoutData.recordPointSportType}`,
-
         sportType: Number(workoutData.recordPointSportType || 0),
-
         startTime,
         endTime,
-        durationSec,
+        durationSec: endUnix - startUnix,
 
         summary: {
-          avgHeart: Number(workoutData.reportAvgHeart || 0),
-          maxHeart: Number(workoutData.reportMaxHeart || 0),
-          minHeart: Number(workoutData.reportMinHeart || 0),
+  avgHeart: this.getNumber(workoutData, [
+    'reportAvgHeart',
+    'avgHeart',
+    'avg_hr',
+  ]),
 
-          calories: Number(workoutData.calorie || 0),
+  maxHeart: this.getNumber(workoutData, [
+    'reportMaxHeart',
+    'maxHeart',
+    'max_hr',
+  ]),
 
-          steps: Number(workoutData.reportTotalStep || 0),
+  minHeart: this.getNumber(workoutData, [
+    'reportMinHeart',
+    'minHeart',
+    'min_hr',
+  ]),
 
-          distance: Number(workoutData.reportDistance || 0),
+  calories: this.getNumber(workoutData, [
+    'calorie',
+    'reportCal',
+    'calories',
+  ]),
 
-          avgPace: Number(workoutData.reportAveragePace || 0),
+  steps: this.getNumber(workoutData, [
+    'reportTotalStep',
+    'steps',
+  ]),
 
-          fastPace: 0,
-          slowestPace: 0,
+  distance: this.getNumber(workoutData, [
+    'reportDistance',
+    'distance',
+  ]),
 
-          avgSpeed: 0,
-          fastSpeed: 0,
+  avgPace: this.getNumber(workoutData, [
+    'reportAveragePace',
+    'avgPace',
+  ]),
 
-          avgStepSpeed: 0,
-          maxStepSpeed: 0,
+  fastPace: this.getNumber(workoutData, [
+    'reportFastPace',
+  ]),
 
-          trainingEffect: Number(workoutData.reportTrainingEffect || 0),
+  slowestPace: this.getNumber(workoutData, [
+    'reportSlowestPace',
+  ]),
 
-          trainingLoad: Number(workoutData.reportSportTrainingLoad || 0),
+  avgSpeed: this.getNumber(workoutData, [
+    'reportAvgSpeed',
+  ]),
 
-          vo2max: 0,
+  fastSpeed: this.getNumber(workoutData, [
+    'reportFastSpeed',
+  ]),
 
-          recoveryTime: Number(workoutData.reportRecoveryTime || 0),
+  avgStepSpeed: this.getNumber(workoutData, [
+    'reportAvgStepSpeed',
+  ]),
 
-          heartWarmUp: Number(workoutData.reportHeartWarmUp || 0),
+  maxStepSpeed: this.getNumber(workoutData, [
+    'reportMaxStepSpeed',
+  ]),
 
-          heartFatBurning: Number(workoutData.reportHeartFatBurning || 0),
+  trainingEffect: this.getNumber(workoutData, [
+    'reportTrainingEffect',
+  ]),
 
-          heartAerobic: Number(workoutData.reportHeartAerobic || 0),
+  trainingLoad: this.getNumber(workoutData, [
+    'reportSportTrainingLoad',
+    'reportTrainingLoad',
+  ]),
 
-          heartAnaerobic: Number(workoutData.reportHeartAnaerobic || 0),
-        },
+  vo2max: this.getNumber(workoutData, [
+    'reportVO2max',
+  ]),
+
+  recoveryTime: this.getNumber(workoutData, [
+    'reportRecoveryTime',
+  ]),
+
+  heartWarmUp: this.getNumber(workoutData, [
+    'reportHeartWarmUp',
+  ]),
+
+  heartFatBurning: this.getNumber(workoutData, [
+    'reportHeartFatBurning',
+  ]),
+
+  heartAerobic: this.getNumber(workoutData, [
+    'reportHeartAerobic',
+  ]),
+
+  heartAnaerobic: this.getNumber(workoutData, [
+    'reportHeartAnaerobic',
+  ]),
+},
 
         readings,
       };
 
     } catch (error) {
-      console.error(`[NFAIosWorkoutParser] Failed to build workout: ${error}`);
+      console.error(`[buildWorkout] Parse failed:`, error);
       return null;
     }
   }
 
   private static extractWorkoutJson(line: string): string | null {
-    const match = line.match(/Workout SDK logs\s+(\[.*\])/);
+    const match = line.match(/Workout SDK logs\s+(\[[\s\S]*\])/);
     return match ? match[1] : null;
   }
 
   private static parsePseudoJson(input: string): any {
-
     const result: any = {};
-    const content = input.trim().replace(/^\[/, '').replace(/\]$/, '');
+
+    const content = input.trim()
+      .replace(/^\[/, '')
+      .replace(/\]$/, '');
 
     const pairRegex = /"([^"]+)"\s*:\s*(\[[^\]]*\]|"[^"]*"|[^,]+)(?:,|$)/g;
 
     let match;
 
     while ((match = pairRegex.exec(content)) !== null) {
-
       const key = match[1];
       let value: any = match[2].trim();
 
@@ -196,13 +277,9 @@ export class NFAIosWorkoutParser {
         } catch {
           value = [];
         }
-      }
-
-      else if (value.startsWith('"') && value.endsWith('"')) {
+      } else if (value.startsWith('"') && value.endsWith('"')) {
         value = value.slice(1, -1);
-      }
-
-      else if (!isNaN(Number(value))) {
+      } else if (!isNaN(Number(value))) {
         value = Number(value);
       }
 
@@ -220,7 +297,6 @@ export class NFAIosWorkoutParser {
     const readings: IParsedWorkout['readings'] = [];
 
     for (let i = 0; i < hrValues.length; i++) {
-
       const hr = hrValues[i];
 
       if (hr <= 0 || hr === 255) continue;
@@ -231,6 +307,15 @@ export class NFAIosWorkoutParser {
         heartRateConfidence: 4,
         exerciseIntensity: 0,
       });
+    }
+
+    if (readings.length > 0) {
+      console.log(`[NFAIosWorkoutParser] Parsed ${readings.length} HR readings`);
+      console.log(`[NFAIosWorkoutParser]   First: ${readings[0].timestamp.toISOString()} HR=${readings[0].heartRate}`);
+      console.log(`[NFAIosWorkoutParser]   Last:  ${readings[readings.length - 1].timestamp.toISOString()} HR=${readings[readings.length - 1].heartRate}`);
+      const durationSec =
+        (readings[readings.length - 1].timestamp.getTime() - readings[0].timestamp.getTime()) / 1000;
+      console.log(`[NFAIosWorkoutParser]   Span:  ${durationSec} seconds (${(durationSec / 60).toFixed(1)} minutes)`);
     }
 
     return readings;

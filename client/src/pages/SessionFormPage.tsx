@@ -66,6 +66,55 @@ interface SessionResult {
   sessionId?: string;
   error?: string;
 }
+const uploadFileSmart = async (
+  file: File,
+  fieldname: string
+): Promise<any> => {
+  const SIZE_LIMIT = 30 * 1024 * 1024; // 30MB
+  const CHUNK_SIZE = 20 * 1024 * 1024; // 20MB
+
+  // Normal upload for <=30MB
+  if (file.size <= SIZE_LIMIT) {
+    const form = new FormData();
+    form.append('file', file);
+    form.append('fieldname', fieldname);
+
+    const res = await apiClient.post('/sessions/upload-single', form, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+
+    return res.data.data;
+  }
+
+  // Chunk upload for >30MB
+  const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+  const uploadId = crypto.randomUUID();
+
+  for (let i = 0; i < totalChunks; i++) {
+    const chunk = file.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+
+    const form = new FormData();
+    form.append('chunk', chunk, `${file.name}.part-${i}`);
+    form.append('uploadId', uploadId);
+    form.append('fileName', file.name);
+    form.append('chunkIndex', String(i));
+    form.append('totalChunks', String(totalChunks));
+    form.append('fieldname', fieldname);
+
+    await apiClient.post('/sessions/upload-chunk', form, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  }
+
+  return {
+    uploadId,
+    fieldname,
+    originalname: file.name,
+    chunked: true
+  };
+};
 
 export default function SessionFormPage() {
   const navigate = useNavigate();
@@ -192,6 +241,30 @@ useEffect(() => {
     }
 
     const results: SessionResult[] = [];
+    const uploadedFiles: any[] = [];
+
+    setUploadProgress({ global: 'Uploading files...' });
+
+      const uploadTasks = [
+        uploadFileSmart(deviceFiles.luna!, 'luna')
+      ];
+
+      if (
+        formData.benchmarkDeviceType &&
+        deviceFiles[formData.benchmarkDeviceType]
+      ) {
+        uploadTasks.push(
+          uploadFileSmart(
+            deviceFiles[formData.benchmarkDeviceType]!,
+            formData.benchmarkDeviceType
+          )
+        );
+      }
+
+      const uploaded = await Promise.all(uploadTasks);
+      uploadedFiles.push(...uploaded);
+
+      setUploadProgress({ global: 'Files uploaded ✓' });
     const sessionPromises = selectedMetrics.map(async (metric) => {
       try {
         setUploadProgress(prev => ({ ...prev, [metric]: 'uploading...' }));
@@ -224,11 +297,7 @@ useEffect(() => {
         form.append('firmwareVersion', formData.firmwareVersion);
         form.append('mobileType', formData.mobileType);
         form.append('appPlatform', formData.appPlatform);
-        form.append('luna', deviceFiles.luna as File);
-
-        if (formData.benchmarkDeviceType && deviceFiles[formData.benchmarkDeviceType]) {
-          form.append(formData.benchmarkDeviceType, deviceFiles[formData.benchmarkDeviceType] as File);
-        }
+        form.append('uploadedFiles', JSON.stringify(uploadedFiles));
 
         setUploadProgress(prev => ({ ...prev, [metric]: 'processing...' }));
 
@@ -260,7 +329,15 @@ useEffect(() => {
     });
 
     await Promise.allSettled(sessionPromises);
+    const chunkedIds = uploadedFiles
+      .filter(f => f.chunked)
+      .map(f => f.uploadId);
 
+    if (chunkedIds.length) {
+      await apiClient.post('/sessions/cleanup-upload', {
+        uploadIds: chunkedIds
+      });
+    }
     setSessionResults(results);
     setIsSubmitting(false);
 
@@ -540,6 +617,13 @@ useEffect(() => {
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
               <h4 className="text-sm font-semibold text-gray-900 mb-3">Upload Progress</h4>
               <div className="space-y-2">
+                {uploadProgress.global && (
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="font-medium">Files</span>
+                    <span className="text-blue-600">{uploadProgress.global}</span>
+                  </div>
+                )}
+
                 {selectedMetrics.map(metric => (
                   <div key={metric} className="flex items-center justify-between text-sm">
                     <span className="font-medium">{getMetricIcon(metric)} {metric}</span>

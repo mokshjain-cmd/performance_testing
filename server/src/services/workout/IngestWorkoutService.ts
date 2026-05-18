@@ -107,7 +107,7 @@ export class IngestWorkoutService {
     let lunaFilePath = lunaFile.path;
     let extractedFolder: string | undefined;
     
-    if (lunaFile.path.toLowerCase().endsWith('.zip')) {
+    if (lunaFile.originalname.toLowerCase().endsWith('.zip')) {
       console.log('[IngestWorkoutService] 📦 Luna ZIP file detected, extracting...');
       const extracted = await extractLunaZip(lunaFile.path);
       lunaFilePath = extracted.logFilePath;
@@ -121,6 +121,7 @@ export class IngestWorkoutService {
 
     if(mobileType?.toLowerCase()=='ios'){
       console.log('[IngestWorkoutService] 🍎 Using NFA iOS workout parser');
+      console.log('[IngestWorkoutService] workout data :')
 
         parsedWorkouts = await NFAIosWorkoutParser.parseWorkoutsFromLog(
           lunaFilePath,
@@ -306,7 +307,7 @@ export class IngestWorkoutService {
       if (benchmarkFile && isAppleBasedDevice) {
         console.log(`[IngestWorkoutService] 🍎 Parsing Apple Health benchmark file...`);
         
-        const fileExtension = path.extname(benchmarkFile.path).toLowerCase();
+        const fileExtension = path.extname(benchmarkFile.originalname).toLowerCase();
         if (fileExtension === '.zip') {
           try {
             const extracted = await extractAppleHealthZip(benchmarkFile.path);

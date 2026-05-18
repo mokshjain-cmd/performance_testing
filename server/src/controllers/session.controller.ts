@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import Session from '../models/Session';
 import Device from '../models/Devices';
 import mongoose from "mongoose";
+import path from 'path';
 import { ingestSessionFiles } from '../services/sessionIngestion.service';
 import { ingestSPO2SessionFiles } from '../services/ingestSPO2Session.service';
 import { IngestSleepService } from '../services/sleep/IngestSleepService';
@@ -354,36 +355,35 @@ export const createManualSleepSession = async (req: Request, res: Response): Pro
   }
 };
 //currently no user check , add later
+
 export const createSession = async (
   req: Request,
   res: Response
 ): Promise<void> => {
   try {
-    const userId = req.userId; 
+    const userId = req.userId;
+
     const {
       sessionName,
       activityType,
       metric,
       startTime,
       endTime,
-      sleepDate, // For sleep sessions: user provides just the date, we calculate the range
-      activityDate, // For activity sessions: user provides just the date, we calculate the range
-      workoutDate, // For workout sessions: user provides just the date, we extract all workouts
-      dailyDate, // For HR/SPO2 daily sessions: user provides just the date, we calculate the range
+      sleepDate,
+      activityDate,
+      workoutDate,
+      dailyDate,
       benchmarkDeviceType,
       bandPosition,
       firmwareVersion,
-      mobileType, // For Sleep/Activity with Luna: Android or iOS
-      appPlatform // For Sleep with Luna: NoiseFit or Luna
+      mobileType,
+      appPlatform,
     } = req.body;
 
-    // For Activity metric, activityType is optional (tracks daily totals)
-    // For Workout metric, activityType is auto-set to 'daily'
-    // For other metrics, activityType is required
     if (!userId || !metric) {
       res.status(400).json({
         success: false,
-        message: "Missing required fields: userId, metric"
+        message: 'Missing required fields: userId, metric',
       });
       return;
     }
@@ -391,27 +391,63 @@ export const createSession = async (
     if (metric !== 'Activity' && metric !== 'Workout' && !activityType) {
       res.status(400).json({
         success: false,
-        message: "activityType is required for non-Activity sessions"
+        message: 'activityType is required for non-Activity sessions',
       });
       return;
     }
 
-    // Validate metric value
-    const validMetrics = ['HR', 'SPO2', 'Sleep', 'Activity', 'SkinTemp', 'Stress', 'Workout'];
+    const validMetrics = [
+      'HR',
+      'SPO2',
+      'Sleep',
+      'Activity',
+      'SkinTemp',
+      'Stress',
+      'Workout',
+    ];
+
     if (!validMetrics.includes(metric)) {
       res.status(400).json({
         success: false,
-        message: `Invalid metric. Must be one of: ${validMetrics.join(', ')}`
+        message: `Invalid metric. Must be one of: ${validMetrics.join(', ')}`,
       });
       return;
     }
 
-    // For Workout metric, handle separately - it creates multiple sessions internally
+    // -------------------------------------------------------
+    // Unified file loader (IMPORTANT FIX)
+    // -------------------------------------------------------
+    let files: any[] = [];
+
+    if (req.files && (req.files as any[]).length > 0) {
+      files = req.files as Express.Multer.File[];
+    } else if (req.body.uploadedFiles) {
+      const uploadedFiles = JSON.parse(req.body.uploadedFiles);
+
+      files = uploadedFiles.map((f: any) => ({
+        fieldname: f.fieldname,
+        originalname: f.originalname,
+        filename: `${f.uploadId}.tmp`,
+        path: path.join(process.cwd(), 'temp', 'uploads', `${f.uploadId}.tmp`),
+      }));
+    }
+
+    if (!files || files.length === 0) {
+      res.status(400).json({
+        success: false,
+        message: 'No files uploaded',
+      });
+      return;
+    }
+
+    // =======================================================
+    // WORKOUT
+    // =======================================================
     if (metric === 'Workout') {
       if (!workoutDate) {
         res.status(400).json({
           success: false,
-          message: "workoutDate is required for Workout sessions (format: YYYY-MM-DD)"
+          message: 'workoutDate is required',
         });
         return;
       }
@@ -419,47 +455,28 @@ export const createSession = async (
       if (!firmwareVersion) {
         res.status(400).json({
           success: false,
-          message: "firmwareVersion is required"
+          message: 'firmwareVersion is required',
         });
         return;
       }
 
-      const files = req.files as Express.Multer.File[];
-      if (!files || files.length === 0) {
-        res.status(400).json({
-          success: false,
-          message: "No files uploaded"
-        });
-        return;
-      }
+      const lunaFile = files.find((f) => f.fieldname === 'luna');
 
-      // Find Luna file
-      const lunaFile = files.find(f => f.fieldname === 'luna');
       if (!lunaFile) {
         res.status(400).json({
           success: false,
-          message: "Luna app log file is required (fieldname: 'luna')"
+          message: 'Luna file required',
         });
         return;
       }
 
-      // Find benchmark file if specified
-      const benchmarkFile = benchmarkDeviceType 
-        ? files.find(f => f.fieldname === benchmarkDeviceType)
+      const benchmarkFile = benchmarkDeviceType
+        ? files.find((f) => f.fieldname === benchmarkDeviceType)
         : undefined;
 
-      // Parse workout date
-      const [year, month, day] = workoutDate.split("-").map(Number);
+      const [year, month, day] = workoutDate.split('-').map(Number);
       const targetDate = new Date(Date.UTC(year, month - 1, day, 0, 0, 0));
 
-      console.log(`\n🏋️ ========================================`);
-      console.log(`🏋️ Processing Workout session:`);
-      console.log(`🏋️    - Date: ${workoutDate}`);
-      console.log(`🏋️    - Firmware: ${firmwareVersion}`);
-      console.log(`🏋️    - Mobile Type: ${mobileType}`);
-      console.log(`🏋️ ========================================\n`);
-
-      // Call workout ingestion service - it handles session creation internally
       const result = await IngestWorkoutService.ingestWorkoutDay(
         userId,
         targetDate,
@@ -473,99 +490,73 @@ export const createSession = async (
       res.status(201).json({
         success: true,
         message: `Found ${result.sessionsCreated} workouts`,
-        data: {
-          sessionsCreated: result.sessionsCreated,
-          sessionIds: result.sessionIds,
-          workouts: result.workouts,
-        }
+        data: result,
       });
+
       return;
     }
 
-    // For Sleep sessions, handle date differently
+    // =======================================================
+    // DATE RANGE
+    // =======================================================
     let start: Date;
     let end: Date;
-    
+
     if (metric === 'Sleep') {
       if (!sleepDate) {
         res.status(400).json({
           success: false,
-          message: "sleepDate is required for Sleep sessions (format: YYYY-MM-DD)"
+          message: 'sleepDate required',
         });
         return;
       }
 
-      // Parse the sleep date (e.g., "2026-03-03")
-      const [year, month, day] = sleepDate.split("-").map(Number);
-      
-      // Start time: Previous day at 21:00 (9 PM)
+      const [year, month, day] = sleepDate.split('-').map(Number);
+
       start = new Date(Date.UTC(year, month - 1, day - 1, 21, 0, 0));
-      
-      // End time: Given date at 09:00 (9 AM)
       end = new Date(Date.UTC(year, month - 1, day, 9, 0, 0));
+
     } else if (metric === 'Activity') {
       if (!activityDate) {
         res.status(400).json({
           success: false,
-          message: "activityDate is required for Activity sessions (format: YYYY-MM-DD)"
+          message: 'activityDate required',
         });
         return;
       }
 
-      // Parse the activity date (e.g., "2026-03-09")
-      const [year, month, day] = activityDate.split("-").map(Number);
-      
-      // Start time: Activity day at 00:00 (midnight)
+      const [year, month, day] = activityDate.split('-').map(Number);
+
       start = new Date(Date.UTC(year, month - 1, day, 0, 0, 0));
-      
-      // End time: Activity day at 23:59:59
       end = new Date(Date.UTC(year, month - 1, day, 23, 59, 59));
-    } else if ((metric === 'HR' || metric === 'SPO2' || metric === 'SkinTemp') && activityType === 'daily' && dailyDate) {
-      // For HR/SPO2/SkinTemp daily monitoring sessions
-      // Parse the daily date (e.g., "2026-03-09")
-      const [year, month, day] = dailyDate.split("-").map(Number);
-      
-      // Start time: Daily monitoring day at 00:00 (midnight)
+
+    } else if (
+      ['HR', 'SPO2', 'SkinTemp'].includes(metric) &&
+      activityType === 'daily' &&
+      dailyDate
+    ) {
+      const [year, month, day] = dailyDate.split('-').map(Number);
+
       start = new Date(Date.UTC(year, month - 1, day, 0, 0, 0));
-      
-      // End time: Daily monitoring day at 23:59:59
       end = new Date(Date.UTC(year, month - 1, day, 23, 59, 59));
+
     } else {
-      // For other metrics, require explicit startTime and endTime
       if (!startTime || !endTime) {
         res.status(400).json({
           success: false,
-          message: "Missing required fields: startTime, endTime"
+          message: 'Missing startTime/endTime',
         });
         return;
       }
-      
+
       start = parseISTString(startTime);
       end = parseISTString(endTime);
     }
 
-    // Validate firmwareVersion is provided (required for Luna)
     if (!firmwareVersion) {
       res.status(400).json({
         success: false,
-        message: "firmwareVersion is required"
-      });
-      return;
-    }
-
-    console.log(`\n📝 ========================================`);
-    console.log(`📝 Creating new session:`);
-    console.log(`📝    - Metric: ${metric}`);
-    console.log(`📝    - Activity: ${activityType}`);
-    console.log(`📝    - Firmware Version (from request): "${firmwareVersion}"`);
-    console.log(`📝 ========================================\n`);
-
-    const files = req.files as Express.Multer.File[];
-
-    if (!files || files.length === 0) {
-      res.status(400).json({
-        success: false,
-        message: "No files uploaded"
+        message: 'firmwareVersion is required',
       });
       return;
     }
@@ -574,47 +565,51 @@ export const createSession = async (
       (end.getTime() - start.getTime()) / 1000
     );
 
-    // Resolve deviceId from DB for each uploaded file
+    // =======================================================
+    // DEVICE RESOLUTION
+    // =======================================================
     const devices = await Promise.all(
       files.map(async (file) => {
         const deviceType = file.fieldname;
 
-        // For Luna devices, search by both deviceType and firmwareVersion
-        // For other devices, search by deviceType only
         let device;
+
         if (deviceType === 'luna') {
-          device = await Device.findOne({ 
-            deviceType, 
-            firmwareVersion 
+          device = await Device.findOne({
+            deviceType,
+            firmwareVersion,
           });
-          
+
           if (!device) {
-            throw new Error(`Luna device with firmware version ${firmwareVersion} not found. Please ensure this firmware version is registered.`);
+            throw new Error(
+              `Luna device with firmware ${firmwareVersion} not found`
+            );
           }
-          
-          // Use the firmwareVersion from request, not from device lookup
+
           return {
             deviceId: device._id,
-            deviceType: device.deviceType,
-            firmwareVersion: firmwareVersion  // Use request value
-          };
-        } else {
-          device = await Device.findOne({ deviceType });
-          
-          if (!device) {
-            throw new Error(`Device not registered: ${deviceType}`);
-          }
-          
-          return {
-            deviceId: device._id,
-            deviceType: device.deviceType,
-            firmwareVersion: device.firmwareVersion
+            deviceType,
+            firmwareVersion,
           };
         }
+
+        device = await Device.findOne({ deviceType });
+
+        if (!device) {
+          throw new Error(`Device not registered: ${deviceType}`);
+        }
+
+        return {
+          deviceId: device._id,
+          deviceType,
+          firmwareVersion: device.firmwareVersion,
+        };
       })
     );
 
-    // Create session
+    // =======================================================
+    // SESSION CREATE
+    // =======================================================
     const session = await Session.create({
       userId,
       name: sessionName,
@@ -628,51 +623,28 @@ export const createSession = async (
       bandPosition,
     });
 
-    console.log(`\n✅ ========================================`);
-    console.log(`✅ Session created successfully!`);
-    console.log(`✅    - Session ID: ${session._id}`);
-    console.log(`✅    - Metric: ${metric}`);
-    console.log(`✅    - Devices stored in session:`);
-    devices.forEach((d) => {
-      console.log(`✅       * ${d.deviceType}: firmware="${d.firmwareVersion}"`);
-    });
-    console.log(`✅ ========================================\n`);
-
-    // Upload files to Google Cloud Storage and get download URLs
-    console.log(`📤 Uploading files to GCS for session ${session._id}`);
-    let rawFiles: Record<string, string> = {};
-    if(process.env.ENV==='production') {
+    // =======================================================
+    // GCS
+    // =======================================================
+    if (process.env.ENV === 'production') {
       try {
-      rawFiles = await storageService.uploadDeviceFiles(files, session._id.toString());
-      
-      // Update session with raw file URLs
-      session.rawFiles = rawFiles;
-      await session.save();
-      
-      console.log(`✅ Raw files uploaded for session ${session._id}`);
-    } catch (uploadError) {
-      console.error('❌ Error uploading files to GCS:', uploadError instanceof Error ? uploadError.message : uploadError);
-      // Continue with session creation even if upload fails
-      // Files are still available locally for processing
-    }
-    }
-    
-
-    // Call appropriate ingestion service based on metric - await full pipeline completion
-    try {
-      if (metric === 'SPO2') {
-        await ingestSPO2SessionFiles({
-          sessionId: session._id,
-          userId,
-          activityType,
-          bandPosition,
-          startTime: start,
-          endTime: end,
+        const rawFiles = await storageService.uploadDeviceFiles(
           files,
-          mobileType,
-        });
-        console.log(`✅ SPO2 full pipeline completed for session ${session._id}`);
-      } else if (metric === 'HR') {
+          session._id.toString()
+        );
+
+        session.rawFiles = rawFiles;
+        await session.save();
+      } catch (err) {
+        console.error('GCS upload failed', err);
+      }
+    }
+
+    // =======================================================
+    // PIPELINES
+    // =======================================================
+    try {
+      if (metric === 'HR') {
         await ingestSessionFiles({
           sessionId: session._id,
           userId,
@@ -683,52 +655,19 @@ export const createSession = async (
           files,
           mobileType,
         });
-        console.log(`✅ HR full pipeline completed for session ${session._id}`);
-      } else if (metric === 'Sleep') {
-        await IngestSleepService.ingestSleepSession(session._id, userId, files, benchmarkDeviceType, mobileType, appPlatform);
-        console.log(`✅ Sleep ingestion completed for session ${session._id}`);
-        
-        await SleepAnalysisService.analyzeSession(session._id);
-        console.log(`✅ Sleep analysis completed for session ${session._id}`);
-        
-        // Get Luna firmware version from session
-        const sessionWithDevices = await Session.findById(session._id).populate('devices.deviceId');
-        const lunaDevice = sessionWithDevices?.devices.find((d: any) => d.deviceType === 'luna');
-        const lunaFirmware = lunaDevice?.firmwareVersion;
-        
-        // Update all summary collections
-        await updateAdminGlobalSummary('Sleep', true);
-        if (lunaFirmware) {
-          await updateFirmwarePerformanceForLuna(lunaFirmware, 'Sleep');
-        }
-        await updateBenchmarkComparisonSummariesForSession(session._id);
-        await updateAdminDailyTrend(session.startTime, 'Sleep', true);
-        
-        console.log(`✅ Sleep full pipeline completed for session ${session._id}`);
-      } else if (metric === 'Activity') {
-        await IngestActivityService.ingestActivitySession(session._id, userId, files, benchmarkDeviceType, mobileType, appPlatform);
-        console.log(`✅ Activity ingestion completed for session ${session._id}`);
-        
-        await ActivityAnalysisService.analyzeSession(session._id);
-        console.log(`✅ Activity analysis completed for session ${session._id}`);
-        
-        // Get Luna firmware version from session
-        const sessionWithDevices = await Session.findById(session._id).populate('devices.deviceId');
-        const lunaDevice = sessionWithDevices?.devices.find((d: any) => d.deviceType === 'luna');
-        const lunaFirmware = lunaDevice?.firmwareVersion;
-        
-        // Update all activity summary collections
-        await ActivitySummaryService.updateUserActivitySummary(userId);
-        if (benchmarkDeviceType) {
-          await ActivitySummaryService.updateBenchmarkComparisonSummary(benchmarkDeviceType);
-        }
-        await ActivitySummaryService.updateAdminGlobalSummary();
-        await ActivitySummaryService.updateAdminDailyTrend(session.startTime);
-        if (lunaFirmware) {
-          await ActivitySummaryService.updateFirmwarePerformance(lunaFirmware);
-        }
-        
-        console.log(`✅ Activity full pipeline completed for session ${session._id}`);
+
+      } else if (metric === 'SPO2') {
+        await ingestSPO2SessionFiles({
+          sessionId: session._id,
+          userId,
+          activityType,
+          bandPosition,
+          startTime: start,
+          endTime: end,
+          files,
+          mobileType,
+        });
+
       } else if (metric === 'SkinTemp') {
         await ingestSkinTempSessionFiles({
           sessionId: session._id,
@@ -740,30 +679,92 @@ export const createSession = async (
           files,
           mobileType,
         });
-        console.log(`✅ SkinTemp full pipeline completed for session ${session._id}`);
+
+      } else if (metric === 'Sleep') {
+        await IngestSleepService.ingestSleepSession(
+          session._id,
+          userId,
+          files,
+          benchmarkDeviceType,
+          mobileType,
+          appPlatform
+        );
+
+        await SleepAnalysisService.analyzeSession(session._id);
+
+        const s = await Session.findById(session._id);
+        const lunaFirmware = s?.devices.find((d: any) => d.deviceType === 'luna')
+          ?.firmwareVersion;
+
+        await updateAdminGlobalSummary('Sleep', true);
+
+        if (lunaFirmware) {
+          await updateFirmwarePerformanceForLuna(lunaFirmware, 'Sleep');
+        }
+
+        await updateBenchmarkComparisonSummariesForSession(session._id);
+        await updateAdminDailyTrend(session.startTime, 'Sleep', true);
+
+      } else if (metric === 'Activity') {
+        await IngestActivityService.ingestActivitySession(
+          session._id,
+          userId,
+          files,
+          benchmarkDeviceType,
+          mobileType,
+          appPlatform
+        );
+
+        await ActivityAnalysisService.analyzeSession(session._id);
+
+        const s = await Session.findById(session._id);
+        const lunaFirmware = s?.devices.find((d: any) => d.deviceType === 'luna')
+          ?.firmwareVersion;
+
+        await ActivitySummaryService.updateUserActivitySummary(userId);
+
+        if (benchmarkDeviceType) {
+          await ActivitySummaryService.updateBenchmarkComparisonSummary(
+            benchmarkDeviceType
+          );
+        }
+
+        await ActivitySummaryService.updateAdminGlobalSummary();
+        await ActivitySummaryService.updateAdminDailyTrend(session.startTime);
+
+        if (lunaFirmware) {
+          await ActivitySummaryService.updateFirmwarePerformance(lunaFirmware);
+        }
       }
 
       res.status(201).json({
         success: true,
-        message: "Session created and fully processed",
-        data: session
+        message: 'Session created and fully processed',
+        data: session,
       });
+
     } catch (pipelineError) {
-      console.error(`❌ Pipeline error for session ${session._id}:`, pipelineError);
+      console.error('Pipeline error', pipelineError);
+
       res.status(500).json({
         success: false,
-        message: `Session created but pipeline failed: ${pipelineError instanceof Error ? pipelineError.message : 'Unknown error'}`,
-        data: { sessionId: session._id }
+        message:
+          pipelineError instanceof Error
+            ? pipelineError.message
+            : 'Pipeline failed',
+        data: {
+          sessionId: session._id,
+        },
       });
     }
 
-
-
   } catch (error) {
     console.error('Error creating session:', error);
+
     res.status(500).json({
       success: false,
-      message: error instanceof Error ? error.message : "Unknown error"
+      message:
+        error instanceof Error ? error.message : 'Unknown error',
     });
   }
 };
