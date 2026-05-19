@@ -83,6 +83,7 @@ export async function ingestSessionFiles({
     for (const file of files) {
       const deviceType = file.fieldname;
       const filePath = file.path;
+      const originalname = file.originalname; 
       console.log(`Processing file for device: ${deviceType}, path: ${filePath}`);
 
       const device = await Device.findOne({ deviceType });
@@ -111,14 +112,14 @@ export async function ingestSessionFiles({
           console.log(`Activity type for this session: ${activityType}`);
           console.log('Using standard Luna HR parser (no mobileType specified)');
           let csvFilePath = lunaFilePath;
-          if(filePath.toLowerCase().endsWith('.txt')){
+          if(originalname.toLowerCase().endsWith('.txt')){
             console.log('Detected Luna TXT file, converting to CSV for parsing...');
             csvFilePath = await convertLunaTxtToCsv(lunaFilePath);  
           }
           readings = await parseLunaCsv(csvFilePath, meta, startTime, endTime);
           console.log(`Parsed ${readings.length} readings from Luna file.`);
         }else{
-            if (filePath.toLowerCase().endsWith('.zip')) {
+            if (originalname.toLowerCase().endsWith('.zip')) {
             console.log('📦 Luna ZIP file detected, extracting...');
             const extracted = await extractLunaZip(filePath);
             lunaFilePath = extracted.logFilePath;
@@ -172,7 +173,7 @@ export async function ingestSessionFiles({
         try {
           // Check if the file is a ZIP (for Apple Health export)
           const fileExtension = path.extname(filePath).toLowerCase();
-          if (fileExtension === '.zip') {
+          if (originalname.toLowerCase().endsWith('.zip')) {
             console.log('🍎 Detected Apple Health ZIP file, extracting...');
             try {
               const { exportXmlPath, extractedFolder: extracted } = await extractAppleHealthZip(filePath);

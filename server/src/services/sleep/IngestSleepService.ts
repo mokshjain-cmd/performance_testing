@@ -96,6 +96,7 @@ export class IngestSleepService {
             sessionId,
             userId,
             filePath,
+            file.originalname,
             mobileType,
             appPlatform,
             sessionEndTime
@@ -111,6 +112,7 @@ export class IngestSleepService {
             sessionId,
             userId,
             filePath,
+            file.originalname,
             benchmarkDeviceType,
             sessionEndTime
           );
@@ -224,6 +226,7 @@ export class IngestSleepService {
     sessionId: Types.ObjectId | string,
     userId: Types.ObjectId | string,
     filePath: string,
+    originalname: string,
     mobileType?: string,
     appPlatform?: string,
     sleepDate?: Date
@@ -237,7 +240,7 @@ export class IngestSleepService {
       let lunaFilePath = filePath;
       let extractedFolder: string | undefined;
       
-      if (filePath.toLowerCase().endsWith('.zip')) {
+      if (originalname.toLowerCase().endsWith('.zip')) {
         console.log('[IngestSleepService] 📦 Luna ZIP file detected, extracting...');
         const extracted = await extractLunaZip(filePath);
         lunaFilePath = extracted.logFilePath;
@@ -314,6 +317,7 @@ export class IngestSleepService {
     sessionId: Types.ObjectId | string,
     userId: Types.ObjectId | string,
     filePath: string,
+    originalname: string,
     benchmarkDeviceType: string,
     sleepDate?: Date
   ): Promise<{ epochsInserted: number; extractedFolder?: string }> {
@@ -327,7 +331,7 @@ export class IngestSleepService {
       // Handle ZIP extraction based on device type
       const fileExtension = path.extname(filePath).toLowerCase();
       
-      if (benchmarkDeviceType === 'apple' && fileExtension === '.zip') {
+      if (benchmarkDeviceType === 'apple' && originalname.toLowerCase().endsWith('.zip')) {
         console.log(`[IngestSleepService] Detected Apple Health ZIP file, extracting...`);
         
         try {
@@ -339,7 +343,7 @@ export class IngestSleepService {
           console.error(`[IngestSleepService] Error extracting Apple Health ZIP:`, zipError);
           throw new Error(`Failed to extract Apple Health ZIP: ${zipError instanceof Error ? zipError.message : 'Unknown error'}`);
         }
-      } else if (benchmarkDeviceType === 'whoop' && fileExtension === '.zip') {
+      } else if (benchmarkDeviceType === 'whoop' && originalname.toLowerCase().endsWith('.zip')) {
         console.log(`[IngestSleepService] Detected Whoop ZIP file, extracting...`);
         
         try {

@@ -98,6 +98,7 @@
               sessionId,
               userId,
               filePath,
+              file.originalname,
               mobileType,
               appPlatform,
               sessionStartTime,
@@ -114,6 +115,7 @@
               sessionId,
               userId,
               filePath,
+              file.originalname,
               benchmarkDeviceType,
               sessionStartTime,
               sessionEndTime
@@ -229,6 +231,7 @@
       sessionId: Types.ObjectId | string,
       userId: Types.ObjectId | string,
       filePath: string,
+      originalname: string,
       mobileType?: string,
       appPlatform?: string,
       startDate?: Date,
@@ -246,7 +249,7 @@
         let lunaFilePath = filePath;
         let extractedFolder: string | undefined;
         
-        if (filePath.toLowerCase().endsWith('.zip')) {
+        if (originalname.toLowerCase().endsWith('.zip')) {
           console.log('[IngestActivityService] 📦 Luna ZIP file detected, extracting...');
           const extracted = await extractLunaZip(filePath);
           lunaFilePath = extracted.logFilePath;
@@ -334,6 +337,7 @@
       sessionId: Types.ObjectId | string,
       userId: Types.ObjectId | string,
       filePath: string,
+       originalname: string,
       benchmarkDeviceType: string,
       startDate?: Date,
       endDate?: Date
@@ -347,7 +351,7 @@
 
         // Check if the file is a ZIP (for Apple Health export)
         const fileExtension = path.extname(filePath).toLowerCase();
-        if (benchmarkDeviceType === 'apple' && fileExtension === '.zip') {
+        if (benchmarkDeviceType === 'apple' && originalname.toLowerCase().endsWith('.zip')) {
           console.log(`[IngestActivityService] Detected Apple Health ZIP file, extracting...`);
           
           try {
