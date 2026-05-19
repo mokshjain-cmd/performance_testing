@@ -267,7 +267,11 @@
         } else if (appPlatform === 'Luna' && mobileType?.toLowerCase() === 'ios') {
           console.log(`[IngestActivityService] Using iOS Luna parser`);
           parseResult = await LunaActivityParser.parseLunaActivityFileIOS(lunaFilePath, startDate, endDate);
-        } else {
+        } else if (appPlatform !== 'Luna' && mobileType?.toLowerCase() === 'ios'){
+          console.log(`[IngestActivityService] Using ios sdk parser`);
+          parseResult = await LunaActivityParser.parseLunaActivityFileIOS(lunaFilePath, startDate, endDate);
+        }
+        else {
           // Default to Android parser for backward compatibility
           console.log(`[IngestActivityService] Using Android Luna parser`);
           parseResult = await LunaActivityParser.parseLunaActivityFileAndroid(lunaFilePath, startDate, endDate);
