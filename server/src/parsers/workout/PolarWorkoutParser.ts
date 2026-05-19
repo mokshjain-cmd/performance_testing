@@ -147,8 +147,8 @@ const POLAR_TO_LUNA_SPORT_TYPE: Record<string, number> = {
  */
 export class PolarWorkoutParser {
   // IST offset: 5 hours 30 minutes in milliseconds
-  private static readonly IST_OFFSET_MS = 28800000;
-
+  private static readonly IST_OFFSET_MS = 19800000;
+  
   
   /**
    * Parse a Polar workout CSV file
