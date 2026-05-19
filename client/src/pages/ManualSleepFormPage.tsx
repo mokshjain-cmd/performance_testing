@@ -14,6 +14,7 @@ const BENCHMARK_DEVICE_OPTIONS = [
   { value: 'garmin', label: 'Garmin' },
   {value : 'luna ring', label: 'Luna Ring'},
   { value: 'evie', label: 'Evie' },
+  { value: 'fitbit', label: 'Fitbit' }
 ];
 
 
