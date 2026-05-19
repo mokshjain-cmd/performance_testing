@@ -27,12 +27,10 @@ const formatDuration = (seconds: number): string => {
 };
 
 const formatPace = (pace: number): string => {
-  if (!pace || pace === 0) return '--';
-  const mins = Math.floor(pace);
-  const secs = Math.round((pace - mins) * 60);
-  return `${mins}'${secs.toString().padStart(2, '0')}"`;
-};
+  if (!pace || pace <= 0) return '--';
 
+  return `${(pace / 60).toFixed(1)} /km`;
+};
 const formatDistance = (meters: number): string => {
   if (meters < 1000) return `${meters}m`;
   return `${(meters / 1000).toFixed(2)} km`;
