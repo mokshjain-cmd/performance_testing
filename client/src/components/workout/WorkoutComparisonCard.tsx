@@ -39,10 +39,64 @@ interface WorkoutComparisonCardProps {
   comparison?: BenchmarkComparison;
 }
 
-const getAccuracyStatus = (mae: number): { status: 'good' | 'moderate' | 'poor'; label: string } => {
-  if (mae <= 5) return { status: 'good', label: 'Excellent' };
-  if (mae <= 10) return { status: 'moderate', label: 'Good' };
-  return { status: 'poor', label: 'Needs Review' };
+type AccuracyStatus = {
+  status: 'good' | 'moderate' | 'poor';
+  label: string;
+  score: number;
+};
+
+export const getAccuracyStatus = (
+  mae: number,
+  rmse: number,
+  pearsonR: number
+): AccuracyStatus => {
+  let score = 0;
+
+  /**
+   * MAE (most important)
+   */
+  if (mae <= 5) score += 40;
+  else if (mae <= 8) score += 25;
+  else if (mae <= 12) score += 10;
+
+  /**
+   * RMSE
+   */
+  if (rmse <= 7) score += 30;
+  else if (rmse <= 10) score += 20;
+  else if (rmse <= 15) score += 10;
+
+  /**
+   * Pearson Correlation
+   */
+  if (pearsonR >= 0.9) score += 30;
+  else if (pearsonR >= 0.75) score += 20;
+  else if (pearsonR >= 0.6) score += 10;
+
+  /**
+   * Final Classification
+   */
+  if (score >= 75) {
+    return {
+      status: 'good',
+      label: 'Excellent',
+      score,
+    };
+  }
+
+  if (score >= 45) {
+    return {
+      status: 'moderate',
+      label: 'Good',
+      score,
+    };
+  }
+
+  return {
+    status: 'poor',
+    label: 'Needs Review',
+    score,
+  };
 };
 
 const statusColors = {
@@ -74,7 +128,7 @@ export const WorkoutComparisonCard: React.FC<WorkoutComparisonCardProps> = ({ co
     );
   }
 
-  const accuracy = getAccuracyStatus(comparison.hrMae);
+  const accuracy = getAccuracyStatus(comparison.hrMae, comparison.hrRmse, comparison.hrPearsonR);
   const StatusIcon = statusIcons[accuracy.status];
 
   const metrics = [
