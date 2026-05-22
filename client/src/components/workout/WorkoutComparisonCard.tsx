@@ -128,7 +128,7 @@ export const WorkoutComparisonCard: React.FC<WorkoutComparisonCardProps> = ({ co
     );
   }
 
-  const accuracy = getAccuracyStatus(comparison.hrMae);
+  const accuracy = getAccuracyStatus(comparison.hrMae, comparison.hrRmse, comparison.hrPearsonR);
   const StatusIcon = statusIcons[accuracy.status];
 
   const metrics = [
