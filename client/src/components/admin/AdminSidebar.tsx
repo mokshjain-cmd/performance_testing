@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronDown, ChevronRight, Users as UsersIcon, Activity, User, BarChart3, Trash2, Target, Snowflake, Swords, PersonStanding, Music, Dribbble, Dumbbell, Timer, Waves, Bike, Mountain, Footprints } from 'lucide-react';
 import type { Metric } from './MetricsSelector';
+import apiClient from '../../services/api';
 const SPORT_TYPES: Record<number, { name: string; icon: typeof Activity; color: string }> = {
   // Running
   1: { name: 'Outdoor Running', icon: Activity, color: 'text-orange-500' },
@@ -114,12 +115,16 @@ const SPORT_TYPES: Record<number, { name: string; icon: typeof Activity; color: 
 };
 interface Session {
   sportType?: number;
+
+  deviceType?: string;
+  firmwareVersion?: string;
+  bandPosition?: string;
+
   _id: string;
   name?: string;
   activityType?: string;
   startTime?: string;
   metric?: string;
-  firmwareVersion?: string;
 }
 
 interface User {
@@ -128,19 +133,96 @@ interface User {
   email: string;
   sessions: Session[];
 }
-
+interface SidebarFilters {
+  deviceType: string[];
+  firmwareVersion: string[];
+  sportTypes: number[];
+  bandPosition: string[];
+}
 interface AdminSidebarProps {
   users: User[];
   activeView: 'overview' | 'user' | 'session';
   selectedUserId: string | null;
   selectedSessionId: string | null;
   selectedMetric: Metric;
+  filters: SidebarFilters;
+  onFiltersChange: (filters: SidebarFilters) => void;
   onSelectOverview: () => void;
   onSelectUser: (userId: string) => void;
   onSelectSession: (sessionId: string, userId: string) => void;
   onUserExpand?: (userId: string) => void;
   onDeleteSession?: (sessionId: string, userId: string) => void;
 }
+const BAND_POSITION_OPTIONS = [
+  { value: 'wrist', label: 'Wrist' },
+  { value: 'bicep', label: 'Bicep' },
+];
+
+const SPORT_GROUPS: Record<string, number[]> = {
+
+  // Running
+  outdoor_running: [1, 207, 220, 246],
+  indoor_running: [3, 66, 206, 247],
+  marathon: [139],
+  trail_running: [5, 252],
+
+  // Walking / Hiking
+  outdoor_walking: [2, 208, 251],
+  indoor_walking: [135],
+  hiking: [13, 229, 249],
+  trekking: [4],
+
+  // Cycling
+  outdoor_cycling: [6, 210, 221, 244],
+  indoor_cycling: [7, 209, 245],
+  mountain_cycling: [124],
+  spinning: [253],
+  bmx: [14],
+
+  // Swimming
+  swimming: [21, 22, 200, 219, 248],
+
+  // Strength / Workout
+  strength_training: [25, 35, 215, 266, 228], // yoga merged
+  workout: [0, 8, 30],
+  hiit: [64, 223],
+  crossfit: [84],
+  elliptical: [34],
+  rowing: [121],
+  rope_skipping: [122],
+
+  // Pilates
+  pilates: [28, 233],
+
+  // Sports
+  badminton: [12, 211, 258],
+  football: [10, 213, 257],
+  basketball: [9, 230, 265],
+  tennis: [105, 212, 259],
+  cricket: [39, 214, 262],
+  golf: [134, 256],
+  pickleball: [155],
+  pingpong: [11],
+
+  // Dance
+  dance: [52, 226],
+  zumba: [53, 227],
+  ballet: [47],
+
+  // Martial Arts
+  boxing: [56],
+  taekwondo: [61],
+  kickboxing: [125],
+  martial_arts: [62],
+  tai_chi: [59],
+
+  // Winter
+  skiing: [126],
+  snowboarding: [128],
+
+  // Triathlon
+  triathlon: [123, 204],
+};
 const getSportInfo = (sportType: number) => {
   const sport = SPORT_TYPES[sportType] || SPORT_TYPES[0];
 
@@ -155,6 +237,8 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
   selectedUserId,
   selectedSessionId,
   selectedMetric,
+  filters,
+  onFiltersChange,
   onSelectOverview,
   onSelectUser,
   onSelectSession,
@@ -162,16 +246,63 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
   onDeleteSession,
 }) => {
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
-
+  const [filtersExpanded, setFiltersExpanded] = useState(true);
+  const [firmwareVersions, setFirmwareVersions] = useState<
+    Array<{ value: string; label: string }>
+  >([]);
   // Refetch sessions for all expanded users when metric changes
-  useEffect(() => {
-    if (expandedUsers.size > 0 && onUserExpand) {
-      expandedUsers.forEach(userId => {
-        onUserExpand(userId);
-      });
-    }
-  }, [selectedMetric]);
+useEffect(() => {
+  if (!onUserExpand) return;
 
+  expandedUsers.forEach(userId => {
+    onUserExpand(userId);
+  });
+}, [selectedMetric]);
+  useEffect(() => {
+  apiClient
+    .get('/devices/firmware?deviceType=luna')
+    .then((res) => {
+      if (res.data.success && res.data.data) {
+        const versions = res.data.data.map((version: string) => ({
+          value: version,
+          label: version,
+        }));
+
+        setFirmwareVersions(versions);
+      }
+    })
+    .catch((err) =>
+      console.error('Error fetching firmware versions:', err)
+    );
+}, []);
+  // Auto-expand all users when any filter is active
+// Auto expand/collapse users based on filters
+useEffect(() => {
+  const hasActiveFilters =
+    filters.firmwareVersion.length > 0 ||
+    filters.sportTypes.length > 0 ||
+    filters.bandPosition.length > 0;
+
+  // COLLAPSE ALL when filters are cleared
+  if (!hasActiveFilters) {
+    setExpandedUsers(new Set());
+    return;
+  }
+
+  // EXPAND ALL when filters are active
+  const allUserIds = new Set(users.map(user => user._id));
+
+  setExpandedUsers(allUserIds);
+
+  // Fetch sessions if needed
+  if (onUserExpand) {
+    users.forEach(user => {
+      if (!user.sessions || user.sessions.length === 0) {
+        onUserExpand(user._id);
+      }
+    });
+  }
+}, [filters]);
   const toggleUserExpansion = (userId: string) => {
     setExpandedUsers(prev => {
       const newSet = new Set(prev);
@@ -204,7 +335,309 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
       </button>
 
       {/* Divider */}
-      <div className="h-px bg-gray-200 my-4" />
+      {/* Divider */}
+<div className="h-px bg-gray-200 my-4" />
+
+{/* Filters */}
+{/* Filters */}
+<div className="relative overflow-hidden rounded-2xl border border-white/20 bg-gradient-to-br from-white to-gray-50 shadow-lg backdrop-blur-xl mb-5">
+
+  {/* Background Glow */}
+  <div className="absolute top-0 right-0 w-32 h-32 bg-purple-200/20 rounded-full blur-3xl" />
+  <div className="absolute bottom-0 left-0 w-24 h-24 bg-blue-200/20 rounded-full blur-2xl" />
+
+  <div className="relative z-10">
+
+    {/* Header */}
+    <button
+      onClick={() => setFiltersExpanded(!filtersExpanded)}
+      className="
+        w-full flex items-center justify-between
+        px-5 py-4 text-left
+        hover:bg-white/40 transition-all duration-200
+      "
+    >
+      <div className="flex items-center gap-3">
+        <div className="p-2 rounded-xl bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-md">
+          <Target size={16} />
+        </div>
+
+        <div>
+          <h3 className="text-sm font-semibold text-gray-800">
+            Smart Filters
+          </h3>
+
+          <p className="text-xs text-gray-500">
+            Filter sessions & activities
+          </p>
+        </div>
+      </div>
+
+      <div
+        className={`
+          transition-transform duration-300
+          ${filtersExpanded ? 'rotate-180' : ''}
+        `}
+      >
+        <ChevronDown size={18} className="text-gray-500" />
+      </div>
+    </button>
+
+    {/* Expandable Content */}
+    <div
+      className={`
+        transition-all duration-300 ease-in-out overflow-hidden
+        ${filtersExpanded ? 'max-h-[700px] opacity-100' : 'max-h-0 opacity-0'}
+      `}
+    >
+      <div className="px-5 pb-5 space-y-4">
+
+        {/* Sport Type */}
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">
+            Sport Type
+          </label>
+
+          <div className="relative">
+            <Activity
+              size={16}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-500"
+            />
+
+            <select
+  className="
+    w-full appearance-none rounded-xl border border-gray-200
+    bg-white/80 pl-10 pr-4 py-3 text-sm
+    shadow-sm transition-all duration-200
+    focus:outline-none focus:ring-2 focus:ring-purple-400
+    focus:border-transparent hover:border-purple-300
+  "
+  onChange={(e) => {
+    const value = e.target.value;
+
+    if (!value) {
+      onFiltersChange({
+        ...filters,
+        sportTypes: [],
+      });
+      return;
+    }
+
+    onFiltersChange({
+      ...filters,
+      sportTypes: SPORT_GROUPS[value] || [],
+    });
+  }}
+>
+  <option value="">All Sports</option>
+
+  {/* Running */}
+  <optgroup label="Running">
+    <option value="outdoor_running">Outdoor Running</option>
+    <option value="indoor_running">Indoor Running</option>
+    <option value="marathon">Marathon</option>
+    <option value="trail_running">Trail Running</option>
+  </optgroup>
+
+  {/* Walking / Hiking */}
+  <optgroup label="Walking & Hiking">
+    <option value="outdoor_walking">Outdoor Walking</option>
+    <option value="indoor_walking">Indoor Walking</option>
+    <option value="hiking">Hiking</option>
+    <option value="trekking">Trekking</option>
+  </optgroup>
+
+  {/* Cycling */}
+  <optgroup label="Cycling">
+    <option value="outdoor_cycling">Outdoor Cycling</option>
+    <option value="indoor_cycling">Indoor Cycling</option>
+    <option value="mountain_cycling">Mountain Cycling</option>
+    <option value="spinning">Spinning Bike</option>
+    <option value="bmx">BMX</option>
+  </optgroup>
+
+  {/* Fitness */}
+  <optgroup label="Fitness">
+    <option value="strength_training">Strength Training</option>
+    <option value="workout">Workout</option>
+    <option value="hiit">HIIT</option>
+    <option value="crossfit">CrossFit</option>
+    <option value="elliptical">Elliptical</option>
+    <option value="rowing">Rowing Machine</option>
+    <option value="rope_skipping">Rope Skipping</option>
+    <option value="pilates">Pilates</option>
+  </optgroup>
+
+  {/* Swimming */}
+  <optgroup label="Swimming">
+    <option value="swimming">Swimming</option>
+  </optgroup>
+
+  {/* Sports */}
+  <optgroup label="Sports">
+    <option value="badminton">Badminton</option>
+    <option value="football">Football</option>
+    <option value="basketball">Basketball</option>
+    <option value="tennis">Tennis</option>
+    <option value="cricket">Cricket</option>
+    <option value="golf">Golf</option>
+    <option value="pickleball">Pickleball</option>
+    <option value="pingpong">Ping Pong</option>
+  </optgroup>
+
+  {/* Dance */}
+  <optgroup label="Dance">
+    <option value="dance">Dance</option>
+    <option value="zumba">Zumba</option>
+    <option value="ballet">Ballet</option>
+  </optgroup>
+
+  {/* Martial Arts */}
+  <optgroup label="Martial Arts">
+    <option value="boxing">Boxing</option>
+    <option value="kickboxing">Kickboxing</option>
+    <option value="taekwondo">Taekwondo</option>
+    <option value="martial_arts">Martial Arts</option>
+    <option value="tai_chi">Tai Chi</option>
+  </optgroup>
+
+  {/* Winter */}
+  <optgroup label="Winter Sports">
+    <option value="skiing">Skiing</option>
+    <option value="snowboarding">Snowboarding</option>
+  </optgroup>
+
+  {/* Triathlon */}
+  <optgroup label="Other">
+    <option value="triathlon">Triathlon</option>
+  </optgroup>
+</select>
+          </div>
+        </div>
+
+        {/* Firmware */}
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">
+            Firmware Version
+          </label>
+
+          <div className="relative">
+            <BarChart3
+              size={16}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-purple-500"
+            />
+
+            <select
+              className="
+                w-full appearance-none rounded-xl border border-gray-200
+                bg-white/80 pl-10 pr-4 py-3 text-sm
+                shadow-sm transition-all duration-200
+                focus:outline-none focus:ring-2 focus:ring-purple-400
+                focus:border-transparent hover:border-purple-300
+              "
+              value={filters.firmwareVersion[0] || ''}
+              onChange={(e) => {
+                onFiltersChange({
+                  ...filters,
+                  firmwareVersion: e.target.value
+                    ? [e.target.value]
+                    : [],
+                });
+              }}
+            >
+              <option value="">All Firmware Versions</option>
+
+              {firmwareVersions.map((fw) => (
+                <option key={fw.value} value={fw.value}>
+                  {fw.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Band Position */}
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">
+            Band Position
+          </label>
+
+          <div className="relative">
+            <PersonStanding
+              size={16}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-pink-500"
+            />
+
+            <select
+              className="
+                w-full appearance-none rounded-xl border border-gray-200
+                bg-white/80 pl-10 pr-4 py-3 text-sm
+                shadow-sm transition-all duration-200
+                focus:outline-none focus:ring-2 focus:ring-purple-400
+                focus:border-transparent hover:border-purple-300
+              "
+              value={filters.bandPosition[0] || ''}
+              onChange={(e) => {
+                onFiltersChange({
+                  ...filters,
+                  bandPosition: e.target.value
+                    ? [e.target.value]
+                    : [],
+                });
+              }}
+            >
+              <option value="">All Band Positions</option>
+
+              {BAND_POSITION_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Footer */}
+        {(filters.sportTypes.length > 0 ||
+          filters.firmwareVersion.length > 0 ||
+          filters.bandPosition.length > 0) && (
+          <div className="flex items-center justify-between pt-2">
+
+            <div className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-purple-100 to-blue-100 px-3 py-1 text-xs font-medium text-purple-700">
+              <div className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" />
+
+              {[
+                filters.sportTypes.length > 0,
+                filters.firmwareVersion.length > 0,
+                filters.bandPosition.length > 0,
+              ].filter(Boolean).length}{' '}
+              active filter(s)
+            </div>
+
+            <button
+              onClick={() =>
+                onFiltersChange({
+                  sportTypes: [],
+                  firmwareVersion: [],
+                  bandPosition: [],
+                  deviceType: [],
+                })
+              }
+              className="
+                text-xs font-medium text-red-500
+                hover:text-red-600 transition-colors
+              "
+            >
+              Clear All
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+</div>
+
+{/* Users Section */}
 
       {/* Users Section */}
       <div>
@@ -217,6 +650,34 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
 
         <div className="space-y-1">
           {users.map((user) => {
+
+  const filteredSessions = user.sessions.filter((session) => {
+
+
+    const firmwareMatch =
+      filters.firmwareVersion.length === 0 ||
+      filters.firmwareVersion.includes(
+        session.firmwareVersion || ''
+      );
+
+    const sportMatch =
+      filters.sportTypes.length === 0 ||
+      filters.sportTypes.includes(
+        session.sportType || -1
+      );
+
+    const bandMatch =
+      filters.bandPosition.length === 0 ||
+      filters.bandPosition.includes(
+        session.bandPosition || ''
+      );
+
+    return (
+      firmwareMatch &&
+      sportMatch &&
+      bandMatch
+    );
+  });
             const isExpanded = expandedUsers.has(user._id);
             const isUserSelected = activeView === 'user' && selectedUserId === user._id;
             
@@ -249,9 +710,9 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
                 </div>
 
                 {/* Sessions List (when expanded) */}
-                {isExpanded && user.sessions.length > 0 && (
+                {isExpanded && filteredSessions.length > 0 && (
                   <div className="ml-10 mt-1 space-y-1">
-                    {user.sessions.map((session) => {
+                    {filteredSessions.map((session) => {
                       const isSessionSelected = activeView === 'session' && selectedSessionId === session._id;
                       
                       return (
@@ -303,7 +764,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
                   </div>
                 )}
 
-                {isExpanded && user.sessions.length === 0 && (
+                {isExpanded && filteredSessions.length === 0 && (
                   <div className="ml-10 mt-1 px-3 py-2 text-xs text-gray-400 italic">
                     No {selectedMetric.toUpperCase()} sessions
                   </div>
