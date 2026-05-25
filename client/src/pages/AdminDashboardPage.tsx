@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Layout } from '../components/layout';
 import AdminSidebar from '../components/admin/AdminSidebar';
 import MetricsSelector from '../components/admin/MetricsSelector';
@@ -17,7 +17,12 @@ interface User {
   role: string;
   createdAt: string;
 }
-
+interface SidebarFilters {
+  deviceType: string[];
+  firmwareVersion: string[];
+  sportTypes: number[];
+  bandPosition: string[];
+}
 interface UserWithSessions {
   _id: string;
   name: string;
@@ -32,7 +37,12 @@ type ViewType = 'overview' | 'user' | 'session';
 const AdminDashboardPage: React.FC = () => {
   const [users, setUsers] = useState<UserWithSessions[]>([]);
   const [loading, setLoading] = useState(false);
-  
+  const [filters, setFilters] = useState<SidebarFilters>({
+    deviceType: [],
+    firmwareVersion: [],
+    sportTypes: [],
+    bandPosition: [],
+  });
   // View state
   const [selectedView, setSelectedView] = useState<ViewType>('overview');
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
@@ -42,7 +52,7 @@ const AdminDashboardPage: React.FC = () => {
   const [selectedMetric, setSelectedMetric] = useState<Metric>('workout');
   const [selectedSubTab, setSelectedSubTab] = useState<SubTab>('overview');
   const [latestFirmware, setLatestFirmware] = useState<string>('');
-
+const fetchingUsersRef = useRef(new Set<string>());
   // Reset to overview and clear sessions when metric changes
   useEffect(() => {
     console.log('[Admin Dashboard] 🔄 Metric changed to:', selectedMetric);
@@ -99,37 +109,58 @@ const AdminDashboardPage: React.FC = () => {
       });
   }, []);
 
-  // Fetch sessions for a specific user
-  const fetchUserSessions = async (userId: string) => {
-    try {
-      // Convert metric to backend format (hr -> HR, spo2 -> SPO2, sleep -> Sleep, activity -> Activity, workout -> Workout, skintemp -> SkinTemp)
-      let metricParam = selectedMetric.toUpperCase();
-      if (selectedMetric === 'sleep') {
-        metricParam = 'Sleep';
-      } else if (selectedMetric === 'activity') {
-        metricParam = 'Activity';
-      } else if (selectedMetric === 'workout') {
-        metricParam = 'Workout';
-      } else if (selectedMetric === 'skintemp') {
-        metricParam = 'SkinTemp';
-      }
-      console.log('[Admin Dashboard] 🔍 Fetching sessions for user:', userId, 'metric:', metricParam);
-      const res = await apiClient.get(`/sessions/user/${userId}/ids?metric=${metricParam}`);
-      const sessions = res.data.data || [];
-      console.log('[Admin Dashboard] ✅ Received sessions:', sessions);
-      
-      // Update the user's sessions in the users array
-      setUsers(prev => prev.map(user => 
-        user._id === userId 
+const fetchUserSessions = async (userId: string) => {
+  if (fetchingUsersRef.current.has(userId)) {
+    return;
+  }
+
+  fetchingUsersRef.current.add(userId);
+
+  try {
+    let metricParam = selectedMetric.toUpperCase();
+
+    if (selectedMetric === 'sleep') {
+      metricParam = 'Sleep';
+    } else if (selectedMetric === 'activity') {
+      metricParam = 'Activity';
+    } else if (selectedMetric === 'workout') {
+      metricParam = 'Workout';
+    } else if (selectedMetric === 'skintemp') {
+      metricParam = 'SkinTemp';
+    }
+
+    console.log(
+      '[Admin Dashboard] 🔍 Fetching sessions for user:',
+      userId,
+      'metric:',
+      metricParam
+    );
+
+    const res = await apiClient.get(
+      `/sessions/user/${userId}/ids?metric=${metricParam}`
+    );
+
+    const sessions = res.data.data || [];
+     console.log(
+      `[Admin Dashboard] ✅ Fetched ${JSON.stringify(sessions)} sessions for user:`,
+      userId
+    );
+    setUsers(prev =>
+      prev.map(user =>
+        user._id === userId
           ? { ...user, sessions }
           : user
-      ));
-    } catch (err) {
-      console.error('[Admin Dashboard] ❌ Error fetching user sessions:', err);
-      console.error('Error fetching user sessions:', err);
-    }
-  };
-
+      )
+    );
+  } catch (err) {
+    console.error(
+      '[Admin Dashboard] ❌ Error fetching user sessions:',
+      err
+    );
+  } finally {
+    fetchingUsersRef.current.delete(userId);
+  }
+};
   // Handlers
   const handleSelectOverview = () => {
     console.log('[Admin Dashboard] 📊 Selecting overview view');
@@ -191,6 +222,8 @@ const AdminDashboardPage: React.FC = () => {
             selectedUserId={selectedUserId}
             selectedSessionId={selectedSessionId}
             selectedMetric={selectedMetric}
+            filters={filters}
+            onFiltersChange={setFilters}
             onSelectOverview={handleSelectOverview}
             onSelectUser={handleSelectUser}
             onSelectSession={handleSelectSession}
