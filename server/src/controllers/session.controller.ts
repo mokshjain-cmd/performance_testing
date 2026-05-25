@@ -484,7 +484,8 @@ export const createSession = async (
         lunaFile,
         benchmarkFile,
         benchmarkDeviceType,
-        mobileType
+        mobileType,
+        bandPosition
       );
 
       res.status(201).json({

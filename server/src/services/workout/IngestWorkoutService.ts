@@ -67,15 +67,16 @@ export class IngestWorkoutService {
    * @param benchmarkDeviceType - Type of benchmark device
    * @param mobileType - Android/iOS
    */
-  static async ingestWorkoutDay(
-    userId: Types.ObjectId | string,
-    workoutDate: Date,
-    firmwareVersion: string,
-    lunaFile: Express.Multer.File,
-    benchmarkFile?: Express.Multer.File,
-    benchmarkDeviceType?: string,
-    mobileType?: string
-  ): Promise<IWorkoutIngestionResult> {
+static async ingestWorkoutDay(
+  userId: Types.ObjectId | string,
+  workoutDate: Date,
+  firmwareVersion: string,
+  lunaFile: Express.Multer.File,
+  benchmarkFile?: Express.Multer.File,
+  benchmarkDeviceType?: string,
+  mobileType?: string,
+  bandPosition?: string
+): Promise<IWorkoutIngestionResult>{
     console.log('\n🏋️🏋️🏋️ ============================================');
     console.log('🏋️ WORKOUT INGESTION SERVICE (SYNC MODE)');
     console.log('🏋️🏋️🏋️ ============================================');
@@ -167,7 +168,8 @@ export class IngestWorkoutService {
           workout,
           firmwareVersion,
           lunaDevice._id,
-          benchmarkDeviceType
+          benchmarkDeviceType,
+          bandPosition
         );
         
         sessionInfos.push({ sessionId, workout });
@@ -224,13 +226,14 @@ export class IngestWorkoutService {
 
     return `${day}-${month}-${year} | ${hours}:${minutes}:${seconds}`;
   }
-  private static async createWorkoutSessionOnly(
-    userId: Types.ObjectId | string,
-    workout: IParsedWorkout,
-    firmwareVersion: string,
-    lunaDeviceId: Types.ObjectId,
-    benchmarkDeviceType?: string
-  ): Promise<Types.ObjectId> {
+private static async createWorkoutSessionOnly(
+  userId: Types.ObjectId | string,
+  workout: IParsedWorkout,
+  firmwareVersion: string,
+  lunaDeviceId: Types.ObjectId,
+  benchmarkDeviceType?: string,
+  bandPosition?: string
+): Promise<Types.ObjectId> {
     
     // Format session name as DD-MM-YY | HH:MM:SS from workout start time
     const sessionName = this.formatWithOffset(workout.startTime, 330);
@@ -251,7 +254,7 @@ export class IngestWorkoutService {
         firmwareVersion: firmwareVersion,
       }],
       benchmarkDeviceType: benchmarkDeviceType || null,
-      bandPosition: 'wrist',
+      bandPosition: bandPosition || 'wrist',
       isValid: true,
     });
     
