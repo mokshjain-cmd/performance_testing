@@ -156,6 +156,7 @@ interface AdminSidebarProps {
 const BAND_POSITION_OPTIONS = [
   { value: 'wrist', label: 'Wrist' },
   { value: 'bicep', label: 'Bicep' },
+  { value: 'leg', label: 'Leg' },
 ];
 
 const SPORT_GROUPS: Record<string, number[]> = {
