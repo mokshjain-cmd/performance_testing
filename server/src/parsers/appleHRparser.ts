@@ -54,7 +54,8 @@ export async function parseAppleHR(
     activityType: string;
   },
   startTime: Date,
-  endTime: Date
+  endTime: Date,
+  sourceDevice: string = 'apple'
 ): Promise<NormalizedReadingInput[]> {
   console.log('\n🍎 ========================================');
   console.log('🍎 Apple Watch HR Parser');
@@ -74,7 +75,7 @@ export async function parseAppleHR(
     console.log('🍎 NOTE: Timestamps are parsed AS-IS and stored as UTC');
     console.log('🍎 Apple Health: "2026-03-19 08:15:42 +0530" → Stored as: "2026-03-19T08:15:42.000Z"');
     console.log('🍎 (Timezone offset +0530 is IGNORED - we use the clock time as-is)');
-    const records = await extractAppleWatchHRRecordsStreaming(filePath, targetDateStr, startTime, endTime);
+    const records = await extractAppleWatchHRRecordsStreaming(filePath, targetDateStr, startTime, endTime, sourceDevice );
     
     if (records.length === 0) {
       console.log('🍎 ⚠️ No Apple Watch heart rate records found in the specified time range');
@@ -84,16 +85,25 @@ export async function parseAppleHR(
     console.log(`🍎 Found ${records.length} heart rate records`);
 
     // Bucket the data into 5-minute intervals
-    const buckets = bucketData(records, 5);
-    console.log(`🍎 Data bucketed into ${Object.keys(buckets).length} non-empty intervals`);
+    //const buckets = bucketData(records, 5);
+    //console.log(`🍎 Data bucketed into ${Object.keys(buckets).length} non-empty intervals`);
 
     // Create normalized readings
-    const normalizedReadings = createNormalizedReadings(
-      buckets,
-      startTime,
-      endTime,
-      meta
-    );
+    const normalizedReadings: NormalizedReadingInput[] = records.map(record => ({
+      meta: {
+        sessionId: meta.sessionId,
+        userId: meta.userId,
+        deviceType: sourceDevice,
+        activityType: meta.activityType,
+        bandPosition: meta.bandPosition || 'wrist',
+        firmwareVersion: meta.firmwareVersion,
+      },
+      timestamp: record.timestamp,
+      metrics: {
+        heartRate: record.value,
+      },
+      isValid: true,
+    }));
 
     console.log(`🍎 ✅ Generated ${normalizedReadings.length} heart rate readings`);
     
@@ -133,7 +143,8 @@ async function extractAppleWatchHRRecordsStreaming(
   filePath: string,
   targetDate: string,
   startTime: Date,
-  endTime: Date
+  endTime: Date,
+  sourceDevice: string
 ): Promise<HRRecord[]> {
   return new Promise((resolve, reject) => {
     const records: HRRecord[] = [];
@@ -170,11 +181,19 @@ async function extractAppleWatchHRRecordsStreaming(
           const valueStr = valueMatch[1];
           const motionContext = motionContextMatch ? parseInt(motionContextMatch[1]) : undefined;
 
-          // Normalize source name to handle non-breaking spaces
-          const normalizedSource = sourceName.replace(/\xa0/g, ' ').replace(/\u00A0/g, ' ');
-          const isAppleWatch = normalizedSource.includes('Apple Watch') ||  true;
-          //console.log("sourceName:", sourceName, "→ isAppleWatch:", isAppleWatch);
-          if (isAppleWatch) {
+         const normalizedSource = sourceName
+            .replace(/\xa0/g, ' ')
+            .replace(/\u00A0/g, ' ')
+            .toLowerCase();
+
+          const allowedSources = DEVICE_SOURCE_MAP[sourceDevice] || [];
+
+          const isSupportedSource =
+            allowedSources.some(src =>
+              normalizedSource.includes(src)
+            );
+
+          if (isSupportedSource) {
             // Parse datetime (format: "2026-03-02 14:18:42 +0530" or "2026-03-02 14:18:42 -0800")
             // Extract just the date and time portion (ignoring timezone)
             // Add 'Z' to force UTC interpretation (so 08:15:42 stays as 08:15:42 UTC, not converted)
@@ -428,7 +447,8 @@ function createNormalizedReadings(
     firmwareVersion?: string;
     bandPosition?: string;
     activityType: string;
-  }
+  },
+  sourceDevice: string = 'apple'
 ): NormalizedReadingInput[] {
   const normalizedReadings: NormalizedReadingInput[] = [];
 
@@ -468,7 +488,7 @@ function createNormalizedReadings(
       meta: {
         sessionId: meta.sessionId,
         userId: meta.userId,
-        deviceType: 'apple',
+        deviceType: sourceDevice,
         activityType: meta.activityType,
         bandPosition: meta.bandPosition || 'wrist',
         firmwareVersion: meta.firmwareVersion,

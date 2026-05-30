@@ -14,7 +14,6 @@ const DeviceSchema = new Schema<IDevice>(
   {
     deviceType: {
       type: String,
-      enum: ["luna", "polar", "apple", "whoop", "amazfit", "masimo", "garmin", "coros", "fitbit", "suunto"],
       required: true,
     },
     hardwareVersion: String,

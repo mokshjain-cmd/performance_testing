@@ -205,6 +205,7 @@ const DeviceManagement: React.FC<Props> = ({ isOpen, onClose }) => {
                   <option value="amazfit">amazfit</option>
                   <option value="polar">polar</option>
                   <option value="apple">apple</option>
+                  <option value="fitbit air">fitbit air</option>
                 </select>
               </div>
 
