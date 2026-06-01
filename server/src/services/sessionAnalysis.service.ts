@@ -31,13 +31,21 @@ export async function analyzeSession(sessionId: Types.ObjectId) {
   const pairwiseComparisons = [];
   
   // Only do pairwise analysis for Luna vs rest of the devices
-  if (deviceMap['luna']) {
-    for (const deviceType of deviceTypes) {
-      if (deviceType !== 'luna') {
-        pairwiseComparisons.push(
-          ...calcPairwiseStats('luna', deviceMap['luna'], deviceType, deviceMap[deviceType], metric)
-        );
-      }
+  for (let i = 0; i < deviceTypes.length; i++) {
+    for (let j = i + 1; j < deviceTypes.length; j++) {
+
+      const deviceA = deviceTypes[i];
+      const deviceB = deviceTypes[j];
+
+      pairwiseComparisons.push(
+        ...calcPairwiseStats(
+          deviceA,
+          deviceMap[deviceA],
+          deviceB,
+          deviceMap[deviceB],
+          metric
+        )
+      );
     }
   }
 

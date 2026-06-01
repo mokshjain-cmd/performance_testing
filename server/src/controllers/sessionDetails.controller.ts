@@ -98,7 +98,12 @@ export const getSessionFullDetails = async (req: Request, res: Response): Promis
         metrics: metricsData
       });
     }
-
+    const deviceCount = Object.keys(points).length;
+    if (deviceCount > 2 && analysis?.pairwiseComparisons) {
+      analysis.pairwiseComparisons.forEach((comparison: any) => {
+        delete comparison.blandAltman;
+      });
+    }
     res.json({
       success: true,
       session,

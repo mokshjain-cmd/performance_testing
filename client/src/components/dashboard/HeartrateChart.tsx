@@ -264,7 +264,7 @@ const HeartRateChart: React.FC<Props> = ({ points, analysis, metric = 'HR' }) =>
                   dot={false}
                   activeDot={{ r: 3 }}
                   stroke={getDeviceColor(index)}
-                  connectNulls={false}
+                  connectNulls={true}
                 />
               )
             ))}

@@ -21,9 +21,17 @@ import { extractAppleHealthZip, extractLunaZip, deleteDirectory } from '../tools
 import fs from 'fs';
 import path from 'path';
 import { promisify } from 'util';
+import { LunaWorkoutParser } from '../parsers/workout/LunaWorkoutParser';
+import { NFAIosWorkoutParser } from '../parsers/workout/NFAapplogworkoutparser';
+import { parseTCXHR } from '../parsers/googlefitHRparser';
 
 const unlinkAsync = promisify(fs.unlink);
-
+const appleBasedDevices = [
+  'apple',
+  'whoop',
+  'zepp',
+  'garmin'
+];
 export async function ingestSessionFiles({
   sessionId,
   userId,
@@ -108,18 +116,20 @@ export async function ingestSessionFiles({
         let lunaFilePath = filePath;
         let extractedFolder: string | null = null;
         
-        if(activityType!=="daily") {
-          console.log(`Activity type for this session: ${activityType}`);
-          console.log('Using standard Luna HR parser (no mobileType specified)');
-          let csvFilePath = lunaFilePath;
-          if(originalname.toLowerCase().endsWith('.txt')){
-            console.log('Detected Luna TXT file, converting to CSV for parsing...');
-            csvFilePath = await convertLunaTxtToCsv(lunaFilePath);  
-          }
-          readings = await parseLunaCsv(csvFilePath, meta, startTime, endTime);
-          console.log(`Parsed ${readings.length} readings from Luna file.`);
-        }else{
-            if (originalname.toLowerCase().endsWith('.zip')) {
+        // if(activityType!=="daily") {
+        //   console.log(`Activity type for this session: ${activityType}`);
+        //   console.log('Using standard Luna HR parser (no mobileType specified)');
+        //   let csvFilePath = lunaFilePath;
+        //   if(originalname.toLowerCase().endsWith('.txt')){
+        //     console.log('Detected Luna TXT file, converting to CSV for parsing...');
+        //     csvFilePath = await convertLunaTxtToCsv(lunaFilePath);  
+        //   }
+        //   readings = await parseLunaCsv(csvFilePath, meta, startTime, endTime);
+        //   console.log(`Parsed ${readings.length} readings from Luna file.`);
+        // }
+        
+        
+        if (originalname.toLowerCase().endsWith('.zip')) {
             console.log('📦 Luna ZIP file detected, extracting...');
             const extracted = await extractLunaZip(filePath);
             lunaFilePath = extracted.logFilePath;
@@ -130,42 +140,158 @@ export async function ingestSessionFiles({
           
           // Check if it's iOS - use iOS-specific parser
           if (mobileType === "iOS") {
-            console.log('Using Luna iOS HR parser');
+
+            console.log(
+              'Using NFA iOS Workout Parser HR extraction'
+            );
+
             try {
-              readings = await LunaIOSHRParser.parse(lunaFilePath, meta, startTime, endTime);
-              console.log(`Parsed ${readings.length} readings from Luna iOS file.`);
+
+              const targetDate = new Date(startTime);
+
+              const workouts =
+                await NFAIosWorkoutParser.parseWorkoutsFromLog(
+                  lunaFilePath,
+                  targetDate
+                );
+
+              
+              const offsetMs = 330  * 60 * 1000;
+
+              const workout = workouts.find(w =>
+                new Date(w.startTime.getTime() + offsetMs) <= endTime &&
+                new Date(w.endTime.getTime() + offsetMs) >= startTime
+              );
+
+              if (!workout) {
+                throw new Error(
+                  `No workout found overlapping ${startTime.toISOString()} - ${endTime.toISOString()}`
+                );
+              }
+
+              readings = workout.readings.map(r => ({
+                meta: {
+                  sessionId: meta.sessionId,
+                  userId: meta.userId,
+                  deviceType: 'luna',
+                  activityType: meta.activityType,
+                  bandPosition: meta.bandPosition,
+                  firmwareVersion: meta.firmwareVersion,
+                },
+                timestamp: new Date(r.timestamp.getTime() + offsetMs),
+                metrics: {
+                  heartRate: r.heartRate,
+                },
+                isValid: true,
+              }));
+
+              console.log(
+                `Parsed ${readings.length} readings from iOS workout parser.`
+              );
+
             } catch (iosParseError) {
-              console.error('❌ Luna iOS HR parser failed, falling back to standard parser:', iosParseError);
-              // Fallback to standard parser if iOS parser fails
-              const csvFilePath = await convertLunaTxtToCsv(lunaFilePath);
-              readings = await parseLunaCsv(csvFilePath, meta, startTime, endTime);
-              console.log(`Parsed ${readings.length} readings from Luna file (fallback).`);
+
+              console.error(
+                '❌ NFA iOS workout parser failed, falling back:',
+                iosParseError
+              );
+
+              const csvFilePath =
+                await convertLunaTxtToCsv(lunaFilePath);
+
+              readings = await parseLunaCsv(
+                csvFilePath,
+                meta,
+                startTime,
+                endTime
+              );
+
+              console.log(
+                `Parsed ${readings.length} readings from Luna file (fallback).`
+              );
             }
-          } else if (mobileType === "Android") {
-            // Use Android-specific parser for ALL Android activities
-            // This parser uses onContinuousHeartRateData JSON format (30-sec intervals)
-            console.log('Using Luna Android HR parser (onContinuousHeartRateData format)');
-            try {
-              readings = await LunaAndroidHRParser.parse(lunaFilePath, meta, startTime, endTime);
-              console.log(`Parsed ${readings.length} readings from Luna Android file.`);
-            } catch (androidParseError) {
-              console.error('❌ Luna Android HR parser failed, falling back to standard parser:', androidParseError);
-              // Fallback to standard parser if Android parser fails
-              const csvFilePath = await convertLunaTxtToCsv(lunaFilePath);
-              readings = await parseLunaCsv(csvFilePath, meta, startTime, endTime);
-              console.log(`Parsed ${readings.length} readings from Luna file (fallback).`);
+          }else if (mobileType === "Android") {
+
+          console.log(
+            'Using Luna Workout Parser HR extraction (ringPointData format)'
+          );
+
+          try {
+
+            const targetDate = new Date(startTime);
+
+            const workouts =
+              await LunaWorkoutParser.parseWorkoutsFromLog(
+                lunaFilePath,
+                targetDate
+              );
+
+            // Find workout that overlaps the HR session
+            const offsetMs = 330  * 60 * 1000;
+
+            const workout = workouts.find(w =>
+              new Date(w.startTime.getTime() + offsetMs) <= endTime &&
+              new Date(w.endTime.getTime() + offsetMs) >= startTime
+            );
+
+            if (!workout) {
+              throw new Error(
+                `No workout found overlapping ${startTime.toISOString()} - ${endTime.toISOString()}`
+              );
             }
-          } else {
+
+            readings = workout.readings.map(r => ({
+              meta: {
+                sessionId: meta.sessionId,
+                userId: meta.userId,
+                deviceType: "luna",
+                activityType: meta.activityType,
+                bandPosition: meta.bandPosition,
+                firmwareVersion: meta.firmwareVersion,
+              },
+              timestamp: new Date(r.timestamp.getTime() + offsetMs),
+              metrics: {
+                heartRate: r.heartRate,
+              },
+              isValid: true,
+            }));
+
+            console.log(
+              `Parsed ${readings.length} readings from Luna workout parser.`
+            );
+
+          } catch (androidParseError) {
+
+            console.error(
+              '❌ Luna Workout Parser HR extraction failed, falling back:',
+              androidParseError
+            );
+
+            const csvFilePath =
+              await convertLunaTxtToCsv(lunaFilePath);
+
+            readings = await parseLunaCsv(
+              csvFilePath,
+              meta,
+              startTime,
+              endTime
+            );
+
+            console.log(
+              `Parsed ${readings.length} readings from Luna file (fallback).`
+            );
+          }
+        } else {
             // No mobileType specified - use standard Luna parser (fallback)
             console.log('Using standard Luna HR parser (no mobileType specified)');
             const csvFilePath = await convertLunaTxtToCsv(lunaFilePath);
             readings = await parseLunaCsv(csvFilePath, meta, startTime, endTime);
             console.log(`Parsed ${readings.length} readings from Luna file.`);
           }
-        }
+        
         
       }
-      if (deviceType === "apple") {
+      if (appleBasedDevices.includes(deviceType)) {
         console.log('Parsing Apple HR file:', filePath);
         let fileToProcess = filePath;
         let extractedFolder: string | undefined;
@@ -188,17 +314,27 @@ export async function ingestSessionFiles({
           }
           
           // Parse the Apple HR file (either original file or extracted export.xml)
-          readings = await parseAppleHR(fileToProcess, meta, startTime, endTime);
+          readings = await parseAppleHR(fileToProcess, meta, startTime, endTime,deviceType);
           console.log(`Parsed ${readings.length} readings from Apple file.`);
         } catch (appleParseError) {
           console.error('❌ Apple HR parser failed:', appleParseError);
           throw appleParseError;
         }
       }
+      if(deviceType === "fitbit air"){
+        console.log('Parsing Fitbit Air HR file:', filePath);
+        readings = await parseTCXHR(
+          filePath,
+          meta,
+          startTime,
+          endTime
+        );
+        console.log(`Parsed ${readings.length} readings from Fitbit Air file.`);
+      }
       if (deviceType === "polar") { 
         console.log('Parsing Polar file:', filePath);
         readings = await parsePolarCsv(filePath, meta, startTime, endTime); }
-      console.log(`Parsed ${readings.length} readings from ${deviceType} file.`);
+        console.log(`Parsed ${readings.length} readings from ${deviceType} file.`);
       if (readings.length > 0) {
         //console.log('First element of readings:', JSON.stringify(readings[0], null, 2));
       }
@@ -219,30 +355,36 @@ export async function ingestSessionFiles({
         // Get session to access metric
         const session = await Session.findById(sessionId);
         const metric = session?.metric || 'HR';
-        
+        const hasLuna =session?.devices.some(
+          d => d.deviceType === 'luna'
+        );
         // Update user accuracy summary after analysis
-        if (userId) {
+        if (userId && hasLuna) {
           await updateUserAccuracySummary(userId, metric);
           console.log('User accuracy summary updated for user:', userId, 'metric:', metric);
         }
         
         // Update Luna firmware performance for this session
-        await updateLunaFirmwarePerformanceForSession(sessionId);
+        if (hasLuna) {
+          await updateLunaFirmwarePerformanceForSession(sessionId);
+        }
         
         // Update activity performance summary (only for HR sessions)
-        if (activityType && metric === 'HR') {
+        if (activityType && metric === 'HR' && hasLuna) {
           await updateActivityPerformanceSummary(activityType);
           console.log('Activity performance summary updated for:', activityType);
         }
         
         // Update admin daily trend for session date
-        if (startTime && metric !== 'Workout') {
+        if (startTime && metric !== 'Workout' && hasLuna) {
           await updateAdminDailyTrend(startTime, metric, true);
           console.log('Admin daily trend updated for session date, metric:', metric);
         }
         
         // Update benchmark comparison summaries for devices in this session
-        await updateBenchmarkComparisonSummariesForSession(sessionId);
+        if (hasLuna) {
+          await updateBenchmarkComparisonSummariesForSession(sessionId);
+        }
         
         // Update admin global summary (filtered by latest firmware)
         console.log(`\n📊 ========================================`);

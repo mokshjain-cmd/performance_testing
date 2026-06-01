@@ -258,7 +258,7 @@ export function calcPairwiseStats(
     const v1 = getMetricValue(sorted1[i]);
     const v2 = getMetricValue(sorted2[j]);
 
-    if (Math.abs(t1 - t2) <= toleranceMs) {
+    if (Math.abs(t1 - t2) < toleranceMs) {
       if (
         v1 !== null &&
         v2 !== null &&

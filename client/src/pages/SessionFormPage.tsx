@@ -43,6 +43,7 @@ const BENCHMARK_DEVICE_OPTIONS = [
   { value: 'garmin', label: 'Garmin' },
   { value: 'evie', label: 'Evie' },
   { value: 'suunto', label: 'Suunto' },
+  {value : 'fitbit air',label : "Fitbit Air"}
 ];
 
 const BAND_POSITION_OPTIONS = [
@@ -67,6 +68,7 @@ interface SessionResult {
   sessionId?: string;
   error?: string;
 }
+
 const uploadFileSmart = async (
   file: File,
   fieldname: string
@@ -131,13 +133,15 @@ export default function SessionFormPage() {
     mobileType: 'Android',
     appPlatform: 'Luna',
   });
-  const [deviceFiles, setDeviceFiles] = useState<{ [key: string]: File | null }>({ luna: null });
-  const [firmwareVersions, setFirmwareVersions] = useState<Array<{ value: string; label: string }>>([]);
+  const [deviceFiles, setDeviceFiles] = useState<{ [key: string]: File | null }>({});const [firmwareVersions, setFirmwareVersions] = useState<Array<{ value: string; label: string }>>([]);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: string }>({});
   const [sessionResults, setSessionResults] = useState<SessionResult[]>([]);
   const [fileInputKey, setFileInputKey] = useState<number>(0);
-
+  const [selectedHrDevices, setSelectedHrDevices] = useState<string[]>([]);
+  const isHrOnly =
+    selectedMetrics.length === 1 &&
+    selectedMetrics.includes('HR');
   useEffect(() => {
     apiClient.get('/devices/firmware?deviceType=luna')
       .then(res => {
@@ -203,11 +207,32 @@ useEffect(() => {
       return;
     }
 
-    if (!deviceFiles.luna) {
-      alert('Please upload Falcon (Luna) log file');
-      setIsSubmitting(false);
-      return;
-    }
+    if (isHrOnly) {
+  if (selectedHrDevices.length === 0) {
+    alert('Please select at least one HR device');
+    setIsSubmitting(false);
+    return;
+  }
+
+  const missingFiles = selectedHrDevices.filter(
+    device => !deviceFiles[device]
+  );
+
+  if (missingFiles.length > 0) {
+    alert(
+      `Please upload files for: ${missingFiles.join(', ')}`
+    );
+
+    setIsSubmitting(false);
+    return;
+  }
+} else {
+  if (!deviceFiles.luna) {
+    alert('Please upload Falcon (Luna) log file');
+    setIsSubmitting(false);
+    return;
+  }
+}
 
     if (formData.benchmarkDeviceType && !deviceFiles[formData.benchmarkDeviceType]) {
       alert(`Please upload ${formData.benchmarkDeviceType} benchmark file`);
@@ -246,21 +271,38 @@ useEffect(() => {
 
     setUploadProgress({ global: 'Uploading files...' });
 
-      const uploadTasks = [
-        uploadFileSmart(deviceFiles.luna!, 'luna')
-      ];
+      let uploadTasks: Promise<any>[] = [];
 
-      if (
-        formData.benchmarkDeviceType &&
-        deviceFiles[formData.benchmarkDeviceType]
-      ) {
-        uploadTasks.push(
-          uploadFileSmart(
-            deviceFiles[formData.benchmarkDeviceType]!,
-            formData.benchmarkDeviceType
-          )
-        );
-      }
+if (isHrOnly) {
+  uploadTasks = selectedHrDevices.map(device =>
+    uploadFileSmart(
+      deviceFiles[device]!,
+      device
+    )
+  );
+} else {
+  uploadTasks.push(
+    uploadFileSmart(
+      deviceFiles.luna!,
+      'luna'
+    )
+  );
+
+  if (
+    formData.benchmarkDeviceType &&
+    deviceFiles[formData.benchmarkDeviceType]
+  ) {
+    uploadTasks.push(
+      uploadFileSmart(
+        deviceFiles[
+          formData.benchmarkDeviceType
+        ]!,
+        formData.benchmarkDeviceType
+      )
+    );
+  }
+}
+      
 
       const uploaded = await Promise.all(uploadTasks);
       uploadedFiles.push(...uploaded);
@@ -299,7 +341,12 @@ useEffect(() => {
         form.append('mobileType', formData.mobileType);
         form.append('appPlatform', formData.appPlatform);
         form.append('uploadedFiles', JSON.stringify(uploadedFiles));
-
+        if(isHrOnly){
+          form.append(
+            'selectedDevices',
+            JSON.stringify(selectedHrDevices)
+          );
+        }
         setUploadProgress(prev => ({ ...prev, [metric]: 'processing...' }));
 
         const res = await apiClient.post('/sessions/create', form, {
@@ -358,7 +405,8 @@ useEffect(() => {
         mobileType: 'Android',
         appPlatform: 'Luna',
       });
-      setDeviceFiles({ luna: null });
+      setSelectedHrDevices([]);
+      setDeviceFiles({});
       setSelectedMetrics(['HR']);
       setFileInputKey(prev => prev + 1);
     } else {
@@ -519,14 +567,69 @@ useEffect(() => {
             </>
           )}
 
-          <Select
-            label="Benchmark Device (Optional)"
-            name="benchmarkDeviceType"
-            value={formData.benchmarkDeviceType}
-            onChange={handleChange}
-            options={BENCHMARK_DEVICE_OPTIONS}
-            placeholder="Select benchmark device (optional)"
+          {isHrOnly ? (
+  <div>
+    <label className="block text-sm font-medium text-gray-700 mb-3">
+      Select Devices For Heart Rate Analysis
+    </label>
+
+    <div className="grid grid-cols-2 gap-3">
+      <label
+        className={`flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
+          selectedHrDevices.includes('luna')
+            ? 'border-blue-500 bg-blue-50'
+            : 'border-gray-200 bg-white hover:border-gray-300'
+        }`}
+      >
+        <input
+          type="checkbox"
+          checked={selectedHrDevices.includes('luna')}
+          onChange={() => {
+            setSelectedHrDevices(prev =>
+              prev.includes('luna')
+                ? prev.filter(d => d !== 'luna')
+                : [...prev, 'luna']
+            );
+          }}
+        />
+        <span className="font-medium">Falcon (Luna)</span>
+      </label>
+
+      {BENCHMARK_DEVICE_OPTIONS.map(device => (
+        <label
+          key={device.value}
+          className={`flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
+            selectedHrDevices.includes(device.value)
+              ? 'border-blue-500 bg-blue-50'
+              : 'border-gray-200 bg-white hover:border-gray-300'
+          }`}
+        >
+          <input
+            type="checkbox"
+            checked={selectedHrDevices.includes(device.value)}
+            onChange={() => {
+              setSelectedHrDevices(prev =>
+                prev.includes(device.value)
+                  ? prev.filter(d => d !== device.value)
+                  : [...prev, device.value]
+              );
+            }}
           />
+          <span className="font-medium">{device.label}</span>
+        </label>
+      ))}
+    </div>
+  </div>
+) : (
+  <Select
+    label="Benchmark Device (Optional)"
+    name="benchmarkDeviceType"
+    value={formData.benchmarkDeviceType}
+    onChange={handleChange}
+    options={BENCHMARK_DEVICE_OPTIONS}
+    placeholder="Select benchmark device (optional)"
+  />
+)}
 
           <Select
             label="Band Position"
@@ -566,53 +669,132 @@ useEffect(() => {
           />
 
           <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium text-gray-700 block mb-2">
-                Upload Falcon (Luna) Log File <span className="text-red-500">*</span>
-              </label>
-              <input
-                key={`luna-${fileInputKey}`}
-                type="file"
-                accept=".txt,.TXT,.log,.LOG,.zip,.ZIP,.CSV,.csv"
-                onChange={(e) => handleFileChange('luna', e.target.files?.[0] || null)}
-                required
-                className="block w-full text-sm text-gray-600 file:mr-4 file:py-2.5 file:px-5 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-gradient-to-r file:from-blue-500 file:to-blue-600 file:text-white hover:file:from-blue-600 hover:file:to-blue-700 file:cursor-pointer file:shadow-sm file:transition-all cursor-pointer border border-gray-200 rounded-xl p-3"
-              />
-              {deviceFiles.luna && (
-                <span className="text-xs text-gray-500 ml-1 mt-1 block">
-                  Selected: {deviceFiles.luna.name}
-                </span>
-              )}
-            </div>
 
-            {formData.benchmarkDeviceType && (
-              <div>
-                <label className="text-sm font-medium text-gray-700 block mb-2">
-                  Upload {BENCHMARK_DEVICE_OPTIONS.find(d => d.value === formData.benchmarkDeviceType)?.label} File
-                </label>
-                <input
-                  key={`${formData.benchmarkDeviceType}-${fileInputKey}`}
-                  type="file"
-                  accept={
-                    formData.benchmarkDeviceType === 'apple' || formData.benchmarkDeviceType === 'whoop' || formData.benchmarkDeviceType === 'zepp'
-                      ? '.xml,.XML,.zip,.ZIP,.csv,.CSV' 
-                      : (formData.benchmarkDeviceType === 'coros'|| formData.benchmarkDeviceType === 'suunto')
-                        ? '.fit,.FIT'
-                        : formData.benchmarkDeviceType === 'garmin'
-                          ? '.csv,.CSV,.tcx,.TCX'
-                        : '.csv,.CSV'
-                  }
-                  onChange={(e) => handleFileChange(formData.benchmarkDeviceType, e.target.files?.[0] || null)}
-                  className="block w-full text-sm text-gray-600 file:mr-4 file:py-2.5 file:px-5 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-gradient-to-r file:from-blue-500 file:to-blue-600 file:text-white hover:file:from-blue-600 hover:file:to-blue-700 file:cursor-pointer file:shadow-sm file:transition-all cursor-pointer border border-gray-200 rounded-xl p-3"
-                />
-                {deviceFiles[formData.benchmarkDeviceType] && (
-                  <span className="text-xs text-gray-500 ml-1 mt-1 block">
-                    Selected: {deviceFiles[formData.benchmarkDeviceType]?.name}
-                  </span>
-                )}
-              </div>
+  {isHrOnly ? (
+    <>
+      {selectedHrDevices.map(device => {
+        const deviceLabel =
+          device === 'luna'
+            ? 'Falcon (Luna)'
+            : BENCHMARK_DEVICE_OPTIONS.find(
+                d => d.value === device
+              )?.label || device;
+
+        const acceptTypes =
+          device === 'apple' ||
+          device === 'whoop' ||
+          device === 'zepp'
+            ? '.xml,.XML,.zip,.ZIP,.csv,.CSV'
+            : device === 'coros' || device === 'suunto'
+              ? '.fit,.FIT'
+              : device === 'garmin' || device === 'fitbit air'
+                ? '.csv,.CSV,.tcx,.TCX'
+                : '.txt,.TXT,.log,.LOG,.zip,.ZIP,.csv,.CSV';
+
+        return (
+          <div key={device}>
+            <label className="text-sm font-medium text-gray-700 block mb-2">
+              Upload {deviceLabel} File
+              <span className="text-red-500 ml-1">*</span>
+            </label>
+
+            <input
+              key={`${device}-${fileInputKey}`}
+              type="file"
+              accept={acceptTypes}
+              onChange={(e) =>
+                handleFileChange(
+                  device,
+                  e.target.files?.[0] || null
+                )
+              }
+              className="block w-full text-sm text-gray-600 file:mr-4 file:py-2.5 file:px-5 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-gradient-to-r file:from-blue-500 file:to-blue-600 file:text-white hover:file:from-blue-600 hover:file:to-blue-700 file:cursor-pointer file:shadow-sm file:transition-all cursor-pointer border border-gray-200 rounded-xl p-3"
+            />
+
+            {deviceFiles[device] && (
+              <span className="text-xs text-gray-500 ml-1 mt-1 block">
+                Selected: {deviceFiles[device]?.name}
+              </span>
             )}
           </div>
+        );
+      })}
+    </>
+  ) : (
+    <>
+      <div>
+        <label className="text-sm font-medium text-gray-700 block mb-2">
+          Upload Falcon (Luna) Log File
+          <span className="text-red-500">*</span>
+        </label>
+
+        <input
+          key={`luna-${fileInputKey}`}
+          type="file"
+          accept=".txt,.TXT,.log,.LOG,.zip,.ZIP,.CSV,.csv"
+          onChange={(e) =>
+            handleFileChange(
+              'luna',
+              e.target.files?.[0] || null
+            )
+          }
+          required
+          className="block w-full text-sm text-gray-600 file:mr-4 file:py-2.5 file:px-5 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-gradient-to-r file:from-blue-500 file:to-blue-600 file:text-white hover:file:from-blue-600 hover:file:to-blue-700 file:cursor-pointer file:shadow-sm file:transition-all cursor-pointer border border-gray-200 rounded-xl p-3"
+        />
+
+        {deviceFiles.luna && (
+          <span className="text-xs text-gray-500 ml-1 mt-1 block">
+            Selected: {deviceFiles.luna.name}
+          </span>
+        )}
+      </div>
+
+      {formData.benchmarkDeviceType && (
+        <div>
+          <label className="text-sm font-medium text-gray-700 block mb-2">
+            Upload {
+              BENCHMARK_DEVICE_OPTIONS.find(
+                d => d.value === formData.benchmarkDeviceType
+              )?.label
+            } File
+          </label>
+
+          <input
+            key={`${formData.benchmarkDeviceType}-${fileInputKey}`}
+            type="file"
+            accept={
+              formData.benchmarkDeviceType === 'apple' ||
+              formData.benchmarkDeviceType === 'whoop' ||
+              formData.benchmarkDeviceType === 'zepp'
+                ? '.xml,.XML,.zip,.ZIP,.csv,.CSV'
+                : formData.benchmarkDeviceType === 'coros' ||
+                  formData.benchmarkDeviceType === 'suunto'
+                  ? '.fit,.FIT'
+                  : formData.benchmarkDeviceType === 'garmin'
+                    ? '.csv,.CSV,.tcx,.TCX'
+                    : '.csv,.CSV'
+            }
+            onChange={(e) =>
+              handleFileChange(
+                formData.benchmarkDeviceType,
+                e.target.files?.[0] || null
+              )
+            }
+            className="block w-full text-sm text-gray-600 file:mr-4 file:py-2.5 file:px-5 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-gradient-to-r file:from-blue-500 file:to-blue-600 file:text-white hover:file:from-blue-600 hover:file:to-blue-700 file:cursor-pointer file:shadow-sm file:transition-all cursor-pointer border border-gray-200 rounded-xl p-3"
+          />
+
+          {deviceFiles[formData.benchmarkDeviceType] && (
+            <span className="text-xs text-gray-500 ml-1 mt-1 block">
+              Selected: {
+                deviceFiles[formData.benchmarkDeviceType]?.name
+              }
+            </span>
+          )}
+        </div>
+      )}
+    </>
+  )}
+</div>
 
           {isSubmitting && Object.keys(uploadProgress).length > 0 && (
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
