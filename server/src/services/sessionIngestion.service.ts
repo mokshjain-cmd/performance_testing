@@ -196,8 +196,11 @@ export async function ingestSessionFiles({
                 iosParseError
               );
 
-              const csvFilePath =
-                await convertLunaTxtToCsv(lunaFilePath);
+            let csvFilePath = lunaFilePath;
+            if(originalname.toLowerCase().endsWith('.txt')){
+              console.log('Detected Luna TXT file, converting to CSV for parsing (Android fallback)...');
+              csvFilePath = await convertLunaTxtToCsv(lunaFilePath);
+            }
 
               readings = await parseLunaCsv(
                 csvFilePath,
@@ -266,10 +269,11 @@ export async function ingestSessionFiles({
               '❌ Luna Workout Parser HR extraction failed, falling back:',
               androidParseError
             );
-
-            const csvFilePath =
-              await convertLunaTxtToCsv(lunaFilePath);
-
+            let csvFilePath = lunaFilePath;
+            if(originalname.toLowerCase().endsWith('.txt')){
+              console.log('Detected Luna TXT file, converting to CSV for parsing (Android fallback)...');
+              csvFilePath = await convertLunaTxtToCsv(lunaFilePath);
+            }
             readings = await parseLunaCsv(
               csvFilePath,
               meta,
