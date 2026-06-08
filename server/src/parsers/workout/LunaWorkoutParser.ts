@@ -77,8 +77,10 @@ export class LunaWorkoutParser {
         // Look for workout lines - support both App Log and BLE Log formats
         // App Log: "RECORD_WORKOUT received workout DevSportInfoBean{...}"
         // BLE Log: "----> sportparsing -------------> devSportInfoBean --->DevSportInfoBean{...}"
+        // Note: Use case-insensitive check for 'sportparsing' to handle variations like 'SportParsing'
+        const lineLower = line.toLowerCase();
         const isAppLogLine = line.includes('RECORD_WORKOUT received workout DevSportInfoBean{');
-        const isBleLogLine = line.includes('sportparsing') && line.includes('devSportInfoBean --->DevSportInfoBean{');
+        const isBleLogLine = lineLower.includes('sportparsing') && line.includes('devSportInfoBean --->DevSportInfoBean{');
         
         if (!isAppLogLine && !isBleLogLine) {
           continue;
