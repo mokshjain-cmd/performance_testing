@@ -157,6 +157,10 @@ const BAND_POSITION_OPTIONS = [
   { value: 'wrist', label: 'Wrist' },
   { value: 'bicep', label: 'Bicep' },
   { value: 'leg', label: 'Leg' },
+  { value: 'dominant-wrist', label: 'Dominant Wrist' },
+  { value: 'non-dominant-wrist', label: 'Non-Dominant Wrist' },
+  { value: 'dominant-bicep', label: 'Dominant Bicep' },
+  { value: 'non-dominant-bicep', label: 'Non-Dominant Bicep' },
 ];
 
 const SPORT_GROUPS: Record<string, number[]> = {

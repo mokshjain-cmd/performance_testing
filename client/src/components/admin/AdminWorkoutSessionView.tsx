@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Card } from '../common';
 import Loader from '../common/Loader';
 import { getWorkoutSession, getWorkoutReadings } from '../../services/workout.service';
@@ -10,8 +10,9 @@ import {
   WorkoutComparisonCard 
 } from '../workout';
 import type { WorkoutSessionDetails, WorkoutStats, WorkoutReadingsResult } from '../../types';
-import { Calendar, Clock, Cpu, MapPin, FileText } from 'lucide-react';
+import { Calendar, Clock, Cpu, MapPin, FileText, Download } from 'lucide-react';
 import BlandAltmanChart from '../dashboard/BlandAltmanChart';
+import { exportToPDF, generateSessionFilename } from '../../utils/pdfExport';
 
 
 interface AdminWorkoutSessionViewProps {
@@ -54,7 +55,29 @@ const AdminWorkoutSessionView: React.FC<AdminWorkoutSessionViewProps> = ({
   const [readingsData, setReadingsData] = useState<WorkoutReadingsResult>({ luna: [], benchmark: null });
   const [loading, setLoading] = useState(true);
   const [readingsLoading, setReadingsLoading] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  const handleDownloadPDF = async () => {
+    if (!contentRef.current || !sessionData) return;
+
+    setDownloading(true);
+    try {
+      const filename = generateSessionFilename(
+        sessionData.session.name,
+        sessionId
+      );
+      
+      await exportToPDF(contentRef.current, { filename });
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      alert(`Failed to generate PDF: ${errorMessage}\n\nPlease try again or contact support if the issue persists.`);
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -110,10 +133,10 @@ const AdminWorkoutSessionView: React.FC<AdminWorkoutSessionViewProps> = ({
 
   return (
     <div className="space-y-6">
-      
-
-      {/* Session Header */}
-      <Card>
+      {/* Exportable Content */}
+      <div ref={contentRef} className="space-y-6">
+        {/* Session Header */}
+        <Card>
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="flex items-center gap-4">
             {workoutStats && (
@@ -159,33 +182,45 @@ const AdminWorkoutSessionView: React.FC<AdminWorkoutSessionViewProps> = ({
         </div>
 
         {/* User Info */}
-        <div className="mt-4 pt-4 border-t border-gray-100 flex flex-wrap items-center gap-6">
-          <div>
-            <span className="text-sm text-gray-500">User</span>
-            <p className="text-sm font-medium text-gray-900">
-              {typeof session.userId === 'object' ? session.userId.name || session.userId.email : session.userId}
-            </p>
-          </div>
-          <div>
-            <span className="text-sm text-gray-500">Duration</span>
-            <p className="text-sm font-semibold text-gray-900">
-              {formatDuration(session.durationSec)}
-            </p>
-          </div>
-          {session.benchmarkDeviceType && (
+        <div className="mt-4 pt-4 border-t border-gray-100 flex flex-wrap items-center justify-between gap-6">
+          <div className="flex flex-wrap items-center gap-6">
             <div>
-              <span className="text-sm text-gray-500">Benchmark</span>
-              <p className="text-sm font-semibold text-gray-900 capitalize">
-                {session.benchmarkDeviceType}
+              <span className="text-sm text-gray-500">User</span>
+              <p className="text-sm font-medium text-gray-900">
+                {typeof session.userId === 'object' ? session.userId.name || session.userId.email : session.userId}
               </p>
             </div>
-          )}
-          <div>
-            <span className="text-sm text-gray-500">Valid</span>
-            <p className={`text-sm font-semibold ${session.isValid ? 'text-green-600' : 'text-red-600'}`}>
-              {session.isValid ? 'Yes' : 'No'}
-            </p>
+            <div>
+              <span className="text-sm text-gray-500">Duration</span>
+              <p className="text-sm font-semibold text-gray-900">
+                {formatDuration(session.durationSec)}
+              </p>
+            </div>
+            {session.benchmarkDeviceType && (
+              <div>
+                <span className="text-sm text-gray-500">Benchmark</span>
+                <p className="text-sm font-semibold text-gray-900 capitalize">
+                  {session.benchmarkDeviceType}
+                </p>
+              </div>
+            )}
+            <div>
+              <span className="text-sm text-gray-500">Valid</span>
+              <p className={`text-sm font-semibold ${session.isValid ? 'text-green-600' : 'text-red-600'}`}>
+                {session.isValid ? 'Yes' : 'No'}
+              </p>
+            </div>
           </div>
+          
+          {/* Export PDF Button */}
+          <button
+            onClick={handleDownloadPDF}
+            disabled={downloading}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-900 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed transition-all duration-200 shadow-sm"
+          >
+            <Download size={16} />
+            <span>{downloading ? 'Exporting...' : 'Export PDF'}</span>
+          </button>
         </div>
       </Card>
 
@@ -247,17 +282,18 @@ const AdminWorkoutSessionView: React.FC<AdminWorkoutSessionViewProps> = ({
       {/* Benchmark Comparison */}
       <WorkoutComparisonCard comparison={workoutStats?.benchmarkComparison} />
 
-      {/* Bland-Altman Plot */}
-      {blandAltmanData && session.benchmarkDeviceType && (
-        <Card>
-          <BlandAltmanChart
-            blandAltmanData={blandAltmanData}
-            metric="HR"
-            device1="luna"
-            device2={session.benchmarkDeviceType}
-          />
-        </Card>
-      )}
+        {/* Bland-Altman Plot */}
+        {blandAltmanData && session.benchmarkDeviceType && (
+          <Card>
+            <BlandAltmanChart
+              blandAltmanData={blandAltmanData}
+              metric="HR"
+              device1="luna"
+              device2={session.benchmarkDeviceType}
+            />
+          </Card>
+        )}
+      </div>
     </div>
   );
 };
