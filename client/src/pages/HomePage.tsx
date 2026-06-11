@@ -6,7 +6,6 @@ import {
   Users,
   Watch,
   Clock,
-  Trophy,
   Target,
   Zap,
 } from 'lucide-react';
@@ -207,30 +206,16 @@ export default function HomePage() {
         {/* Firmware */}
 
         <Card title="Firmware Progress">
-          <div className="grid md:grid-cols-2 gap-6">
+  <div className="p-5 rounded-xl bg-gray-50">
+    <div className="text-sm text-gray-500">
+      Firmware Releases
+    </div>
 
-            <div className="p-5 rounded-xl bg-gray-50">
-              <div className="text-sm text-gray-500">
-                Firmware Releases
-              </div>
-
-              <div className="text-4xl font-bold mt-2 text-gray-900">
-                {stats.totalFirmwareReleases}
-              </div>
-            </div>
-
-            <div className="p-5 rounded-xl bg-gray-50">
-              <div className="text-sm text-gray-500">
-                Latest Firmware
-              </div>
-
-              <div className="text-4xl font-bold mt-2 text-gray-900">
-                {stats.latestFirmware || '-'}
-              </div>
-            </div>
-
-          </div>
-        </Card>
+    <div className="text-4xl font-bold mt-2 text-gray-900">
+      {stats.totalFirmwareReleases}
+    </div>
+  </div>
+</Card>
 
         {/* Activities */}
 
