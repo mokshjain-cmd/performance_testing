@@ -19,12 +19,23 @@ const Header: React.FC<Props> = ({ isLoggedIn, onLogin, onLogout, onNavigate }) 
     <header className="w-full bg-white/80 backdrop-blur-xl border-b border-gray-200/50 shadow-sm px-6 h-14 flex items-center justify-between sticky top-0 z-50">
       {/* Left Section - Logo & Navigation */}
       <div className="flex items-center gap-2">
-        <div className="flex items-center gap-2 mr-4">
+        <button
+          type="button"
+          onClick={() => onNavigate('/')}
+          className="flex items-center gap-2 mr-4 cursor-pointer hover:opacity-80 transition-opacity"
+        >
           <div className="w-9 h-9 flex items-center justify-center">
-            <img src="/n_logo.png" alt="Noise Logo" className="w-9 h-9 object-contain" />
+            <img
+              src="/n_logo.png"
+              alt="Noise Logo"
+              className="w-9 h-9 object-contain"
+            />
           </div>
-          <span className="font-semibold text-gray-800 text-sm hidden sm:block">Noise-Benchmarking Platform</span>
-        </div>
+
+          <span className="font-semibold text-gray-800 text-sm hidden sm:block">
+            Noise-Benchmarking Platform
+          </span>
+        </button>
         
         {isLoggedIn && (
           <>

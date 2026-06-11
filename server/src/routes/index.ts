@@ -1,5 +1,6 @@
 
 import { Router } from 'express';
+import homeRoutes from './home.routes';
 import healthRoutes from './health.routes';
 import sessionRoutes from './session.routes';
 import sleepRoutes from './sleep.routes';
@@ -42,5 +43,5 @@ router.use('/admin/global-summary', authenticateJWT, requireRole('admin'), admin
 router.use('/firmware-performance', authenticateJWT, requireRole('admin'), firmwarePerformanceRoutes);
 router.use('/firmware-config', authenticateJWT, requireRole('admin'), firmwareConfigRoutes);
 router.use('/cron', authenticateJWT, requireRole('admin'),   cronRoutes);
-
+router.use('/home',  homeRoutes); // Home stats 
 export default router;
