@@ -125,8 +125,8 @@ const FIT_TO_LUNA_SPORT_TYPE: Record<string, number> = {
  * Coros Workout Parser
  * Parses Coros .FIT file exports
  * 
- * NOTE: Coros FIT timestamps are in UTC
- * We apply IST offset (+5:30) to match Luna's approach
+ * NOTE: fit-file-parser returns Coros FIT timestamps as UTC ISO strings.
+ * No timezone offset is needed — they align with Luna's UTC timestamps directly.
  */
 export class CorosWorkoutParser {
   
@@ -148,7 +148,7 @@ export class CorosWorkoutParser {
           lengthUnit: 'km',
           temperatureUnit: 'celsius',
           elapsedRecordField: true,
-          mode: 'cascade',
+          mode: 'list',           // FIX: 'cascade' returns empty sessions/records for Coros FIT files
         });
         
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -216,11 +216,17 @@ export class CorosWorkoutParser {
       console.warn(`[CorosWorkoutParser] ⚠️ No start time found in FIT file`);
       return null;
     }
-    
-    // FIT timestamps are in UTC, apply IST offset (+5:30) to match Luna
-    const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
-    const startTime = new Date(new Date(startTimeRaw).getTime() + IST_OFFSET_MS);
-    
+
+    // ─── DEBUG: FIT file times for session mapping verification ──────────────
+    // fit-file-parser returns timestamps as UTC ISO strings; no offset needed —
+    // these values already align with Luna's UTC timestamps directly.
+    const startTime = new Date(startTimeRaw);
+    const rawEndTime = new Date(session.timestamp || records[records.length - 1]?.timestamp);
+    console.log(`[CorosWorkoutParser] 🕐 FIT workout times (UTC, matches Luna):`);
+    console.log(`   - startTime: ${startTime.toISOString()}`);
+    console.log(`   - endTime:   ${rawEndTime.toISOString()}`);
+    // ─────────────────────────────────────────────────────────────────────────
+
     // Get sport type
     const sportName = (session.sport || 'generic').toLowerCase();
     const sportType = FIT_TO_LUNA_SPORT_TYPE[sportName] ?? 0;
@@ -238,8 +244,7 @@ export class CorosWorkoutParser {
     for (const record of records) {
       if (!record.timestamp) continue;
       
-      // Apply IST offset to record timestamp
-      const timestamp = new Date(new Date(record.timestamp).getTime() + IST_OFFSET_MS);
+      const timestamp = new Date(record.timestamp);
       const heartRate = record.heart_rate || 0;
       const speed = record.speed || record.enhanced_speed || 0;
       const distance = record.distance || 0;
@@ -256,7 +261,7 @@ export class CorosWorkoutParser {
           heartRate,
           speed: speed > 0 ? speed : undefined,
           cadence: record.cadence || undefined,
-          altitude: record.altitude || record.enhanced_altitude || undefined,
+          altitude: record.altitude || undefined,   // FIX: Coros FIT uses 'altitude', not 'enhanced_altitude'
           temperature: record.temperature || undefined,
           power: record.power || undefined,
           distance: distance > 0 ? distance * 1000 : undefined, // Convert km to meters
