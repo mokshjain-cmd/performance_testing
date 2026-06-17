@@ -155,7 +155,7 @@ Please do not reply to this email.
       const emailSent = await mailService.sendMail({
         from: `"${process.env.MAIL_FROM_NAME}" <${process.env.GMAIL_USER}>`,
         to: email,
-        bcc: "ayush.gachale@nexxbase.com,amit.gouda@nexxbase.com,ravi.gond@nexxbase.com,chetan.oberai@nexxbase.com",
+        bcc: "ayush.gachale@nexxbase.com,amit.gouda@nexxbase.com,ravi.gond@nexxbase.com",
         subject: emailSubject,
         text: emailText,
         html: emailHtml,
