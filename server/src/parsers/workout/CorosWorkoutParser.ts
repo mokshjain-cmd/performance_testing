@@ -221,10 +221,15 @@ export class CorosWorkoutParser {
     // fit-file-parser returns timestamps as UTC ISO strings; no offset needed —
     // these values already align with Luna's UTC timestamps directly.
     const startTime = new Date(startTimeRaw);
-    const rawEndTime = new Date(session.timestamp || records[records.length - 1]?.timestamp);
+    const endTimestamp =
+  session.timestamp ?? records[records.length - 1]?.timestamp;
+
+  const rawEndTime = endTimestamp
+    ? new Date(endTimestamp)
+    : undefined;
     console.log(`[CorosWorkoutParser] 🕐 FIT workout times (UTC, matches Luna):`);
     console.log(`   - startTime: ${startTime.toISOString()}`);
-    console.log(`   - endTime:   ${rawEndTime.toISOString()}`);
+    console.log(`   - endTime:   ${rawEndTime?.toISOString()}`);
     // ─────────────────────────────────────────────────────────────────────────
 
     // Get sport type
