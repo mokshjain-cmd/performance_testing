@@ -23,6 +23,7 @@ import path from 'path';
 import { promisify } from 'util';
 import { LunaWorkoutParser } from '../parsers/workout/LunaWorkoutParser';
 import { NFAIosWorkoutParser } from '../parsers/workout/NFAapplogworkoutparser';
+import { GarminWorkoutParser } from '../parsers/workout/GarminWorkoutParser';
 import { parseTCXHR } from '../parsers/googlefitHRparser';
 
 const unlinkAsync = promisify(fs.unlink);
@@ -334,6 +335,70 @@ export async function ingestSessionFiles({
           endTime
         );
         console.log(`Parsed ${readings.length} readings from Fitbit Air file.`);
+      }
+      if (deviceType === "garmin") {
+        console.log('Using Garmin Workout Parser HR extraction (TCX format)');
+
+        try {
+          const rawWorkout = await GarminWorkoutParser.parseWorkout(filePath);
+
+          if (!rawWorkout) {
+            throw new Error('Garmin TCX file could not be parsed or contained no HR data');
+          }
+
+          // Garmin TCX <Time> fields are ISO-8601 but the watch often stamps them
+          // with local (IST) wall-clock time instead of true UTC (no GPS sync).
+          // Build an offset-corrected copy so we can reuse the parser's own
+          // findWorkoutOverlap/extractHRInTimeWindow helpers unchanged.
+          const offsetMs = 330 * 60 * 1000;
+
+          const workout = {
+            ...rawWorkout,
+            startTime: new Date(rawWorkout.startTime.getTime() + offsetMs),
+            endTime: new Date(rawWorkout.endTime.getTime() + offsetMs),
+            hrReadings: rawWorkout.hrReadings.map(r => ({
+              ...r,
+              timestamp: new Date(r.timestamp.getTime() + offsetMs),
+            })),
+          };
+
+          console.log(`[Garmin] Raw workout window     : ${rawWorkout.startTime.toISOString()} - ${rawWorkout.endTime.toISOString()}`);
+          console.log(`[Garmin] Offset-adjusted window  : ${workout.startTime.toISOString()} - ${workout.endTime.toISOString()}`);
+          console.log(`[Garmin] Session window          : ${startTime.toISOString()} - ${endTime.toISOString()}`);
+
+          const overlap = GarminWorkoutParser.findWorkoutOverlap(workout, startTime, endTime);
+
+          if (!overlap || !overlap.isMatch) {
+            throw new Error(
+              `No Garmin workout found overlapping ${startTime.toISOString()} - ${endTime.toISOString()} ` +
+              `(adjusted workout: ${workout.startTime.toISOString()} - ${workout.endTime.toISOString()}, overlap: ${overlap?.overlapPercent ?? 0}%)`
+            );
+          }
+
+          const windowedReadings = GarminWorkoutParser.extractHRInTimeWindow(workout, startTime, endTime);
+
+          readings = windowedReadings.map(r => ({
+            meta: {
+              sessionId: meta.sessionId,
+              userId: meta.userId,
+              deviceType: 'garmin',
+              activityType: meta.activityType,
+              bandPosition: meta.bandPosition,
+              firmwareVersion: meta.firmwareVersion,
+            },
+            timestamp: r.timestamp,
+            metrics: {
+              heartRate: r.heartRate,
+            },
+            isValid: true,
+          }));
+
+          console.log(`Parsed ${readings.length} readings from Garmin workout parser (offset applied).`);
+
+        } catch (garminParseError) {
+          console.error('❌ Garmin Workout Parser HR extraction failed:', garminParseError);
+          throw garminParseError;
+        }
       }
       if (deviceType === "polar") { 
         console.log('Parsing Polar file:', filePath);
