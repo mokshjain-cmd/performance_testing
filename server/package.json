@@ -10,6 +10,7 @@
     "start": "node dist/server.js",
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
+    "etl:fitness-age": "ts-node src/scripts/fitnessAgeEtl.ts",
     "format": "prettier --write \"src/**/*.{ts,js,json}\"",
     "format:check": "prettier --check \"src/**/*.{ts,js,json}\""
   },
@@ -32,6 +33,7 @@
     "mongoose": "^8.0.0",
     "morgan": "^1.10.0",
     "multer": "^1.4.5-lts.1",
+    "mysql2": "^3.11.0",
     "node-cron": "^4.2.1",
     "nodemailer": "^8.0.1",
     "simple-statistics": "^7.8.8"
@@ -54,6 +56,7 @@
     "eslint-plugin-prettier": "^5.0.1",
     "kill-port": "^2.0.1",
     "prettier": "^3.1.0",
+    "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.3.2"
   }

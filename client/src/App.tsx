@@ -18,6 +18,8 @@ import {
 import SignUpPage from './pages/SignUpPage';
 import FirmwareConfigPage from './pages/FirmwareConfigPage';
 import UserEngagementDashboardPage from './pages/UserEngagementDashboardPage';
+import FitnessAgePage from './pages/FitnessAgePage';
+import AdminFitnessAgeDashboardPage from './pages/AdminFitnessAgeDashboardPage';
 import { ProtectedRoute, AdminRoute, TesterRoute } from './components/common';
 import ManualSleepFormPage from './pages/ManualSleepFormPage';
 import ManualActivityFormPage from './pages/ManualActivityFormPage';
@@ -77,7 +79,21 @@ function App() {
             <UserEngagementDashboardPage />
           </AdminRoute>
         } />
-        
+
+        {/* Admin Fitness Age Dashboard - Only accessible by admins */}
+        <Route path="/admin/fitness-age" element={
+          <AdminRoute>
+            <AdminFitnessAgeDashboardPage />
+          </AdminRoute>
+        } />
+
+        {/* Fitness Age - Available to any authenticated user (their own profile) */}
+        <Route path="/fitness-age" element={
+          <ProtectedRoute>
+            <FitnessAgePage />
+          </ProtectedRoute>
+        } />
+
         {/* Tester Dashboard - Only accessible by testers */}
         <Route path="/dashboard" element={
           <TesterRoute>

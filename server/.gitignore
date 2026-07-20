@@ -7,5 +7,9 @@ temp/*
 !temp/.gitkeep
 big-celerity-488305-e1-14f72f49398f.json
 
+# Real Fitness Age ETL targets — holds actual user_ids/names/emails (PII).
+# Copy src/scripts/fitnessAgeTargets.example.ts to fitnessAgeTargets.ts locally.
+src/scripts/fitnessAgeTargets.ts
+
 # Test files
 test-*.ts

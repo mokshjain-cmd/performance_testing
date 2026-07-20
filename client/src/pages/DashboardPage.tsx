@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import apiClient from '../services/api';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
 import Sidebar from '../components/dashboard/Sidebar';
@@ -14,6 +15,7 @@ import { WorkoutSessionPage } from './WorkoutSessionPage';
 import type { Session, SessionFullDetails, UserSummary } from '../types';
 
 const DashboardPage: React.FC = () => {
+  const navigate = useNavigate();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [sessionDetails, setSessionDetails] = useState<SessionFullDetails | null>(null);
@@ -91,7 +93,15 @@ const DashboardPage: React.FC = () => {
             <select
               value={selectedMetric}
               onChange={(e) => {
-                setSelectedMetric(e.target.value);
+                const value = e.target.value;
+                // Fitness Age isn't a benchmarking metric — it lives on its
+                // own page, so picking it just navigates there instead of
+                // changing the session-based metric state.
+                if (value === 'FitnessAge') {
+                  navigate('/fitness-age');
+                  return;
+                }
+                setSelectedMetric(value);
                 setSelectedSessionId(null); // Reset session selection when metric changes
               }}
               className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white text-sm"
@@ -102,6 +112,7 @@ const DashboardPage: React.FC = () => {
               <option value="Activity">Activity</option>
               <option value="Workout">Workout</option>
               <option value="SkinTemp">Skin Temperature</option>
+              <option value="FitnessAge">Fitness Age</option>
             </select>
           </div>
 
