@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, ChevronRight, Users as UsersIcon, Activity, User, BarChart3, Trash2, Target, Snowflake, Swords, PersonStanding, Music, Dribbble, Dumbbell, Timer, Waves, Bike, Mountain, Footprints } from 'lucide-react';
+import { ChevronDown, ChevronRight, Users as UsersIcon, Activity, User, BarChart3, Trash2, Target, Snowflake, Swords, PersonStanding, Music, Dribbble, Dumbbell, Timer, Waves, Bike, Mountain, Footprints, Calendar } from 'lucide-react';
 import type { Metric } from './MetricsSelector';
 import apiClient from '../../services/api';
 const SPORT_TYPES: Record<number, { name: string; icon: typeof Activity; color: string }> = {
@@ -138,6 +138,7 @@ interface SidebarFilters {
   firmwareVersion: string[];
   sportTypes: number[];
   bandPosition: string[];
+  date: string | null;
 }
 interface AdminSidebarProps {
   users: User[];
@@ -236,6 +237,15 @@ const getSportInfo = (sportType: number) => {
     : sport;
 };
 
+// Local calendar date (not UTC) so it lines up with what the <input type="date"> picker shows.
+const toLocalDateString = (dateStr: string): string => {
+  const d = new Date(dateStr);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+
 const AdminSidebar: React.FC<AdminSidebarProps> = ({
   users,
   activeView,
@@ -286,7 +296,8 @@ useEffect(() => {
   const hasActiveFilters =
     filters.firmwareVersion.length > 0 ||
     filters.sportTypes.length > 0 ||
-    filters.bandPosition.length > 0;
+    filters.bandPosition.length > 0 ||
+    !!filters.date;
 
   // COLLAPSE ALL when filters are cleared
   if (!hasActiveFilters) {
@@ -392,10 +403,42 @@ useEffect(() => {
     <div
       className={`
         transition-all duration-300 ease-in-out overflow-hidden
-        ${filtersExpanded ? 'max-h-[700px] opacity-100' : 'max-h-0 opacity-0'}
+        ${filtersExpanded ? 'max-h-[840px] opacity-100' : 'max-h-0 opacity-0'}
       `}
     >
       <div className="px-5 pb-5 space-y-4">
+
+        {/* Date */}
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">
+            Date
+          </label>
+
+          <div className="relative">
+            <Calendar
+              size={16}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-500 pointer-events-none"
+            />
+
+            <input
+              type="date"
+              value={filters.date || ''}
+              onChange={(e) =>
+                onFiltersChange({
+                  ...filters,
+                  date: e.target.value || null,
+                })
+              }
+              className="
+                w-full rounded-xl border border-gray-200
+                bg-white/80 pl-10 pr-3 py-3 text-sm
+                shadow-sm transition-all duration-200
+                focus:outline-none focus:ring-2 focus:ring-purple-400
+                focus:border-transparent hover:border-purple-300
+              "
+            />
+          </div>
+        </div>
 
         {/* Sport Type */}
         <div className="space-y-1">
@@ -605,7 +648,8 @@ useEffect(() => {
         {/* Footer */}
         {(filters.sportTypes.length > 0 ||
           filters.firmwareVersion.length > 0 ||
-          filters.bandPosition.length > 0) && (
+          filters.bandPosition.length > 0 ||
+          !!filters.date) && (
           <div className="flex items-center justify-between pt-2">
 
             <div className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-purple-100 to-blue-100 px-3 py-1 text-xs font-medium text-purple-700">
@@ -615,6 +659,7 @@ useEffect(() => {
                 filters.sportTypes.length > 0,
                 filters.firmwareVersion.length > 0,
                 filters.bandPosition.length > 0,
+                !!filters.date,
               ].filter(Boolean).length}{' '}
               active filter(s)
             </div>
@@ -626,6 +671,7 @@ useEffect(() => {
                   firmwareVersion: [],
                   bandPosition: [],
                   deviceType: [],
+                  date: null,
                 })
               }
               className="
@@ -677,10 +723,15 @@ useEffect(() => {
         session.bandPosition || ''
       );
 
+    const dateMatch =
+      !filters.date ||
+      (!!session.startTime && toLocalDateString(session.startTime) === filters.date);
+
     return (
       firmwareMatch &&
       sportMatch &&
-      bandMatch
+      bandMatch &&
+      dateMatch
     );
   });
             const isExpanded = expandedUsers.has(user._id);

@@ -22,6 +22,7 @@ interface SidebarFilters {
   firmwareVersion: string[];
   sportTypes: number[];
   bandPosition: string[];
+  date: string | null;
 }
 interface UserWithSessions {
   _id: string;
@@ -42,6 +43,7 @@ const AdminDashboardPage: React.FC = () => {
     firmwareVersion: [],
     sportTypes: [],
     bandPosition: [],
+    date: null,
   });
   // View state
   const [selectedView, setSelectedView] = useState<ViewType>('overview');
