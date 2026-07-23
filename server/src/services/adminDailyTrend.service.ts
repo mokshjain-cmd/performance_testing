@@ -12,7 +12,7 @@ import { getLatestFirmwareVersion } from '../controllers/firmwareConfig.controll
  */
 export async function updateAdminDailyTrend(
   date: Date, 
-  metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity' | 'SkinTemp' | 'Workout' = 'HR',
+  metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity' | 'SkinTemp' | 'Workout' | 'HRV' = 'HR',
   latestFirmwareOnly: boolean = true
 ) {
   // Normalize to midnight UTC
@@ -230,10 +230,12 @@ export async function updateAdminDailyTrend(
   let totalRMSE = 0;
   let totalPearson = 0;
   let totalCoverage = 0;
+  let totalBias = 0;
   let countMAE = 0;
   let countRMSE = 0;
   let countPearson = 0;
   let countCoverage = 0;
+  let countBias = 0;
 
   analyses.forEach((analysis) => {
     // Get session to access benchmarkDeviceType
@@ -259,8 +261,14 @@ export async function updateAdminDailyTrend(
         countPearson++;
       }
       if (comparison.coverage !== undefined && comparison.coverage !== null) {
-        totalCoverage += comparison.coverage * 100; // Convert to percentage
+        // comparison.coverage is already 0-100 (e.g. Workout's overlapPercent,
+        // HRV's coverage) — no further scaling needed.
+        totalCoverage += comparison.coverage;
         countCoverage++;
+      }
+      if (comparison.meanBias !== undefined && comparison.meanBias !== null) {
+        totalBias += comparison.meanBias;
+        countBias++;
       }
     }
   });
@@ -275,6 +283,7 @@ export async function updateAdminDailyTrend(
       avgRMSE: countRMSE > 0 ? totalRMSE / countRMSE : undefined,
       avgPearson: countPearson > 0 ? totalPearson / countPearson : undefined,
       avgCoveragePercent: countCoverage > 0 ? totalCoverage / countCoverage : undefined,
+      avgBias: countBias > 0 ? totalBias / countBias : undefined,
     },
     latestFirmwareVersion: latestFirmware || undefined,
     computedAt: new Date(),

@@ -9,6 +9,7 @@ import AnalysisSection from '../dashboard/AnalysisSection';
 import AdminSleepSessionView from './AdminSleepSessionView';
 import AdminActivitySessionView from './AdminActivitySessionView';
 import AdminWorkoutSessionView from './AdminWorkoutSessionView';
+import AdminHrvSessionView from './AdminHrvSessionView';
 import { Download } from 'lucide-react';
 
 interface AdminSessionViewProps {
@@ -45,7 +46,7 @@ const AdminSessionView: React.FC<AdminSessionViewProps> = ({ sessionId, metric }
 
   useEffect(() => {
     // Skip fetch for metrics with dedicated components
-    if (metric === 'sleep' || metric === 'activity' || metric === 'workout' || metric === 'skintemp') {
+    if (metric === 'sleep' || metric === 'activity' || metric === 'workout' || metric === 'skintemp' || metric === 'hrv') {
       return;
     }
     
@@ -74,6 +75,11 @@ const AdminSessionView: React.FC<AdminSessionViewProps> = ({ sessionId, metric }
   // Handle workout metric separately
   if (metric === 'workout') {
     return <AdminWorkoutSessionView sessionId={sessionId} />;
+  }
+
+  // Handle HRV metric separately
+  if (metric === 'hrv') {
+    return <AdminHrvSessionView sessionId={sessionId} />;
   }
 
   // Handle skintemp metric - use the user SkinTempSessionPage component

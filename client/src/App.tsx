@@ -20,6 +20,9 @@ import FirmwareConfigPage from './pages/FirmwareConfigPage';
 import UserEngagementDashboardPage from './pages/UserEngagementDashboardPage';
 import FitnessAgePage from './pages/FitnessAgePage';
 import AdminFitnessAgeDashboardPage from './pages/AdminFitnessAgeDashboardPage';
+import HrvOverviewPage from './pages/HrvOverviewPage';
+import HrvSessionPage from './pages/HrvSessionPage';
+import ManualHrvFormPage from './pages/ManualHrvFormPage';
 import { ProtectedRoute, AdminRoute, TesterRoute } from './components/common';
 import ManualSleepFormPage from './pages/ManualSleepFormPage';
 import ManualActivityFormPage from './pages/ManualActivityFormPage';
@@ -94,6 +97,20 @@ function App() {
           </ProtectedRoute>
         } />
 
+        {/* User HRV Overview - Available to authenticated users */}
+        <Route path="/hrv" element={
+          <ProtectedRoute>
+            <HrvOverviewPage />
+          </ProtectedRoute>
+        } />
+
+        {/* User HRV Session - Available to authenticated users */}
+        <Route path="/hrv/session/:sessionId" element={
+          <ProtectedRoute>
+            <HrvSessionPage />
+          </ProtectedRoute>
+        } />
+
         {/* Tester Dashboard - Only accessible by testers */}
         <Route path="/dashboard" element={
           <TesterRoute>
@@ -140,6 +157,7 @@ function App() {
           path="/sessions/manual-activity"
           element={<ManualActivityFormPage />}
         />
+        <Route path="/sessions/manual-hrv" element={<ManualHrvFormPage />} />
         {/* Session creation - Available to both roles */}
         <Route path="/session/new" element={
           <ProtectedRoute>

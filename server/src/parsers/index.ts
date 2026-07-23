@@ -45,3 +45,8 @@ export { AppleHealthActivityParser } from './activity/AppleHealthActivityParser'
 
 // Export engagement parsers
 export { FalconEngagementLunaAppParser, falconEngagementLunaAppParser, EngagementData } from './engagementparser';
+
+// Export HRV parsers
+export { parseFalconHrvLog } from './hrv/FalconHrvParser';
+export { parseEliteHrvRri } from './hrv/EliteHrvPolarParser';
+export { computeHrvComparison } from './hrv/computeHrvComparison';

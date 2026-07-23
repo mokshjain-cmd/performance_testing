@@ -13,7 +13,7 @@ import { getLatestFirmwareVersion } from '../controllers/firmwareConfig.controll
  * @param latestFirmwareOnly - Whether to filter by latest firmware version only (default: true)
  */
 export async function updateAdminGlobalSummary(
-  metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity' | 'SkinTemp' | 'Workout' = 'HR',
+  metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity' | 'SkinTemp' | 'Workout' | 'HRV' = 'HR',
   latestFirmwareOnly: boolean = true
 ) {
   console.log(`\n🔄 ========================================`);
@@ -356,7 +356,9 @@ export async function updateAdminGlobalSummary(
         countPearson++;
       }
       if (comparison.coverage !== undefined && comparison.coverage !== null) {
-        totalCoverage += comparison.coverage * 100; // Convert to percentage
+        // comparison.coverage is already 0-100 (e.g. Workout's overlapPercent,
+        // HRV's coverage) — no further scaling needed.
+        totalCoverage += comparison.coverage;
         countCoverage++;
       }
       if (comparison.meanBias !== undefined && comparison.meanBias !== null) {

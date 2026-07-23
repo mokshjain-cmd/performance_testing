@@ -28,9 +28,10 @@ const METRIC_OPTIONS = [
   { value: 'Sleep', label: 'Sleep', icon: '😴' },
   { value: 'Activity', label: 'Activity', icon: '🏃' },
   { value: 'Workout', label: 'Workout', icon: '💪' },
+  { value: 'HRV', label: 'HRV', icon: '💓' },
   // { value: 'Stress', label: 'Stress (Beta)', icon: '😰' }, // Hidden - not yet implemented
   { value: 'SkinTemp', label: 'Skin Temperature (Beta)', icon: '🌡️' },
-  
+
 ];
 
 const BENCHMARK_DEVICE_OPTIONS = [
@@ -43,6 +44,7 @@ const BENCHMARK_DEVICE_OPTIONS = [
   { value: 'garmin', label: 'Garmin' },
   { value: 'evie', label: 'Evie' },
   { value: 'suunto', label: 'Suunto' },
+  { value: 'elitehrv', label: 'Elite HRV' },
   {value : 'fitbit air',label : "Fitbit Air"}
 ];
 
@@ -64,6 +66,18 @@ const MOBILE_TYPE_OPTIONS = [
 const APP_PLATFORM_OPTIONS = [
   { value: 'NoiseFit', label: 'NoiseFit (Legacy Format)' },
   { value: 'Luna', label: 'Luna (App Logs)' },
+];
+
+// HRV benchmarks are limited to devices we actually support an HRV comparison
+// against; app platform is NoiseFit-only for HRV.
+const HRV_BENCHMARK_DEVICE_OPTIONS = [
+  { value: 'elitehrv', label: 'Elite HRV' },
+  { value: 'whoop', label: 'WHOOP' },
+  { value: 'garmin', label: 'Garmin' },
+];
+
+const HRV_APP_PLATFORM_OPTIONS = [
+  { value: 'NoiseFit', label: 'NoiseFit (Legacy Format)' },
 ];
 
 interface SessionResult {
@@ -146,6 +160,9 @@ export default function SessionFormPage() {
   const isHrOnly =
     selectedMetrics.length === 1 &&
     selectedMetrics.includes('HR');
+  const isHrv = selectedMetrics.includes('HRV');
+  const benchmarkDeviceOptions = isHrv ? HRV_BENCHMARK_DEVICE_OPTIONS : BENCHMARK_DEVICE_OPTIONS;
+  const appPlatformOptions = isHrv ? HRV_APP_PLATFORM_OPTIONS : APP_PLATFORM_OPTIONS;
   useEffect(() => {
     apiClient.get('/devices/firmware?deviceType=luna')
       .then(res => {
@@ -165,11 +182,25 @@ useEffect(() => {
       ...prev,
       activityType: 'daily',
     }));
+  } else if (selectedMetrics.includes('HRV')) {
+    setFormData(prev => ({
+      ...prev,
+      activityType: 'sleeping',
+      appPlatform: 'NoiseFit',
+      // Drop any benchmark that isn't valid for HRV (e.g. left over from a
+      // previous HR/Workout selection).
+      benchmarkDeviceType: HRV_BENCHMARK_DEVICE_OPTIONS.some(
+        d => d.value === prev.benchmarkDeviceType
+      )
+        ? prev.benchmarkDeviceType
+        : '',
+    }));
   }
 }, [selectedMetrics]);
   const shouldShowDateOnly =
   selectedMetrics.length > 1 ||
   selectedMetrics.includes('Workout') ||
+  selectedMetrics.includes('HRV') ||
   formData.activityType === 'daily';
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -330,6 +361,9 @@ if (isHrOnly) {
         } else if (metric === 'Workout') {
           form.append('activityType', 'daily');
           form.append('workoutDate', dateForMetric || formData.date);
+        } else if (metric === 'HRV') {
+          form.append('activityType', 'sleeping');
+          form.append('hrvDate', dateForMetric || formData.date);
         } else if (shouldShowDateOnly) {
           form.append('activityType', formData.activityType);
           form.append('dailyDate', dateForMetric);
@@ -505,8 +539,32 @@ if (isHrOnly) {
                       </Button>
                     </div>
                   )}
+
+                  {selectedMetrics.includes('HRV') && (
+                    <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                      <div>
+                        <h4 className="text-sm font-bold text-purple-900">
+                          Have just the average HRV values instead of log files?
+                        </h4>
+
+                        <p className="text-xs text-purple-700 mt-1">
+                          If you only have Falcon's and the benchmark device's average HRV for the night,
+                          you can manually enter those values.
+                        </p>
+                      </div>
+
+                      <Button
+                        type="button"
+                        variant="primary"
+                        className="whitespace-nowrap border-purple-300 text-purple-700 hover:bg-purple-100"
+                        onClick={() => navigate('/sessions/manual-hrv')}
+                      >
+                        Go to Manual Entry
+                      </Button>
+                    </div>
+                  )}
                 </div>
-          {selectedMetrics.length === 1 && !selectedMetrics.includes('Workout') ?(
+          {selectedMetrics.length === 1 && !selectedMetrics.includes('Workout') && !selectedMetrics.includes('HRV') ?(
             <Select
               label="Activity Type"
               name="activityType"
@@ -523,12 +581,14 @@ if (isHrOnly) {
               </label>
               <input
                 type="text"
-                value="daily"
+                value={selectedMetrics.length === 1 && selectedMetrics.includes('HRV') ? 'sleeping' : 'daily'}
                 disabled
                 className="block w-full px-4 py-2.5 text-sm text-gray-500 bg-gray-100 border border-gray-300 rounded-lg cursor-not-allowed"
               />
               <p className="text-xs text-gray-500 mt-1">
-                Multiple metrics or workout selected - automatically set to "daily" monitoring
+                {selectedMetrics.length === 1 && selectedMetrics.includes('HRV')
+                  ? 'HRV is always monitored as "sleeping"'
+                  : 'Multiple metrics or workout selected - automatically set to "daily" monitoring'}
               </p>
             </div>
           )}
@@ -630,7 +690,7 @@ if (isHrOnly) {
     name="benchmarkDeviceType"
     value={formData.benchmarkDeviceType}
     onChange={handleChange}
-    options={BENCHMARK_DEVICE_OPTIONS}
+    options={benchmarkDeviceOptions}
     placeholder="Select benchmark device (optional)"
   />
 )}
@@ -668,7 +728,7 @@ if (isHrOnly) {
             name="appPlatform"
             value={formData.appPlatform}
             onChange={handleChange}
-            options={APP_PLATFORM_OPTIONS}
+            options={appPlatformOptions}
             required
           />
 
@@ -776,7 +836,9 @@ if (isHrOnly) {
                   ? '.fit,.FIT'
                   : formData.benchmarkDeviceType === 'garmin'
                     ? '.csv,.CSV,.tcx,.TCX'
-                    : '.csv,.CSV'
+                    : formData.benchmarkDeviceType === 'elitehrv'
+                      ? '.txt,.TXT'
+                      : '.csv,.CSV'
             }
             onChange={(e) =>
               handleFileChange(

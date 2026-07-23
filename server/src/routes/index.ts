@@ -19,6 +19,7 @@ import cronRoutes from './cron.routes';
 import authRoutes from './auth.routes';
 import engagementRoutes from './engagement.routes';
 import fitnessAgeRoutes from './fitnessAge.routes';
+import hrvRoutes from './hrv.routes';
 import { authenticateJWT, requireRole, verifyUserRole } from '../middleware/auth.middleware';
 
 const router = Router();
@@ -38,6 +39,7 @@ router.use('/workout', authenticateJWT, workoutRoutes);
 router.use('/devices', authenticateJWT, deviceRoutes);
 router.use('/users', authenticateJWT, userRoutes);
 router.use('/fitness-age', authenticateJWT, fitnessAgeRoutes);
+router.use('/hrv', authenticateJWT, hrvRoutes);
 router.use('/activity-performance', authenticateJWT, requireRole('admin'),activityPerformanceRoutes);
 router.use('/benchmark-comparisons', authenticateJWT, requireRole('admin'),benchmarkComparisonRoutes);
 router.use('/admin/daily-trends', authenticateJWT, requireRole('admin'), adminDailyTrendRoutes);

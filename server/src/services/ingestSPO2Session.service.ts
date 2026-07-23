@@ -48,7 +48,7 @@ export async function ingestSPO2SessionFiles({
   let userEmail: string | undefined;
   let userName: string | undefined;
   let sessionName: string | undefined;
-  let metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity' | 'SkinTemp' | 'Workout' = 'SPO2';
+  let metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity' | 'SkinTemp' | 'Workout' | 'HRV' = 'SPO2';
   
   try {
     // Fetch user details for email notification

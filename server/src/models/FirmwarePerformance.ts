@@ -2,7 +2,7 @@ import { Schema, model, Document } from "mongoose";
 
 export interface IFirmwarePerformance extends Document {
   firmwareVersion: string;
-  metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity' | 'SkinTemp' | 'Workout';
+  metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity' | 'SkinTemp' | 'Workout' | 'HRV';
   totalSessions: number;
   totalUsers: number;
   overallAccuracy?: {
@@ -10,6 +10,7 @@ export interface IFirmwarePerformance extends Document {
     avgRMSE?: number;
     avgMAPE?: number;
     avgPearson?: number;
+    avgBias?: number;
   };
   activityWise?: {
     activityType: string;
@@ -59,7 +60,7 @@ const FirmwarePerformanceSchema = new Schema<IFirmwarePerformance>({
   firmwareVersion: { type: String, index: true },
   metric: { 
     type: String, 
-    enum: ['HR', 'SPO2', 'Sleep', 'Activity', 'SkinTemp', 'Workout'],
+    enum: ['HR', 'SPO2', 'Sleep', 'Activity', 'SkinTemp', 'Workout', 'HRV'],
     required: true,
     index: true 
   },
@@ -70,6 +71,7 @@ const FirmwarePerformanceSchema = new Schema<IFirmwarePerformance>({
     avgRMSE: Number,
     avgMAPE: Number,
     avgPearson: Number,
+    avgBias: Number,
   },
   activityWise: [
     {

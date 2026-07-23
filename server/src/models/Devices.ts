@@ -1,6 +1,6 @@
 import { Schema, model, Document } from "mongoose";
 
-export type DeviceType = "luna" | "polar" | "apple" | "whoop" | "amazfit" | "masimo" | "garmin" | "coros" | "fitbit" | "suunto";
+export type DeviceType = "luna" | "polar" | "apple" | "whoop" | "amazfit" | "masimo" | "garmin" | "coros" | "fitbit" | "suunto" | "elitehrv";
 
 export interface IDevice extends Document {
   deviceType: DeviceType;

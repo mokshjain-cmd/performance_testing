@@ -9,7 +9,7 @@ import { Types } from 'mongoose';
  * @param firmwareVersion - The firmware version to update
  * @param metric - The metric to calculate performance for (HR, SPO2, etc.)
  */
-export async function updateFirmwarePerformanceForLuna(firmwareVersion: string, metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity' | 'SkinTemp' | 'Workout' = 'HR') {
+export async function updateFirmwarePerformanceForLuna(firmwareVersion: string, metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity' | 'SkinTemp' | 'Workout' | 'HRV' = 'HR') {
   // Find all sessions and analyses for Luna with this firmware and metric
   const sessions = await Session.find({ 'devices.deviceType': 'luna', 'devices.firmwareVersion': firmwareVersion, metric, benchmarkDeviceType: { $ne: null, $exists: true } }).lean();
   if (!sessions.length) return;
@@ -179,8 +179,12 @@ export async function updateFirmwarePerformanceForLuna(firmwareVersion: string, 
   // Convert metric to lowercase for comparison (stored as 'hr', 'spo2' in DB)
   const metricLower = metric.toLowerCase();
 
-  // Aggregate overall accuracy
-  let totalMAE = 0, totalRMSE = 0, totalPearson = 0, totalMAPE = 0, count = 0;
+  // Aggregate overall accuracy — independent per-field counters, since a
+  // manual-entry session (no mae/rmse/mape/pearsonR, only meanBias) must
+  // still count toward avgBias/totalSessions without being dropped entirely.
+  let totalMAE = 0, totalRMSE = 0, totalPearson = 0, totalMAPE = 0, totalBias = 0;
+  let countMAE = 0, countRMSE = 0, countPearson = 0, countMAPE = 0, countBias = 0;
+  let sessionsWithComparison = 0;
   const activityMap = new Map<string, { sum: number, count: number }>();
   const userSet = new Set<string>();
 
@@ -188,28 +192,31 @@ export async function updateFirmwarePerformanceForLuna(firmwareVersion: string, 
     // Get session to access benchmarkDeviceType
     const session = sessionMap.get(String(analysis.sessionId));
     if (!session) continue;
-    
+
     // Find the Luna vs benchmark device comparison for this metric
     const pair = analysis.pairwiseComparisons?.find(
       (p: any) => p.d1 === 'luna' && p.d2 === session.benchmarkDeviceType && p.metric === metricLower
     );
-    
-    if (pair && typeof pair.mape === 'number') {
-      totalMAE += pair.mae || 0;
-      totalRMSE += pair.rmse || 0;
-      totalPearson += pair.pearsonR || 0;
-      totalMAPE += pair.mape || 0;
-      count++;
-      
-      // Calculate accuracy from MAPE: accuracy = 100 - MAPE
-      const sessionAccuracy = 100 - (pair.mape || 0);
-      
-      // Activity
-      if (analysis.activityType) {
-        const a = activityMap.get(analysis.activityType) || { sum: 0, count: 0 };
-        a.sum += sessionAccuracy;
-        a.count++;
-        activityMap.set(analysis.activityType, a);
+
+    if (pair && (pair.mape !== undefined || pair.meanBias !== undefined)) {
+      sessionsWithComparison++;
+      if (typeof pair.mae === 'number') { totalMAE += pair.mae; countMAE++; }
+      if (typeof pair.rmse === 'number') { totalRMSE += pair.rmse; countRMSE++; }
+      if (typeof pair.pearsonR === 'number') { totalPearson += pair.pearsonR; countPearson++; }
+      if (typeof pair.mape === 'number') { totalMAPE += pair.mape; countMAPE++; }
+      if (typeof pair.meanBias === 'number') { totalBias += pair.meanBias; countBias++; }
+
+      // Calculate accuracy from MAPE: accuracy = 100 - MAPE (only when MAPE exists)
+      if (typeof pair.mape === 'number') {
+        const sessionAccuracy = 100 - pair.mape;
+
+        // Activity
+        if (analysis.activityType) {
+          const a = activityMap.get(analysis.activityType) || { sum: 0, count: 0 };
+          a.sum += sessionAccuracy;
+          a.count++;
+          activityMap.set(analysis.activityType, a);
+        }
       }
     }
     if (analysis.userId) userSet.add(String(analysis.userId));
@@ -219,13 +226,14 @@ export async function updateFirmwarePerformanceForLuna(firmwareVersion: string, 
   const doc: Partial<IFirmwarePerformance> = {
     firmwareVersion,
     metric,
-    totalSessions: count,
+    totalSessions: sessionsWithComparison,
     totalUsers: userSet.size,
-    overallAccuracy: count ? {
-      avgMAE: totalMAE / count,
-      avgRMSE: totalRMSE / count,
-      avgMAPE: totalMAPE / count,
-      avgPearson: totalPearson / count,
+    overallAccuracy: sessionsWithComparison ? {
+      avgMAE: countMAE ? totalMAE / countMAE : undefined,
+      avgRMSE: countRMSE ? totalRMSE / countRMSE : undefined,
+      avgMAPE: countMAPE ? totalMAPE / countMAPE : undefined,
+      avgPearson: countPearson ? totalPearson / countPearson : undefined,
+      avgBias: countBias ? totalBias / countBias : undefined,
     } : undefined,
     activityWise: Array.from(activityMap.entries()).map(([activityType, { sum, count }]) => ({
       activityType,

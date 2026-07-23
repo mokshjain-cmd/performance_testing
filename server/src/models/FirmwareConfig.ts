@@ -1,7 +1,7 @@
 import { Schema, model, Document } from "mongoose";
 
 export interface IFirmwareConfig extends Document {
-  metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity' | 'SkinTemp' | 'Workout';
+  metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity' | 'SkinTemp' | 'Workout' | 'HRV';
   latestFirmwareVersion: string;
   description?: string; // Optional description of what changed in this version
   updatedAt: Date;
@@ -11,7 +11,7 @@ export interface IFirmwareConfig extends Document {
 const FirmwareConfigSchema = new Schema<IFirmwareConfig>({
   metric: { 
     type: String, 
-    enum: ['HR', 'SPO2', 'Sleep', 'Activity', 'SkinTemp', 'Workout'],
+    enum: ['HR', 'SPO2', 'Sleep', 'Activity', 'SkinTemp', 'Workout', 'HRV'],
     required: true,
     unique: true,
     index: true 

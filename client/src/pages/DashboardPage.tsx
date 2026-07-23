@@ -12,6 +12,8 @@ import { ActivitySessionPage } from './ActivitySessionPage';
 import { SkinTempSessionPage } from './SkinTempSessionPage';
 import { WorkoutOverviewPage } from './WorkoutOverviewPage';
 import { WorkoutSessionPage } from './WorkoutSessionPage';
+import { HrvOverviewContent } from '../components/hrv/HrvOverviewContent';
+import { HrvSessionContent } from '../components/hrv/HrvSessionContent';
 import type { Session, SessionFullDetails, UserSummary } from '../types';
 
 const DashboardPage: React.FC = () => {
@@ -94,9 +96,9 @@ const DashboardPage: React.FC = () => {
               value={selectedMetric}
               onChange={(e) => {
                 const value = e.target.value;
-                // Fitness Age isn't a benchmarking metric — it lives on its
-                // own page, so picking it just navigates there instead of
-                // changing the session-based metric state.
+                // Fitness Age still lives on its own page. HRV now stays in
+                // this shared session view (side panel + metric selector),
+                // like HR/Workout/etc.
                 if (value === 'FitnessAge') {
                   navigate('/fitness-age');
                   return;
@@ -113,6 +115,7 @@ const DashboardPage: React.FC = () => {
               <option value="Workout">Workout</option>
               <option value="SkinTemp">Skin Temperature</option>
               <option value="FitnessAge">Fitness Age</option>
+              <option value="HRV">HRV</option>
             </select>
           </div>
 
@@ -146,6 +149,19 @@ const DashboardPage: React.FC = () => {
           <WorkoutOverviewPage />
         ) : (
           <WorkoutSessionPage sessionId={selectedSessionId} />
+        )
+      ) : selectedMetric === 'HRV' ? (
+        // HRV-specific dashboard — overview (cards + latest nights + multi-line
+        // trend) and per-session detail, both inside the shared layout.
+        activeTab === 'overview' ? (
+          <HrvOverviewContent
+            onSelectSession={(id) => {
+              setSelectedSessionId(id);
+              setActiveTab('sessions');
+            }}
+          />
+        ) : (
+          <HrvSessionContent sessionId={selectedSessionId} showHeader />
         )
       ) : selectedMetric === 'SkinTemp' ? (
         // SkinTemp-specific dashboard - uses same OverviewTab as HR/SPO2

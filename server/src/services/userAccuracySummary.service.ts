@@ -9,7 +9,7 @@ import { Types } from 'mongoose';
  * @param userId - The user ID to update summary for
  * @param metric - The metric to calculate summary for (HR, SPO2, etc.)
  */
-export async function updateUserAccuracySummary(userId: Types.ObjectId | string, metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity' | 'SkinTemp' | 'Workout' = 'HR') {
+export async function updateUserAccuracySummary(userId: Types.ObjectId | string, metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity' | 'SkinTemp' | 'Workout' | 'HRV' = 'HR') {
   // Get all sessions for the user with this metric
   const sessions = await Session.find({ userId, metric, benchmarkDeviceType: { $ne: null, $exists: true } }).lean();
   

@@ -44,7 +44,7 @@ export interface ISessionAnalysis extends Document {
   sessionId: Types.ObjectId;
   userId: Types.ObjectId;
   activityType: string;
-  metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity' | 'SkinTemp' | 'Workout';
+  metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity' | 'SkinTemp' | 'Workout' | 'HRV';
   startTime: Date;
   endTime: Date;
   deviceStats: IDeviceStats[];
@@ -243,6 +243,30 @@ export interface ISessionAnalysis extends Document {
       benchmarkSteps?: number;
       stepsDifference?: number;
       stepsAccuracyPercent?: number;
+    };
+  };
+  hrvStats?: {
+    benchmarkDeviceType?: string;
+    hrv?: {
+      lunaAvg?: number;
+      benchmarkAvg?: number;
+      mae?: number;
+      rmse?: number;
+      mape?: number;
+      pearsonR?: number;
+      meanBias?: number;
+      coverage?: number;
+      blandAltman?: IBlandAltman;
+    };
+    hr?: {
+      lunaAvg?: number;
+      benchmarkAvg?: number;
+      mae?: number;
+      rmse?: number;
+      mape?: number;
+      pearsonR?: number;
+      meanBias?: number;
+      coverage?: number;
     };
   };
   isValid: boolean;
@@ -502,15 +526,51 @@ const WorkoutStatsSchema = new Schema(
   { _id: false }
 );
 
+const HrvStatsSchema = new Schema(
+  {
+    benchmarkDeviceType: String,
+    hrv: {
+      lunaAvg: Number,
+      benchmarkAvg: Number,
+      mae: Number,
+      rmse: Number,
+      mape: Number,
+      pearsonR: Number,
+      meanBias: Number,
+      coverage: Number,
+      blandAltman: {
+        differences: [Number],
+        averages: [Number],
+        meanDifference: Number,
+        stdDifference: Number,
+        upperLimit: Number,
+        lowerLimit: Number,
+        percentageInLimits: Number,
+      },
+    },
+    hr: {
+      lunaAvg: Number,
+      benchmarkAvg: Number,
+      mae: Number,
+      rmse: Number,
+      mape: Number,
+      pearsonR: Number,
+      meanBias: Number,
+      coverage: Number,
+    },
+  },
+  { _id: false }
+);
+
 const SessionAnalysisSchema = new Schema<ISessionAnalysis>({
   sessionId: { type: Schema.Types.ObjectId, ref: "Session", index: true, unique: true },
   userId: { type: Schema.Types.ObjectId, ref: "User", index: true },
   activityType: String,
-  metric: { 
-    type: String, 
-    enum: ['HR', 'SPO2', 'Sleep', 'Activity', 'SkinTemp', 'Workout'],
+  metric: {
+    type: String,
+    enum: ['HR', 'SPO2', 'Sleep', 'Activity', 'SkinTemp', 'Workout', 'HRV'],
     required: true,
-    index: true 
+    index: true
   },
   startTime: Date,
   endTime: Date,
@@ -520,6 +580,7 @@ const SessionAnalysisSchema = new Schema<ISessionAnalysis>({
   sleepStats: SleepStatsSchema,
   activityStats: ActivityStatsSchema,
   workoutStats: WorkoutStatsSchema,
+  hrvStats: HrvStatsSchema,
   isValid: { type: Boolean, default: true },
   computedAt: { type: Date, default: Date.now },
 });

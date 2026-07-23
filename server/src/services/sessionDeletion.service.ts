@@ -3,6 +3,7 @@ import SessionAnalysis from '../models/SessionAnalysis';
 import NormalizedReading from '../models/NormalizedReadings';
 import SleepStageEpoch from '../models/SleepStageEpoch';
 import ActivityDailyReading from '../models/ActivityDailyReading';
+import HrvReading from '../models/HrvReading';
 import { Types } from 'mongoose';
 import { updateUserAccuracySummary } from './userAccuracySummary.service';
 import { updateFirmwarePerformanceForLuna } from './firmwarePerformance.service';
@@ -60,7 +61,10 @@ export async function deleteSession(sessionId: Types.ObjectId | string) {
     
     // Delete activity daily readings (for Activity sessions)
     ActivityDailyReading.deleteMany({ 'meta.sessionId': sessionId }),
-    
+
+    // Delete HRV readings (for HRV sessions)
+    HrvReading.deleteMany({ 'meta.sessionId': sessionId }),
+
     // Delete session analysis
     SessionAnalysis.deleteOne({ sessionId }),
     

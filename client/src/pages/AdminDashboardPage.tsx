@@ -70,11 +70,12 @@ const fetchingUsersRef = useRef(new Set<string>());
   useEffect(() => {
     const fetchFirmwareVersion = async () => {
       try {
-        const metricParam = selectedMetric === 'hr' ? 'HR' : 
-                           selectedMetric === 'spo2' ? 'SPO2' : 
-                           selectedMetric === 'sleep' ? 'Sleep' : 
-                           selectedMetric === 'activity' ? 'Activity' : 
-                           selectedMetric === 'workout' ? 'Workout' : 'SkinTemp';
+        const metricParam = selectedMetric === 'hr' ? 'HR' :
+                           selectedMetric === 'spo2' ? 'SPO2' :
+                           selectedMetric === 'sleep' ? 'Sleep' :
+                           selectedMetric === 'activity' ? 'Activity' :
+                           selectedMetric === 'workout' ? 'Workout' :
+                           selectedMetric === 'hrv' ? 'HRV' : 'SkinTemp';
         
         const res = await apiClient.get(`/admin/global-summary?metric=${metricParam}`);
         const firmware = res.data.data?.latestFirmwareVersion;
@@ -129,6 +130,8 @@ const fetchUserSessions = async (userId: string) => {
       metricParam = 'Workout';
     } else if (selectedMetric === 'skintemp') {
       metricParam = 'SkinTemp';
+    } else if (selectedMetric === 'hrv') {
+      metricParam = 'HRV';
     }
 
     console.log(

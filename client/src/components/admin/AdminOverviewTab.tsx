@@ -14,6 +14,7 @@ import AdminActivityBenchmarkTab from './AdminActivityBenchmarkTab';
 import AdminActivityFirmwareTab from './AdminActivityFirmwareTab';
 import AdminWorkoutOverviewTab from './AdminWorkoutOverviewTab';
 import AdminSkinTempOverviewTab from './AdminSkinTempOverviewTab';
+import AdminHrvOverviewTab from './AdminHrvOverviewTab';
 
 interface GlobalSummary {
   totalUsers: number;
@@ -76,7 +77,7 @@ const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({ metric, subTab }) =
   // Fetch data only for hr/spo2 metrics
   useEffect(() => {
     // Skip fetch for metrics that have dedicated components
-    if (metric === 'sleep' || metric === 'activity' || metric === 'workout' || metric === 'skintemp') {
+    if (metric === 'sleep' || metric === 'activity' || metric === 'workout' || metric === 'skintemp' || metric === 'hrv') {
       return;
     }
 
@@ -166,6 +167,10 @@ const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({ metric, subTab }) =
 
   if (metric === 'skintemp') {
     return <AdminSkinTempOverviewTab subTab={subTab} />;
+  }
+
+  if (metric === 'hrv') {
+    return <AdminHrvOverviewTab subTab={subTab} />;
   }
 
   if (loading) {

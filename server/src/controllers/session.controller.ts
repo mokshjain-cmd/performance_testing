@@ -7,6 +7,8 @@ import { ingestSessionFiles } from '../services/sessionIngestion.service';
 import { ingestSPO2SessionFiles } from '../services/ingestSPO2Session.service';
 import { IngestSleepService } from '../services/sleep/IngestSleepService';
 import { SleepAnalysisService } from '../services/sleep/SleepAnalysisService';
+import { IngestHrvService } from '../services/hrv/IngestHrvService';
+import { HrvAnalysisService } from '../services/hrv/HrvAnalysisService';
 import { IngestActivityService } from '../services/activity/IngestActivityService';
 import { ActivityAnalysisService } from '../services/activity/ActivityAnalysisService';
 import { ActivitySummaryService } from '../services/activity/ActivitySummaryService';
@@ -356,6 +358,81 @@ export const createManualSleepSession = async (req: Request, res: Response): Pro
 };
 //currently no user check , add later
 
+const HRV_MANUAL_BENCHMARK_DEVICES = ['whoop', 'garmin', 'luna ring'];
+
+export const createManualHrvSession = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = req.userId;
+    const {
+      sessionName,
+      hrvDate,
+      firmwareVersion,
+      benchmarkDeviceType,
+      manualData, // { luna: { hrvValue }, benchmark?: { hrvValue } }
+    } = req.body;
+
+    if (benchmarkDeviceType && !HRV_MANUAL_BENCHMARK_DEVICES.includes(benchmarkDeviceType)) {
+      res.status(400).json({
+        success: false,
+        message: `Invalid benchmarkDeviceType for manual HRV entry. Must be one of: ${HRV_MANUAL_BENCHMARK_DEVICES.join(', ')}`,
+      });
+      return;
+    }
+
+    const [year, month, day] = hrvDate.split('-').map(Number);
+    // 21:00/09:00 are IST wall-clock times — subtract the 5:30 IST offset to
+    // get the true UTC instant (see FalconHrvParser, which filters ticks by
+    // comparing this window against genuinely-correct UTC unix timestamps).
+    const start = new Date(Date.UTC(year, month - 1, day - 1, 15, 30, 0));
+    const end = new Date(Date.UTC(year, month - 1, day, 3, 30, 0));
+    const durationSec = Math.floor((end.getTime() - start.getTime()) / 1000);
+
+    const lunaDevice = await Device.findOne({ deviceType: 'luna', firmwareVersion });
+    if (!lunaDevice) {
+      res.status(400).json({
+        success: false,
+        message: `Luna device with firmware version ${firmwareVersion} not found. Please ensure this firmware version is registered.`,
+      });
+      return;
+    }
+    const devices = [{ deviceId: lunaDevice._id, deviceType: 'luna', firmwareVersion }];
+
+    if (benchmarkDeviceType) {
+      const benchDevice = await Device.findOne({ deviceType: benchmarkDeviceType });
+      if (benchDevice) devices.push({ deviceId: benchDevice._id, deviceType: benchmarkDeviceType, firmwareVersion: benchDevice.firmwareVersion });
+    }
+
+    const session = await Session.create({
+      userId,
+      name: sessionName,
+      activityType: 'sleeping',
+      metric: 'HRV',
+      startTime: start,
+      endTime: end,
+      durationSec,
+      devices,
+      benchmarkDeviceType,
+    });
+
+    await HrvAnalysisService.analyzeManualSession(session._id, {
+      lunaHrv: manualData?.luna?.hrvValue,
+      benchmarkHrv: manualData?.benchmark?.hrvValue,
+      benchmarkDeviceType,
+    });
+
+    await updateAdminGlobalSummary('HRV', true);
+    await updateFirmwarePerformanceForLuna(firmwareVersion, 'HRV');
+    if (benchmarkDeviceType) {
+      await updateBenchmarkComparisonSummariesForSession(session._id);
+    }
+    await updateAdminDailyTrend(session.startTime, 'HRV', true);
+
+    res.status(201).json({ success: true, data: session });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 export const createSession = async (
   req: Request,
   res: Response
@@ -372,6 +449,7 @@ export const createSession = async (
       sleepDate,
       activityDate,
       workoutDate,
+      hrvDate,
       dailyDate,
       benchmarkDeviceType,
       bandPosition,
@@ -404,6 +482,7 @@ export const createSession = async (
       'SkinTemp',
       'Stress',
       'Workout',
+      'HRV',
     ];
 
     if (!validMetrics.includes(metric)) {
@@ -516,6 +595,24 @@ export const createSession = async (
 
       start = new Date(Date.UTC(year, month - 1, day - 1, 21, 0, 0));
       end = new Date(Date.UTC(year, month - 1, day, 9, 0, 0));
+
+    } else if (metric === 'HRV') {
+      if (!hrvDate) {
+        res.status(400).json({
+          success: false,
+          message: 'hrvDate required',
+        });
+        return;
+      }
+
+      const [year, month, day] = hrvDate.split('-').map(Number);
+
+      // 21:00/09:00 are IST wall-clock times — subtract the 5:30 IST offset
+      // to get the true UTC instant. FalconHrvParser filters ticks against
+      // this window using genuinely-correct UTC unix timestamps, so a
+      // mislabeled (unconverted) window here silently drops real ticks.
+      start = new Date(Date.UTC(year, month - 1, day - 1, 15, 30, 0));
+      end = new Date(Date.UTC(year, month - 1, day, 3, 30, 0));
 
     } else if (metric === 'Activity') {
       if (!activityDate) {
@@ -705,6 +802,33 @@ export const createSession = async (
 
         await updateBenchmarkComparisonSummariesForSession(session._id);
         await updateAdminDailyTrend(session.startTime, 'Sleep', true);
+
+      } else if (metric === 'HRV') {
+        await IngestHrvService.ingestHrvSession(
+          session._id,
+          userId,
+          files,
+          benchmarkDeviceType,
+          mobileType
+        );
+
+        // analyzeSession rewrites startTime/endTime/durationSec to the actual
+        // (overlapping) data window, so re-read the session and bucket the
+        // daily trend by the updated startTime rather than the nominal one.
+        await HrvAnalysisService.analyzeSession(session._id);
+
+        const s = await Session.findById(session._id);
+        const lunaFirmware = s?.devices.find((d: any) => d.deviceType === 'luna')
+          ?.firmwareVersion;
+
+        await updateAdminGlobalSummary('HRV', true);
+
+        if (lunaFirmware) {
+          await updateFirmwarePerformanceForLuna(lunaFirmware, 'HRV');
+        }
+
+        await updateBenchmarkComparisonSummariesForSession(session._id);
+        await updateAdminDailyTrend(s?.startTime ?? session.startTime, 'HRV', true);
 
       } else if (metric === 'Activity') {
         await IngestActivityService.ingestActivitySession(

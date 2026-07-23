@@ -6,6 +6,7 @@ import apiClient from '../../services/api';
 import AdminSleepUserView from './AdminSleepUserView';
 import AdminActivityUserView from './AdminActivityUserView';
 import AdminWorkoutUserView from './AdminWorkoutUserView';
+import AdminHrvUserView from './AdminHrvUserView';
 
 interface UserSummary {
   totalSessions: number;
@@ -92,6 +93,11 @@ const AdminUserView: React.FC<AdminUserViewProps> = ({ userId, metric }) => {
   // Handle workout metric separately
   if (metric === 'workout') {
     return <AdminWorkoutUserView userId={userId} metric={metric} />;
+  }
+
+  // Handle HRV metric separately
+  if (metric === 'hrv') {
+    return <AdminHrvUserView userId={userId} />;
   }
 
   // For HR, SPO2, and SkinTemp - use the same user summary view

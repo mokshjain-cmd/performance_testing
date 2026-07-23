@@ -1,8 +1,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Activity, Droplet, Moon, ChevronDown, TrendingUp, Thermometer, Dumbbell } from 'lucide-react';
+import { Activity, Droplet, Moon, ChevronDown, TrendingUp, Thermometer, Dumbbell, HeartPulse } from 'lucide-react';
 
-type Metric = 'hr' | 'spo2' | 'sleep' | 'activity' | 'workout' | 'skintemp';
+type Metric = 'hr' | 'spo2' | 'sleep' | 'activity' | 'workout' | 'skintemp' | 'hrv';
 
 interface MetricsSelectorProps {
   selectedMetric: Metric;
@@ -13,11 +13,11 @@ const METRICS = [
   { value: 'workout' as Metric, label: 'Workout', icon: Dumbbell, color: 'text-purple-500' },
   { value: 'sleep' as Metric, label: 'Sleep', icon: Moon, color: 'text-indigo-500' },
   { value: 'hr' as Metric, label: 'Heart Rate', icon: Activity, color: 'text-red-500' },
-  
-  
+  { value: 'hrv' as Metric, label: 'HRV', icon: HeartPulse, color: 'text-pink-500' },
+
   { value: 'activity' as Metric, label: 'Activity', icon: TrendingUp, color: 'text-green-500' },
   { value: 'spo2' as Metric, label: 'SpO₂', icon: Droplet, color: 'text-blue-500' },
-  
+
   { value: 'skintemp' as Metric, label: 'Skin Temp', icon: Thermometer, color: 'text-orange-500' },
 ];
 
@@ -37,9 +37,9 @@ const MetricsSelector: React.FC<MetricsSelectorProps> = ({
           value={selectedMetric}
           onChange={(e) => {
             const value = e.target.value;
-            // Fitness Age isn't a benchmarking metric — it lives on its own
-            // dashboard, so picking it just navigates there instead of
-            // changing the session-based metric state.
+            // Fitness Age isn't part of the shared session-based benchmarking
+            // view — it lives on its own dedicated dashboard, so picking it
+            // just navigates there instead of changing the metric state.
             if (value === 'fitness-age') {
               navigate('/admin/fitness-age');
               return;

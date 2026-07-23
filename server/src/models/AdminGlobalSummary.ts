@@ -1,7 +1,7 @@
 import { Schema, model, Document } from "mongoose";
 
 export interface IAdminGlobalSummary extends Document {
-  metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity' | 'SkinTemp' | 'Workout';
+  metric: 'HR' | 'SPO2' | 'Sleep' | 'Activity' | 'SkinTemp' | 'Workout' | 'HRV';
   totalUsers: number;
   totalSessions: number;
   totalReadings: number;
@@ -66,7 +66,7 @@ export interface IAdminGlobalSummary extends Document {
 const AdminGlobalSummarySchema = new Schema<IAdminGlobalSummary>({
   metric: { 
     type: String, 
-    enum: ['HR', 'SPO2', 'Sleep', 'Activity', 'SkinTemp', 'Workout'],
+    enum: ['HR', 'SPO2', 'Sleep', 'Activity', 'SkinTemp', 'Workout', 'HRV'],
     required: true,
     unique: true,
     index: true 
