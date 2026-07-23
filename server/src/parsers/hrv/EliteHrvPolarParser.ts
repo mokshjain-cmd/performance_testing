@@ -19,9 +19,10 @@ const HALF_WIN_SEC = 15;
 const MIN_BEATS_WINDOW = 4;
 const FREQ_SEC = 30;
 
-// Accepts both "YYYY-MM-DD_HH-MM-SS" and "YYYY-MM-DD HH-MM-SS" (real exports
-// have been seen with either separator between the date and time portions).
-const FILENAME_RE = /(\d{4}-\d{2}-\d{2})[_ ](\d{2})-(\d{2})-(\d{2})$/;
+// Accepts "YYYY-MM-DD_HH-MM-SS" and "YYYY-MM-DD HH-MM-SS" — real exports have
+// been seen with either an underscore or a space (occasionally more than one)
+// between the date and time portions, so allow any run of whitespace/underscore.
+const FILENAME_RE = /(\d{4}-\d{2}-\d{2})[_\s]+(\d{2})-(\d{2})-(\d{2})$/;
 
 interface IK22CleanResult {
   cleaned: number[];
