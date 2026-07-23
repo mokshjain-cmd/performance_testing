@@ -4,13 +4,24 @@ export interface FitnessAgeMetric {
   delta_years?: number | null;
 }
 
+export interface FitnessAgeEnsembleMetric {
+  value: number | null;
+  target: number;
+  delta_years?: number | null;
+  bracket?: string;
+  jack_weight?: number;
+  hrr_weight?: number;
+}
+
 export interface FitnessAgeWindow {
   fitness_age: number | null;
   total_delta: number | null;
   pace_of_aging: number | null;
   metrics: {
-    vo2_jackson: FitnessAgeMetric;
-    vo2_ensemble: { value: number | null; target: number };
+    vo2_jackson: { value: number | null; target: number };
+    vo2_hrr: { value: number | null; target: number };
+    vo2_legacy: { value: number | null; target: number };
+    vo2_ensemble: FitnessAgeEnsembleMetric;
     resting_hr: FitnessAgeMetric;
     sleep_hours: FitnessAgeMetric;
     sleep_consistency: FitnessAgeMetric;

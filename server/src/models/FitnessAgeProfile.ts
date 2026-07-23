@@ -6,13 +6,24 @@ export interface IFitnessAgeMetric {
   delta_years?: number | null;
 }
 
+export interface IFitnessAgeEnsembleMetric {
+  value: number | null;
+  target: number;
+  delta_years: number | null;
+  bracket: string;
+  jack_weight: number;
+  hrr_weight: number;
+}
+
 export interface IFitnessAgeWindow {
   fitness_age: number | null;
   total_delta: number | null;
   pace_of_aging: number | null;
   metrics: {
-    vo2_jackson: IFitnessAgeMetric;
-    vo2_ensemble: { value: number | null; target: number };
+    vo2_jackson: { value: number | null; target: number };
+    vo2_hrr: { value: number | null; target: number };
+    vo2_legacy: { value: number | null; target: number };
+    vo2_ensemble: IFitnessAgeEnsembleMetric;
     resting_hr: IFitnessAgeMetric;
     sleep_hours: IFitnessAgeMetric;
     sleep_consistency: IFitnessAgeMetric;
@@ -64,10 +75,25 @@ const FitnessAgeWindowSchema = new Schema(
     total_delta: { type: Number, default: null },
     pace_of_aging: { type: Number, default: null },
     metrics: {
-      vo2_jackson: FitnessAgeMetricSchema,
+      vo2_jackson: {
+        value: { type: Number, default: null },
+        target: Number,
+      },
+      vo2_hrr: {
+        value: { type: Number, default: null },
+        target: Number,
+      },
+      vo2_legacy: {
+        value: { type: Number, default: null },
+        target: Number,
+      },
       vo2_ensemble: {
         value: { type: Number, default: null },
         target: Number,
+        delta_years: { type: Number, default: null },
+        bracket: { type: String, default: 'None' },
+        jack_weight: { type: Number, default: 0 },
+        hrr_weight: { type: Number, default: 0 },
       },
       resting_hr: FitnessAgeMetricSchema,
       sleep_hours: FitnessAgeMetricSchema,

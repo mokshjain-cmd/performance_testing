@@ -1,8 +1,12 @@
+import type { Momentum } from '../../utils/fitnessAgeMetricDefs';
+import { overallMomentumCopy } from '../../utils/fitnessAgeMetricDefs';
+
 interface FitnessAgeHeroProps {
   fitnessAge: number;
   chronoAge: number;
   paceOfAging: number | null;
   computedAt: string;
+  momentum?: Momentum | null;
 }
 
 const PACE_MIN = 0.6;
@@ -36,7 +40,13 @@ const TONE_STYLES = {
   warn: 'bg-amber-50 border-amber-100 text-amber-800',
 };
 
-export default function FitnessAgeHero({ fitnessAge, chronoAge, paceOfAging, computedAt }: FitnessAgeHeroProps) {
+const MOMENTUM_TONE_STYLES = {
+  ahead: 'bg-green-50 border-green-100 text-green-800',
+  breakeven: 'bg-indigo-50 border-indigo-100 text-indigo-800',
+  lagging: 'bg-amber-50 border-amber-100 text-amber-800',
+};
+
+export default function FitnessAgeHero({ fitnessAge, chronoAge, paceOfAging, computedAt, momentum }: FitnessAgeHeroProps) {
   const diff = fitnessAge - chronoAge;
   const younger = diff < -0.05;
   const older = diff > 0.05;
@@ -88,6 +98,13 @@ export default function FitnessAgeHero({ fitnessAge, chronoAge, paceOfAging, com
         <div className="font-semibold mb-0.5">{insight.title}</div>
         <div className="opacity-90">{insight.msg}</div>
       </div>
+
+      {momentum && (
+        <div className={`mt-3 border rounded-xl px-4 py-3 text-sm ${MOMENTUM_TONE_STYLES[momentum.status]}`}>
+          <div className="font-semibold mb-0.5">{overallMomentumCopy(momentum.status).title}</div>
+          <div className="opacity-90">{overallMomentumCopy(momentum.status).msg}</div>
+        </div>
+      )}
 
       <div className="mt-3 text-[11px] text-gray-400">
         As of {new Date(computedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}

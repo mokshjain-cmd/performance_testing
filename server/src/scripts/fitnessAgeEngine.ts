@@ -1,6 +1,6 @@
 /**
- * Node/TS port of notes/unified_fitness_age_engine.py — the Gompertz-based
- * Fitness Age calculations, kept numerically identical to the Python spec.
+ * Node/TS port of notes/unified_fitness_age_engine.py — the Fitness Age
+ * calculations, kept numerically identical to the Python spec.
  * This file is pure math/data-shaping and has no DB or Mongo dependency,
  * so it can be exercised independently of the ETL script that calls it.
  */
@@ -14,6 +14,7 @@ export interface DayRecord {
   Strength_Hours: number | null;
   Z13_Cardio_Hours: number | null;
   Z45_Cardio_Hours: number | null;
+  Max_HR: number | null;
   Steps: number | null;
 }
 
@@ -23,13 +24,24 @@ export interface FitnessAgeMetricResult {
   delta_years?: number | null;
 }
 
+export interface FitnessAgeEnsembleResult {
+  value: number | null;
+  target: number;
+  delta_years: number | null;
+  bracket: string;
+  jack_weight: number;
+  hrr_weight: number;
+}
+
 export interface FitnessAgeWindowResult {
   fitness_age: number | null;
   total_delta: number | null;
   pace_of_aging: number | null;
   metrics: {
-    vo2_jackson: FitnessAgeMetricResult;
-    vo2_ensemble: { value: number | null; target: number };
+    vo2_jackson: { value: number | null; target: number };
+    vo2_hrr: { value: number | null; target: number };
+    vo2_legacy: { value: number | null; target: number };
+    vo2_ensemble: FitnessAgeEnsembleResult;
     resting_hr: FitnessAgeMetricResult;
     sleep_hours: FitnessAgeMetricResult;
     sleep_consistency: FitnessAgeMetricResult;
@@ -57,20 +69,75 @@ export function calculateHrRatioModel(hrMax: number, rhrAvg: number | null): num
 }
 
 export function calculateJacksonPar(z13h: number, z45h: number, genderMale: 0 | 1): number {
-  const activityScore = z13h * 1.5 + z45h * 2.0;
-  const thresholds = genderMale
-    ? [1.2, 2.4, 4.8, 8.0, 11.2, 14.4]
-    : [0.96, 1.92, 3.84, 6.4, 8.96, 11.52];
-  const [t2, t3, t4, t5, t6, t7] = thresholds;
+  if (Number.isNaN(z13h)) z13h = 0.0;
+  if (Number.isNaN(z45h)) z45h = 0.0;
 
-  if (activityScore === 0) return 1;
-  if (activityScore <= t2) return 2;
-  if (activityScore <= t3) return 3;
-  if (activityScore <= t4) return 4;
-  if (activityScore <= t5) return 5;
-  if (activityScore <= t6) return 6;
-  if (activityScore <= t7) return 7;
-  return 8;
+  const activityScore = z13h * 1.5 + z45h * 2.0;
+
+  let basePa = 1.0;
+  if (genderMale) {
+    if (activityScore > 13.1) basePa = 10.0;
+    else if (activityScore > 11.5) basePa = 9.5;
+    else if (activityScore > 9.9) basePa = 9.0;
+    else if (activityScore > 9.3) basePa = 8.5;
+    else if (activityScore > 8.4) basePa = 8.0;
+    else if (activityScore > 7.3) basePa = 7.5;
+    else if (activityScore > 6.7) basePa = 7.0;
+    else if (activityScore > 5.95) basePa = 6.5;
+    else if (activityScore > 5.2) basePa = 6.0;
+    else if (activityScore > 4.35) basePa = 5.5;
+    else if (activityScore > 3.5) basePa = 5.0;
+    else if (activityScore > 2.8) basePa = 4.5;
+    else if (activityScore > 2.1) basePa = 4.0;
+    else if (activityScore > 1.5) basePa = 3.5;
+    else if (activityScore > 0.9) basePa = 3.0;
+    else if (activityScore > 0.45) basePa = 2.5;
+    else if (activityScore > 0) basePa = 2.0;
+  } else {
+    // Women's thresholds scaled by 20%
+    if (activityScore > 10.48) basePa = 10.0;
+    else if (activityScore > 9.2) basePa = 9.5;
+    else if (activityScore > 7.92) basePa = 9.0;
+    else if (activityScore > 7.44) basePa = 8.5;
+    else if (activityScore > 6.72) basePa = 8.0;
+    else if (activityScore > 5.84) basePa = 7.5;
+    else if (activityScore > 5.36) basePa = 7.0;
+    else if (activityScore > 4.76) basePa = 6.5;
+    else if (activityScore > 4.16) basePa = 6.0;
+    else if (activityScore > 3.48) basePa = 5.5;
+    else if (activityScore > 2.8) basePa = 5.0;
+    else if (activityScore > 2.24) basePa = 4.5;
+    else if (activityScore > 1.68) basePa = 4.0;
+    else if (activityScore > 1.2) basePa = 3.5;
+    else if (activityScore > 0.72) basePa = 3.0;
+    else if (activityScore > 0.36) basePa = 2.5;
+    else if (activityScore > 0) basePa = 2.0;
+  }
+
+  // The Vigorous Waterfall Demotion Gates
+  const baseGates: Record<string, number> = {
+    '10': 3.0,
+    '9.5': 2.5,
+    '9': 2.0,
+    '8.5': 1.5,
+    '8': 1.0,
+    '7.5': 0.5,
+    '7': 0.0,
+  };
+  // Scale gates down by 20% for women to maintain proportional intensity burden
+  const vigorousGates: Record<string, number> = genderMale
+    ? baseGates
+    : Object.fromEntries(Object.entries(baseGates).map(([k, v]) => [k, v * 0.8]));
+
+  let currentPa = basePa;
+  while (currentPa > 7.0) {
+    const key = String(currentPa);
+    if (key in vigorousGates && z45h >= vigorousGates[key]) {
+      return currentPa;
+    }
+    currentPa -= 0.5;
+  }
+  return currentPa;
 }
 
 export function calculateJacksonModel(
@@ -82,20 +149,55 @@ export function calculateJacksonModel(
   return 56.363 + 1.921 * par - 0.381 * age - 0.754 * bmi + 10.987 * genderMale;
 }
 
+export interface EnsembleVo2Result {
+  vo2Ens: number;
+  vo2Jack: number;
+  vo2Hrr: number | null;
+  vo2Legacy: number | null;
+  bracket: string;
+  jackWeight: number;
+  hrrWeight: number;
+}
+
 export function ensembleVo2(
   hrMax: number,
   rhrAvg: number | null,
   age: number,
   genderMale: 0 | 1,
   bmi: number,
-  par: number,
-  weightHrr = 0.7,
-  weightJackson = 0.3
-): number {
+  par: number
+): EnsembleVo2Result {
   const vo2Hrr = calculateHrRatioModel(hrMax, rhrAvg);
   const vo2Jack = calculateJacksonModel(age, genderMale, bmi, par);
-  if (vo2Hrr == null) return vo2Jack;
-  return vo2Hrr * weightHrr + vo2Jack * weightJackson;
+
+  let vo2Legacy: number | null = null;
+  let vo2Ens = vo2Jack;
+  let bracket = 'None';
+  let jackWeight = 1.0;
+  let hrrWeight = 0.0;
+
+  if (vo2Hrr != null) {
+    vo2Legacy = vo2Hrr * 0.7 + vo2Jack * 0.3;
+
+    if (vo2Jack > vo2Hrr) {
+      bracket = 'Bracket 0: Jackson Override';
+      jackWeight = 1.0;
+      hrrWeight = 0.0;
+      vo2Ens = vo2Jack;
+    } else if (vo2Hrr - vo2Jack > 4.0) {
+      bracket = 'Bracket 1: High HRR Efficiency';
+      jackWeight = 0.2;
+      hrrWeight = 0.8;
+      vo2Ens = vo2Hrr * hrrWeight + vo2Jack * jackWeight;
+    } else {
+      bracket = 'Static Baseline (70/30)';
+      jackWeight = 0.7;
+      hrrWeight = 0.3;
+      vo2Ens = vo2Hrr * hrrWeight + vo2Jack * jackWeight;
+    }
+  }
+
+  return { vo2Ens, vo2Jack, vo2Hrr, vo2Legacy, bracket, jackWeight, hrrWeight };
 }
 
 export function getAcsmVo2Baseline(age: number, genderMale: 0 | 1): number {
@@ -176,14 +278,17 @@ export function calculateMetricsForPeriod(
 
   const { age, sex, genderMale, bmi } = demo;
 
-  const stepDaysRaw = periodDays.filter((d) => d.Steps != null).length;
-  const dayHasActSleepData = (d: DayRecord) =>
-    d.Sleep_Hours != null ||
-    d.Resting_HR != null ||
-    d.Strength_Hours != null ||
-    d.Z13_Cardio_Hours != null ||
-    d.Z45_Cardio_Hours != null;
-  const actSleepDaysRaw = periodDays.filter(dayHasActSleepData).length;
+  // Wear day denominators (strictly filtering noise to avoid poisoning)
+  const gt0 = (v: number | null): boolean => v != null && v > 0;
+  const stepDaysRaw = periodDays.filter((d) => d.Steps != null && d.Steps >= 200).length;
+  const actSleepDaysRaw = periodDays.filter(
+    (d) =>
+      gt0(d.Sleep_Hours) ||
+      gt0(d.Resting_HR) ||
+      gt0(d.Strength_Hours) ||
+      gt0(d.Z13_Cardio_Hours) ||
+      gt0(d.Z45_Cardio_Hours)
+  ).length;
 
   const stepDays = stepDaysRaw === 0 ? 1 : stepDaysRaw;
   const actSleepDays = actSleepDaysRaw === 0 ? 1 : actSleepDaysRaw;
@@ -192,22 +297,26 @@ export function calculateMetricsForPeriod(
   const RHR_BASE = age < 40 ? 60.0 : age < 60 ? 62.0 : age < 80 ? 64.0 : 66.0;
   const SLP_OPT_MAX = age < 65 ? 9.0 : 8.0;
 
-  // RHR: median, floored at 40
+  // RHR uses median (floored at 40, rounded), Sleep uses mean (excluding micro-naps)
   const validRhr = periodDays
     .map((d) => d.Resting_HR)
     .filter((v): v is number => v != null && v > 0);
   let avgRhr = median(validRhr);
-  if (avgRhr != null) avgRhr = Math.max(avgRhr, 40.0);
+  if (avgRhr != null) {
+    avgRhr = Math.max(avgRhr, 40.0);
+    avgRhr = Math.round(avgRhr);
+  }
 
-  // Sleep: mean, excluding naps <= 3h
   const validSleep = periodDays
     .map((d) => d.Sleep_Hours)
-    .filter((v): v is number => v != null && v > 3.0);
+    .filter((v): v is number => v != null && v >= 3.0 && v <= 17.0);
   const avgSleep = mean(validSleep);
 
-  // Sleep consistency via MAD of onset/offset times
+  // Sleep Consistency via MAD (Median Absolute Deviation)
   let sleepCon: number | null = null;
-  const conGroup = periodDays.filter((d) => d.Sleep_Hours != null && d.Sleep_Hours > 3.0);
+  const conGroup = periodDays.filter(
+    (d) => d.Sleep_Hours != null && d.Sleep_Hours >= 3.0 && d.Sleep_Hours <= 17.0
+  );
   const validStart = conGroup.map((d) => d.start_time).filter((v): v is string => v != null);
   const validEnd = conGroup.map((d) => d.end_time).filter((v): v is string => v != null);
   if (validStart.length > 1 && validEnd.length > 1) {
@@ -243,8 +352,39 @@ export function calculateMetricsForPeriod(
   let vo2 = calculateJacksonModel(age, genderMale, bmi, pa);
   vo2 = Math.min(vo2, 70.0);
 
-  const hrMax = 208 - 0.7 * age;
-  let vo2Ens = avgRhr != null ? ensembleVo2(hrMax, avgRhr, age, genderMale, bmi, pa) : vo2;
+  // Experimental Dynamic Ensemble Model
+  const tanakaHr = 208 - 0.7 * age;
+  const validMaxHr = periodDays
+    .map((d) => d.Max_HR)
+    .filter((v): v is number => v != null && v > 0);
+  let windowMaxHr: number | null = null;
+  if (validMaxHr.length >= 3) {
+    const top3 = [...validMaxHr].sort((a, b) => b - a).slice(0, 3);
+    windowMaxHr = mean(top3);
+  } else if (validMaxHr.length > 0) {
+    windowMaxHr = Math.max(...validMaxHr);
+  }
+  const finalMaxHr = windowMaxHr != null ? Math.max(tanakaHr, windowMaxHr) : tanakaHr;
+
+  let vo2Ens: number;
+  let vo2Jack: number;
+  let vo2Hrr: number | null;
+  let vo2Legacy: number | null;
+  let bracket: string;
+  let jackWeight: number;
+  let hrrWeight: number;
+  if (avgRhr != null) {
+    const ens = ensembleVo2(finalMaxHr, avgRhr, age, genderMale, bmi, pa);
+    ({ vo2Ens, vo2Jack, vo2Hrr, vo2Legacy, bracket, jackWeight, hrrWeight } = ens);
+  } else {
+    vo2Ens = vo2;
+    vo2Jack = vo2;
+    vo2Hrr = null;
+    vo2Legacy = null;
+    bracket = 'None';
+    jackWeight = 0.0;
+    hrrWeight = 0.0;
+  }
   vo2Ens = Math.min(vo2Ens, 70.0);
 
   // Deltas
@@ -268,7 +408,8 @@ export function calculateMetricsForPeriod(
     dtStr = ws < 0.67 ? (0.67 - ws) * 2.2 : (0.67 - ws) * 1.2;
   }
 
-  const dtVo2 = vo2 != null ? (vo2Base - vo2) * (sex === 'female' ? 0.26 : 0.2) : 0.0;
+  // dt_vo2 uses the final Dynamic Ensemble VO2 (not the pure Jackson baseline)
+  const dtVo2 = vo2Ens != null ? (vo2Base - vo2Ens) * (sex === 'female' ? 0.26 : 0.2) : 0.0;
 
   const totalDelta = dtRhr + dtSleep + dtCon + dtSteps + dtStr + dtVo2;
   const fitnessAge = age + totalDelta;
@@ -278,8 +419,17 @@ export function calculateMetricsForPeriod(
     total_delta: safeFloat(totalDelta),
     pace_of_aging: safeFloat(fitnessAge / age),
     metrics: {
-      vo2_jackson: { value: safeFloat(vo2), target: vo2Base, delta_years: safeFloat(dtVo2) },
-      vo2_ensemble: { value: safeFloat(vo2Ens), target: vo2Base },
+      vo2_jackson: { value: safeFloat(vo2Jack), target: vo2Base },
+      vo2_hrr: { value: safeFloat(vo2Hrr), target: vo2Base },
+      vo2_legacy: { value: safeFloat(vo2Legacy), target: vo2Base },
+      vo2_ensemble: {
+        value: safeFloat(vo2Ens),
+        target: vo2Base,
+        delta_years: safeFloat(dtVo2),
+        bracket,
+        jack_weight: safeFloat(jackWeight) ?? 0.0,
+        hrr_weight: safeFloat(hrrWeight) ?? 0.0,
+      },
       resting_hr: { value: safeFloat(avgRhr), target: RHR_BASE, delta_years: safeFloat(dtRhr) },
       sleep_hours: { value: safeFloat(avgSleep), target: 7.0, delta_years: safeFloat(dtSleep) },
       sleep_consistency: {

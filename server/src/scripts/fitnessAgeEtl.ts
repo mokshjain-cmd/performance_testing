@@ -31,15 +31,47 @@ import mongoose from 'mongoose';
 import readline from 'readline';
 import User from '../models/Users';
 import FitnessAgeProfile from '../models/FitnessAgeProfile';
-import { FITNESS_AGE_TARGETS, FitnessAgeTarget, FitnessAgeSourceEnv } from './fitnessAgeTargets';
+import {
+  FITNESS_AGE_TARGETS,
+  FitnessAgeTarget,
+  FitnessAgeSourceEnv,
+  FitnessAgeDemographicsOverride,
+} from './fitnessAgeTargets';
 import {
   DayRecord,
   Demographics,
   generateAllWindows,
 } from './fitnessAgeEngine';
 
-const DB_PREFIX = process.env.FITNESS_DB_NAME || 'ebdb_stage';
+function applyDemographicsOverride(
+  demo: Demographics,
+  override: FitnessAgeDemographicsOverride | undefined
+): Demographics {
+  if (!override) return demo;
+
+  const merged: Demographics = { ...demo };
+  if (override.heightCm != null) merged.height = override.heightCm / 100.0;
+  if (override.weightKg != null) merged.weight = override.weightKg;
+  if (override.dob != null) {
+    merged.age = (Date.now() - new Date(override.dob).getTime()) / (1000 * 60 * 60 * 24 * 365.25);
+  } else if (override.age != null) {
+    merged.age = override.age;
+  }
+  merged.bmi = merged.height > 0 ? merged.weight / (merged.height * merged.height) : 0;
+  return merged;
+}
+
 const DEMOGRAPHICS_SCHEMA = 'stage_user_details';
+
+// Schema/database name differs by source env (stage vs uat), unlike the
+// host/user/password which are otherwise the same shape across both.
+function dbNameFor(env: FitnessAgeSourceEnv): string {
+  const envVarName = env === 'uat' ? 'FITNESS_DB_NAME_UAT' : 'FITNESS_DB_NAME_STAGE';
+  const explicit = process.env[envVarName];
+  if (explicit) return explicit;
+  if (env === 'uat') return 'ebdb';
+  return process.env.FITNESS_DB_NAME || 'ebdb_stage';
+}
 
 function requireEnv(name: string): string {
   const val = process.env[name];
@@ -154,6 +186,7 @@ interface ActivityRow {
   aerobic_minutes: number | null;
   anaerobic_minutes: number | null;
   extreme_min: number | null;
+  heart_rate_maximum: number | null;
 }
 
 interface StepRow {
@@ -171,7 +204,7 @@ const STRENGTH_TYPES = new Set([
 ]);
 
 class FitnessAgeDbClient {
-  constructor(private pool: mysql.Pool) {}
+  constructor(private pool: mysql.Pool, private dbName: string) {}
 
   async fetchDemographics(userId: number): Promise<Demographics> {
     const demo: Demographics = {
@@ -215,35 +248,42 @@ class FitnessAgeDbClient {
 
     const [sleepV1] = await this.pool.query<any[]>(
       `SELECT date, total_duration as asleep_min, hr_min as resting_hr, start_time, end_time
-       FROM ${DB_PREFIX}.sleep_activities WHERE user_id = ? AND date BETWEEN ? AND ?`,
+       FROM ${this.dbName}.sleep_activities WHERE user_id = ? AND date BETWEEN ? AND ?`,
       range
     );
     const [sleepV2] = await this.pool.query<any[]>(
       `SELECT date, total_duration as asleep_min, resting_hr, start_time, end_time
-       FROM ${DB_PREFIX}.sleep_activities_v2 WHERE user_id = ? AND date BETWEEN ? AND ?`,
+       FROM ${this.dbName}.sleep_activities_v2 WHERE user_id = ? AND date BETWEEN ? AND ?`,
       range
     );
 
-    // v1 first, v2 second — v2 wins on same-date conflicts (matches the
-    // Python drop_duplicates(keep='last') after concatenating [v1, v2]).
-    const sleepByDate = new Map<string, SleepRow>();
+    // Anti-duplication: collapse identical v1 and v2 records (same date +
+    // start_time) while preserving naps (distinct start_times survive).
+    // v1 is concatenated first and wins ties, matching the Python
+    // drop_duplicates(subset=['date','start_time'], keep='first').
+    const segmentsByDate = new Map<string, Map<string, SleepRow>>();
     for (const r of [...(sleepV1 as any[]), ...(sleepV2 as any[])]) {
+      const d = toDateString(new Date(r.date));
       const restingHr = r.resting_hr && r.resting_hr !== 0 ? parseFloat(r.resting_hr) : null;
-      sleepByDate.set(toDateString(new Date(r.date)), {
-        date: toDateString(new Date(r.date)),
+      const seg: SleepRow = {
+        date: d,
         asleep_min: r.asleep_min != null ? parseFloat(r.asleep_min) : null,
         resting_hr: restingHr,
         start_time: r.start_time ?? null,
         end_time: r.end_time ?? null,
-      });
+      };
+      if (!segmentsByDate.has(d)) segmentsByDate.set(d, new Map());
+      const dayMap = segmentsByDate.get(d)!;
+      const dupKey = String(seg.start_time); // null start_times collapse to one
+      if (!dayMap.has(dupKey)) dayMap.set(dupKey, seg);
     }
 
     const [hrV1] = await this.pool.query<any[]>(
-      `SELECT date, resting_hr as hr_rhr FROM ${DB_PREFIX}.heart_rates WHERE user_id = ? AND date BETWEEN ? AND ?`,
+      `SELECT date, resting_hr as hr_rhr FROM ${this.dbName}.heart_rates WHERE user_id = ? AND date BETWEEN ? AND ?`,
       range
     );
     const [hrV2] = await this.pool.query<any[]>(
-      `SELECT date, resting_hr as hr_rhr FROM ${DB_PREFIX}.heart_rates_v2 WHERE user_id = ? AND date BETWEEN ? AND ?`,
+      `SELECT date, resting_hr as hr_rhr FROM ${this.dbName}.heart_rates_v2 WHERE user_id = ? AND date BETWEEN ? AND ?`,
       range
     );
     const hrSumByDate = new Map<string, { sum: number; count: number }>();
@@ -261,19 +301,57 @@ class FitnessAgeDbClient {
       if (avg !== 0) hrByDate.set(d, avg);
     }
 
-    // Only fills in dates that already have a sleep row (left-merge semantics).
-    for (const [d, row] of sleepByDate) {
-      if (row.resting_hr == null && hrByDate.has(d)) {
-        row.resting_hr = hrByDate.get(d)!;
+    // Fill each segment's missing resting_hr from the day's heart_rates
+    // average (left-merge semantics), then aggregate all of a day's sleep
+    // segments: total sleep is summed (naps included) and capped at 16h,
+    // resting_hr is averaged, start_time is the first and end_time the last.
+    interface DaySleep {
+      Sleep_Hours: number | null;
+      Resting_HR: number | null;
+      start_time: string | null;
+      end_time: string | null;
+    }
+    const sleepByDate = new Map<string, DaySleep>();
+    for (const [d, dayMap] of segmentsByDate) {
+      const segs = [...dayMap.values()];
+      let asleepSum = 0;
+      let hasAsleep = false;
+      const rhrVals: number[] = [];
+      for (const seg of segs) {
+        if (seg.resting_hr == null && hrByDate.has(d)) {
+          seg.resting_hr = hrByDate.get(d)!;
+        }
+        if (seg.asleep_min != null) {
+          asleepSum += seg.asleep_min;
+          hasAsleep = true;
+        }
+        if (seg.resting_hr != null) rhrVals.push(seg.resting_hr);
       }
+      const sleepHours = hasAsleep ? Math.min(asleepSum / 60.0, 16.0) : null;
+      const restingHr =
+        rhrVals.length > 0 ? rhrVals.reduce((a, b) => a + b, 0) / rhrVals.length : null;
+      sleepByDate.set(d, {
+        Sleep_Hours: sleepHours,
+        Resting_HR: restingHr,
+        start_time: segs[0]?.start_time ?? null,
+        end_time: segs[segs.length - 1]?.end_time ?? null,
+      });
     }
 
     const [actRows] = await this.pool.query<any[]>(
-      `SELECT date, activity_type, duration, warm_up_minutes, fat_burn_minutes, aerobic_minutes, anaerobic_minutes, extreme_min
-       FROM ${DB_PREFIX}.activities WHERE user_id = ? AND date BETWEEN ? AND ?`,
+      `SELECT date, activity_type, duration, warm_up_minutes, fat_burn_minutes, aerobic_minutes, anaerobic_minutes, extreme_min, heart_rate_maximum
+       FROM ${this.dbName}.activities WHERE user_id = ? AND date BETWEEN ? AND ?`,
       range
     );
-    const actsByDate = new Map<string, { Strength_Hours: number | null; Z13_Cardio_Hours: number | null; Z45_Cardio_Hours: number | null }>();
+    const actsByDate = new Map<
+      string,
+      {
+        Strength_Hours: number | null;
+        Z13_Cardio_Hours: number | null;
+        Z45_Cardio_Hours: number | null;
+        Max_HR: number | null;
+      }
+    >();
     const actGroups = new Map<string, ActivityRow[]>();
     for (const r of actRows as any[]) {
       const d = toDateString(new Date(r.date));
@@ -286,6 +364,7 @@ class FitnessAgeDbClient {
       let z45H = 0.0;
       let hasCardio = false;
       let hasStr = false;
+      let dailyMaxHr = 0;
       for (const a of rows) {
         const actType = String(a.activity_type ?? '').toLowerCase().trim();
         const duration = a.duration != null ? Number(a.duration) : 0;
@@ -294,14 +373,19 @@ class FitnessAgeDbClient {
         const aerobic = a.aerobic_minutes != null ? Number(a.aerobic_minutes) : 0;
         const anaerobic = a.anaerobic_minutes != null ? Number(a.anaerobic_minutes) : 0;
         const extreme = a.extreme_min != null ? Number(a.extreme_min) : 0;
+        const maxHr = a.heart_rate_maximum != null ? Number(a.heart_rate_maximum) : 0;
+        if (maxHr > dailyMaxHr) dailyMaxHr = maxHr;
 
         if (STRENGTH_TYPES.has(actType) || actType.includes('strength') || actType.includes('training')) {
           strH += duration / 3600.0;
           hasStr = true;
         }
 
-        const z13Sec = warmUp + fatBurn + aerobic;
+        let z13Sec = warmUp + fatBurn + aerobic;
         const z45Sec = anaerobic + extreme;
+
+        // Cardio is agnostic of label: any logged zone minutes count as
+        // cardio volume, plus a keyword fallback for manual logs.
         if (
           z13Sec > 0 ||
           z45Sec > 0 ||
@@ -311,6 +395,11 @@ class FitnessAgeDbClient {
           actType.includes('swim')
         ) {
           hasCardio = true;
+        } else if (!hasStr && duration > 0 && z13Sec === 0 && z45Sec === 0) {
+          // Not a strength workout, has duration but no HR zones logged:
+          // credit the duration to moderate Z1-3 cardio so activity isn't lost.
+          hasCardio = true;
+          z13Sec = duration;
         }
         z13H += z13Sec / 3600.0;
         z45H += z45Sec / 3600.0;
@@ -319,6 +408,7 @@ class FitnessAgeDbClient {
         Strength_Hours: hasStr ? strH : null,
         Z13_Cardio_Hours: hasCardio ? z13H : null,
         Z45_Cardio_Hours: hasCardio ? z45H : null,
+        Max_HR: dailyMaxHr > 0 ? dailyMaxHr : null,
       });
     }
 
@@ -353,13 +443,14 @@ class FitnessAgeDbClient {
 
       allDays.push({
         date: d,
-        Sleep_Hours: sleep?.asleep_min != null ? Math.min(sleep.asleep_min / 60.0, 14.0) : null,
-        Resting_HR: sleep?.resting_hr ?? null,
+        Sleep_Hours: sleep?.Sleep_Hours ?? null,
+        Resting_HR: sleep?.Resting_HR ?? null,
         start_time: sleep?.start_time ?? null,
         end_time: sleep?.end_time ?? null,
         Strength_Hours: acts?.Strength_Hours ?? null,
         Z13_Cardio_Hours: acts?.Z13_Cardio_Hours ?? null,
         Z45_Cardio_Hours: acts?.Z45_Cardio_Hours ?? null,
+        Max_HR: acts?.Max_HR ?? null,
         Steps: steps,
       });
     }
@@ -382,7 +473,10 @@ async function runForTarget(client: FitnessAgeDbClient, target: FitnessAgeTarget
   const startDate = new Date(endDate);
   startDate.setDate(startDate.getDate() - 70); // 10-day buffer over the 60-day window
 
-  const demo = await client.fetchDemographics(target.fitnessAppUserId);
+  const demo = applyDemographicsOverride(
+    await client.fetchDemographics(target.fitnessAppUserId),
+    target.demographicsOverride
+  );
   const cleanDays = await client.extractCleanDays(
     target.fitnessAppUserId,
     toDateString(startDate),
@@ -463,7 +557,7 @@ async function main() {
 
   for (const env of neededEnvs) {
     const host = requireEnv(hostEnvVarFor(env));
-    console.log(`🔌 Connecting to ${env} (${host}:${port}) (requires VPN)...`);
+    console.log(`🔌 Connecting to ${env} (${host}:${port}, db "${dbNameFor(env)}") (requires VPN)...`);
     const pool = mysql.createPool({
       host,
       user: dbUser,
@@ -474,7 +568,7 @@ async function main() {
       connectionLimit: 4,
     });
     pools.set(env, pool);
-    clients.set(env, new FitnessAgeDbClient(pool));
+    clients.set(env, new FitnessAgeDbClient(pool, dbNameFor(env)));
   }
 
   await mongoose.connect(mongoUri);

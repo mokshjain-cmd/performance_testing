@@ -1,7 +1,6 @@
-import { useState } from 'react';
 import type { FitnessAgeProfile } from '../../types/fitnessAge';
 import { isWindowError } from '../../types/fitnessAge';
-import { METRIC_DEFS, METRIC_GROUPS } from '../../utils/fitnessAgeMetricDefs';
+import { deriveMomentum, METRIC_DEFS, METRIC_GROUPS } from '../../utils/fitnessAgeMetricDefs';
 import FitnessAgeHero from './FitnessAgeHero';
 import MetricCard from './MetricCard';
 import InsufficientDataCard from './InsufficientDataCard';
@@ -10,15 +9,11 @@ interface FitnessAgeDetailProps {
   profile: FitnessAgeProfile;
 }
 
-type WindowKey = 'sixtyDay' | 'sevenDay';
-
 export default function FitnessAgeDetail({ profile }: FitnessAgeDetailProps) {
   const sixty = profile.windows?.sixtyDay;
   const seven = profile.windows?.sevenDay;
   const sixtyValid = sixty && !isWindowError(sixty);
   const sevenValid = seven && !isWindowError(seven);
-
-  const [selected, setSelected] = useState<WindowKey>(sixtyValid ? 'sixtyDay' : 'sevenDay');
 
   if (!sixtyValid && !sevenValid) {
     return (
@@ -31,39 +26,18 @@ export default function FitnessAgeDetail({ profile }: FitnessAgeDetailProps) {
     );
   }
 
-  const activeOutcome = selected === 'sixtyDay' ? sixty : seven;
+  // The 60-day window is the baseline everyone sees; the 7-day window is only
+  // used to derive momentum call-outs against that baseline, never shown on its own.
+  const activeOutcome = sixtyValid ? sixty : seven;
+  const momentumBaseline = sixtyValid && sevenValid ? seven : null;
+
+  const overallMomentum =
+    momentumBaseline && sixtyValid
+      ? deriveMomentum(momentumBaseline.total_delta, sixty.total_delta)
+      : null;
 
   return (
     <div className="space-y-5">
-      <div className="flex gap-2">
-        <button
-          onClick={() => setSelected('sixtyDay')}
-          disabled={!sixtyValid}
-          className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
-            selected === 'sixtyDay'
-              ? 'bg-gray-900 text-white'
-              : sixtyValid
-              ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              : 'bg-gray-50 text-gray-300 cursor-not-allowed'
-          }`}
-        >
-          60-Day Core
-        </button>
-        <button
-          onClick={() => setSelected('sevenDay')}
-          disabled={!sevenValid}
-          className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
-            selected === 'sevenDay'
-              ? 'bg-gray-900 text-white'
-              : sevenValid
-              ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              : 'bg-gray-50 text-gray-300 cursor-not-allowed'
-          }`}
-        >
-          7-Day Momentum
-        </button>
-      </div>
-
       {!activeOutcome || isWindowError(activeOutcome) ? (
         <InsufficientDataCard
           message={(activeOutcome && isWindowError(activeOutcome) && activeOutcome.error) || 'Not enough data for this window yet.'}
@@ -75,6 +49,7 @@ export default function FitnessAgeDetail({ profile }: FitnessAgeDetailProps) {
             chronoAge={profile.demographics?.age ?? 0}
             paceOfAging={activeOutcome.pace_of_aging}
             computedAt={profile.computedAt}
+            momentum={overallMomentum}
           />
 
           {METRIC_GROUPS.map((group) => (
@@ -84,9 +59,35 @@ export default function FitnessAgeDetail({ profile }: FitnessAgeDetailProps) {
                 <span className="text-xs font-bold uppercase tracking-widest text-gray-700">{group.label}</span>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {group.metrics.map((key) => (
-                  <MetricCard key={key} def={METRIC_DEFS[key]} metric={activeOutcome.metrics[key]} />
-                ))}
+                {group.metrics.map((key) => {
+                  const m = activeOutcome.metrics;
+                  const ens = m.vo2_ensemble;
+                  const breakdown =
+                    key === 'vo2_ensemble' && ens
+                      ? {
+                          bracket: ens.bracket,
+                          jackWeight: ens.jack_weight,
+                          hrrWeight: ens.hrr_weight,
+                          hrr: m.vo2_hrr?.value ?? null,
+                          jackson: m.vo2_jackson?.value ?? null,
+                          legacy: m.vo2_legacy?.value ?? null,
+                        }
+                      : undefined;
+                  const momentum = momentumBaseline
+                    ? deriveMomentum(momentumBaseline.metrics[key]?.delta_years, activeOutcome.metrics[key]?.delta_years)
+                    : null;
+                  const sevenDayValue = momentumBaseline ? momentumBaseline.metrics[key]?.value ?? null : null;
+                  return (
+                    <MetricCard
+                      key={key}
+                      def={METRIC_DEFS[key]}
+                      metric={activeOutcome.metrics[key]}
+                      breakdown={breakdown}
+                      momentum={momentum}
+                      sevenDayValue={sevenDayValue}
+                    />
+                  );
+                })}
               </div>
             </div>
           ))}

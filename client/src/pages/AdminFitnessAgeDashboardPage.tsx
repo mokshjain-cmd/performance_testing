@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
-import { HeartPulse, Search, Users as UsersIcon } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Download, HeartPulse, Search, Users as UsersIcon } from 'lucide-react';
 import { Layout } from '../components/layout';
 import { fitnessAgeApi } from '../services/fitnessAgeApi';
 import type { FitnessAgeAdminListItem, FitnessAgeProfile } from '../types/fitnessAge';
 import { FitnessAgeDetail } from '../components/fitnessAge';
 import Loader from '../components/common/Loader';
+import { exportToPDF } from '../utils/pdfExport';
 
 export default function AdminFitnessAgeDashboardPage() {
   const [users, setUsers] = useState<FitnessAgeAdminListItem[]>([]);
@@ -16,6 +17,8 @@ export default function AdminFitnessAgeDashboardPage() {
   const [selectedProfile, setSelectedProfile] = useState<FitnessAgeProfile | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fitnessAgeApi
@@ -38,6 +41,25 @@ export default function AdminFitnessAgeDashboardPage() {
       .catch((err) => setDetailError(err.message || 'Failed to load fitness age detail'))
       .finally(() => setDetailLoading(false));
   }, [selectedId]);
+
+  const handleDownloadPDF = async () => {
+    if (!contentRef.current || !selectedProfile) return;
+
+    setDownloading(true);
+    try {
+      const sanitizedName = selectedProfile.displayName?.replace(/[^a-z0-9]/gi, '_') || 'user';
+      const timestamp = new Date().toISOString().split('T')[0];
+      await exportToPDF(contentRef.current, {
+        filename: `Fitness_Age_${sanitizedName}_${timestamp}.pdf`,
+      });
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      alert(`Failed to generate PDF: ${errorMessage}\n\nPlease try again or contact support if the issue persists.`);
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   const filteredUsers = users.filter(
     (u) =>
@@ -123,8 +145,20 @@ export default function AdminFitnessAgeDashboardPage() {
             </div>
           ) : (
             <div>
-              <h2 className="text-lg font-bold text-gray-900 mb-4">{selectedProfile.displayName}</h2>
-              <FitnessAgeDetail profile={selectedProfile} />
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold text-gray-900">{selectedProfile.displayName}</h2>
+                <button
+                  onClick={handleDownloadPDF}
+                  disabled={downloading}
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-900 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed transition-all duration-200 shadow-sm"
+                >
+                  <Download size={16} />
+                  <span>{downloading ? 'Exporting...' : 'Export PDF'}</span>
+                </button>
+              </div>
+              <div ref={contentRef}>
+                <FitnessAgeDetail profile={selectedProfile} />
+              </div>
             </div>
           )}
         </div>

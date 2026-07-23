@@ -1,5 +1,5 @@
 export type MetricKey =
-  | 'vo2_jackson'
+  | 'vo2_ensemble'
   | 'resting_hr'
   | 'sleep_hours'
   | 'sleep_consistency'
@@ -19,8 +19,8 @@ export interface MetricDef {
 }
 
 export const METRIC_DEFS: Record<MetricKey, MetricDef> = {
-  vo2_jackson: {
-    key: 'vo2_jackson',
+  vo2_ensemble: {
+    key: 'vo2_ensemble',
     name: 'VO₂ Max',
     unit: 'ml/kg/min',
     range: [15, 70],
@@ -78,7 +78,7 @@ export const METRIC_DEFS: Record<MetricKey, MetricDef> = {
 };
 
 export const METRIC_GROUPS: { key: string; label: string; metrics: MetricKey[] }[] = [
-  { key: 'fitness', label: 'Fitness', metrics: ['vo2_jackson', 'resting_hr'] },
+  { key: 'fitness', label: 'Fitness', metrics: ['vo2_ensemble', 'resting_hr'] },
   { key: 'sleep', label: 'Sleep', metrics: ['sleep_hours', 'sleep_consistency'] },
   { key: 'activity', label: 'Activity', metrics: ['daily_steps', 'weekly_strength'] },
 ];
@@ -124,4 +124,57 @@ export function formatMetricValue(key: MetricKey, value: number | null): string 
 
 export function describeMetric(def: MetricDef, status: MetricStatus): string {
   return status === 'outperforming' ? def.goodDesc : def.warnDesc;
+}
+
+export type MomentumStatus = 'ahead' | 'lagging' | 'breakeven';
+
+export interface Momentum {
+  status: MomentumStatus;
+  diffYears: number; // delta7 - delta60; negative means the last 7 days are outperforming the 60-day baseline
+}
+
+// Below this gap (in age-years), the 7-day trend is treated as "on track" with the 60-day baseline
+// rather than meaningfully ahead or behind it.
+const MOMENTUM_BREAKEVEN_BAND = 0.15;
+
+export function deriveMomentum(
+  delta7: number | null | undefined,
+  delta60: number | null | undefined
+): Momentum | null {
+  if (delta7 == null || delta60 == null) return null;
+  const diffYears = delta7 - delta60;
+  if (diffYears <= -MOMENTUM_BREAKEVEN_BAND) return { status: 'ahead', diffYears };
+  if (diffYears >= MOMENTUM_BREAKEVEN_BAND) return { status: 'lagging', diffYears };
+  return { status: 'breakeven', diffYears };
+}
+
+export function momentumMessage(status: MomentumStatus, topic: string): string {
+  switch (status) {
+    case 'ahead':
+      return `Your 7-day momentum on ${topic} is ahead of your 60-day baseline — recent habits are paying off.`;
+    case 'lagging':
+      return `Your 7-day momentum on ${topic} is lagging behind your 60-day baseline — recent days have slipped a bit.`;
+    case 'breakeven':
+      return `You've got it right — your 7-day momentum on ${topic} is holding steady with your 60-day baseline.`;
+  }
+}
+
+export function overallMomentumCopy(status: MomentumStatus): { title: string; msg: string } {
+  switch (status) {
+    case 'ahead':
+      return {
+        title: '7-Day Momentum: Ahead',
+        msg: 'Your last 7 days are outperforming your 60-day baseline — current habits are pulling Fitness Age down faster than usual.',
+      };
+    case 'lagging':
+      return {
+        title: '7-Day Momentum: Lagging',
+        msg: 'Your last 7 days are behind your 60-day baseline — a dip in sleep, activity, or cardio this week is holding momentum back.',
+      };
+    case 'breakeven':
+      return {
+        title: '7-Day Momentum: On Track',
+        msg: "You've got it right — your last 7 days are holding steady with your 60-day baseline.",
+      };
+  }
 }
