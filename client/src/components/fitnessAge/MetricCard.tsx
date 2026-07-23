@@ -28,9 +28,9 @@ interface MetricCardProps {
 }
 
 const MOMENTUM_STYLES = {
-  ahead: { pillBg: 'bg-green-50 text-green-700 border-green-200', label: '7-Day Ahead', icon: '↑' },
-  lagging: { pillBg: 'bg-amber-50 text-amber-700 border-amber-200', label: '7-Day Lagging', icon: '↓' },
-  breakeven: { pillBg: 'bg-blue-50 text-blue-700 border-blue-200', label: '7-Day On Track', icon: '≈' },
+  ahead: { pillBg: 'bg-green-50 text-green-700 border-green-200', label: '7-Day Ahead', icon: '↑', dot: '#16a34a' },
+  lagging: { pillBg: 'bg-amber-50 text-amber-700 border-amber-200', label: '7-Day Lagging', icon: '↓', dot: '#d97706' },
+  breakeven: { pillBg: 'bg-blue-50 text-blue-700 border-blue-200', label: '7-Day On Track', icon: '≈', dot: '#2563eb' },
 };
 
 const STATUS_STYLES = {
@@ -91,7 +91,12 @@ export default function MetricCard({ def, metric, breakdown, momentum, sevenDayV
     : 'linear-gradient(90deg, rgba(209,213,219,0.5), rgba(22,163,74,0.35))';
 
   const pos7 = sevenDayValue != null ? positionPercent(def.range, sevenDayValue) : null;
-  const pos7Label = Math.min(94, Math.max(6, pos7 ?? 0));
+  const momentumDotColor = momentum ? MOMENTUM_STYLES[momentum.status].dot : '#9ca3af';
+  const sevenDayTooltip =
+    pos7 != null
+      ? `7-day average: ${formatMetricValue(def.key, sevenDayValue ?? null)} ${def.unit}` +
+        (momentum ? ` — ${momentumMessage(momentum.status, def.topic)}` : '')
+      : undefined;
 
   return (
     <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-[0_4px_16px_rgba(0,0,0,0.04)] flex flex-col gap-4">
@@ -143,25 +148,27 @@ export default function MetricCard({ def, metric, breakdown, momentum, sevenDayV
       )}
 
       <div>
-        <div className={`relative h-1.5 rounded-full ${pos7 != null ? 'mt-5' : ''}`} style={{ background: trackGradient }}>
-          {pos7 != null && (
-            <div
-              className="absolute bottom-full flex flex-col items-center"
-              style={{ left: `${pos7Label}%`, transform: 'translateX(-50%)' }}
-            >
-              <span className="mb-0.5 whitespace-nowrap text-[9px] font-semibold text-gray-500">
-                7d {formatMetricValue(def.key, sevenDayValue ?? null)}
-              </span>
-              <span className="w-0.5 h-2.5 rounded-full bg-gray-400" />
-            </div>
-          )}
+        <div className="relative h-1.5 rounded-full" style={{ background: trackGradient }}>
           <div
             className="absolute top-1/2 w-3.5 h-3.5 rounded-full bg-white border-2 shadow"
-            style={{ left: `${pos}%`, transform: 'translate(-50%, -50%)', borderColor: style.ring }}
+            style={{ left: `${pos}%`, transform: 'translate(-50%, -50%)', borderColor: style.ring, zIndex: 1 }}
           />
+          {pos7 != null && (
+            <div
+              className="absolute top-1/2 w-2.5 h-2.5 rounded-full border-2 border-white shadow-sm cursor-help"
+              style={{ left: `${pos7}%`, transform: 'translate(-50%, -50%)', background: momentumDotColor, zIndex: 2 }}
+              title={sevenDayTooltip}
+            />
+          )}
         </div>
-        <div className="flex justify-between mt-2 text-[11px] font-medium text-gray-400">
+        <div className="flex items-center justify-between mt-2 text-[11px] font-medium text-gray-400">
           <span>{def.range[0].toLocaleString()}{bestLeft ? <span className="ml-1 text-green-600 font-semibold">Best</span> : null}</span>
+          {pos7 != null && (
+            <span className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: momentumDotColor }} />
+              7-day avg <span className="font-semibold text-gray-600">{formatMetricValue(def.key, sevenDayValue ?? null)}</span>
+            </span>
+          )}
           <span>{def.range[1].toLocaleString()}{!bestLeft ? <span className="ml-1 text-green-600 font-semibold">Best</span> : null}</span>
         </div>
       </div>

@@ -470,6 +470,7 @@ class FitnessAgeDbClient {
 async function runForTarget(client: FitnessAgeDbClient, target: FitnessAgeTarget) {
   const env: FitnessAgeSourceEnv = target.env || 'stage';
   const endDate = new Date();
+  endDate.setDate(endDate.getDate() - 1); // today's data is still partial, so cut off at the previous day
   const startDate = new Date(endDate);
   startDate.setDate(startDate.getDate() - 70); // 10-day buffer over the 60-day window
 

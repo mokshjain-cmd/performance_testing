@@ -26,6 +26,9 @@ import { ISuuntoWorkout, SuuntoWorkoutParser } from "../../parsers/workout/Suunt
 
 const unlinkAsync = promisify(fs.unlink);
 
+// Workouts shorter than this are noise (band bump, false start, etc.) — skip creating a session for them entirely.
+const MIN_WORKOUT_DURATION_SEC = 8 * 60;
+
 export interface IWorkoutIngestionResult {
   sessionsCreated: number;
   sessionIds: string[];
@@ -162,6 +165,11 @@ static async ingestWorkoutDay(
     const sessionInfos: IWorkoutSessionInfo[] = [];
     
     for (const workout of parsedWorkouts) {
+      if (workout.durationSec < MIN_WORKOUT_DURATION_SEC) {
+        console.log(`[IngestWorkoutService] Skipping workout ${workout.workoutId} — duration ${workout.durationSec}s is under the ${MIN_WORKOUT_DURATION_SEC}s minimum`);
+        continue;
+      }
+
       try {
         const sessionId = await this.createWorkoutSessionOnly(
           userId,
